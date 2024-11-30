@@ -61,3 +61,47 @@ export const signupUser = async (userData) => {
         throw error;
     }
 };
+
+// Fetch all offers
+export const fetchOffers = async () => {
+    try {
+        const response = await axiosInstance.get('/offers');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching offers:', error);
+        throw error;
+    }
+};
+
+// Create a new offer
+export const createOffer = async (offerData) => {
+    try {
+        const response = await axiosInstance.post('/offers', offerData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating offer:', error);
+        throw error;
+    }
+};
+
+// Update an existing offer
+export const updateOffer = async (offerId, offerData) => {
+    try {
+        const response = await axiosInstance.put(`/offers/${offerId}`, offerData);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating offer:', error);
+        throw error;
+    }
+};
+
+// Delete an offer
+export const deleteOffer = async (offerId) => {
+    try {
+        const response = await axiosInstance.delete(`/offers/${offerId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting offer:', error);
+        throw error;
+    }
+};
