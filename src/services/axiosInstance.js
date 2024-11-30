@@ -19,11 +19,9 @@ axiosInstance.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Interceptor for responses (e.g., handling global errors)
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Optionally handle global errors here
         return Promise.reject(error);
     }
 );

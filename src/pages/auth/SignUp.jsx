@@ -26,7 +26,7 @@ const SignupPage = () => {
             const response = await signupUser(formData);
             toast.success('Signup successful! Redirecting to login...');
             setTimeout(() => {
-                window.location.href = '/accounts/login';
+                window.location.href = '/accounts/sign-in';
             }, 1500);
         } catch (error) {
             console.error('Signup error:', error);

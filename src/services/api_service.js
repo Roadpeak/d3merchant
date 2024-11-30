@@ -28,7 +28,7 @@ export const uploadImage = async (file) => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await axiosInstance.post('/upload', formData, {
+        const response = await axiosInstance.post('/files/upload-image', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -43,7 +43,7 @@ export const uploadImage = async (file) => {
 // User login
 export const loginUser = async (credentials) => {
     try {
-        const response = await axiosInstance.post('/login', credentials);
+        const response = await axiosInstance.post('/merchants/login', credentials);
         return response.data;
     } catch (error) {
         console.error('Error logging in:', error);
@@ -54,7 +54,7 @@ export const loginUser = async (credentials) => {
 // User signup
 export const signupUser = async (userData) => {
     try {
-        const response = await axiosInstance.post('/register', userData);
+        const response = await axiosInstance.post('/merchants/register', userData);
         return response.data;
     } catch (error) {
         console.error('Error signing up:', error);
