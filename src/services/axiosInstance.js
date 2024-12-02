@@ -1,4 +1,6 @@
 import axios from 'axios';
+import CryptoJS from 'crypto-js';
+import Cookies from 'js-cookie';
 
 const axiosInstance = axios.create({
     baseURL: 'http://localhost:3000/api/v1',
@@ -10,9 +12,19 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        try {
+            const encryptedData = Cookies.get('auth_data');
+            const secretKey = import.meta.env.VITE_SECRET_KEY;
+            if (encryptedData) {
+                const bytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
+                const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+
+                if (decryptedData.token) {
+                    config.headers.Authorization = `Bearer ${decryptedData.token}`;
+                }
+            }
+        } catch (error) {
+            console.error('Error decrypting token:', error);
         }
         return config;
     },
@@ -21,9 +33,7 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
     (response) => response,
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 export default axiosInstance;

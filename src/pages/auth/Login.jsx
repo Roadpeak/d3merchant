@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { loginUser } from '../../services/api_service';
+import CryptoJS from 'crypto-js';
+import Cookies from 'js-cookie';
 
 const LoginPage = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -20,9 +22,27 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await loginUser(formData); 
+      const response = await loginUser(formData);
+
+      // Encrypt merchant data and token
+      const secretKey = 'your_secret_key'; // Use a secure, environment-protected key
+      const encryptedData = CryptoJS.AES.encrypt(
+        JSON.stringify({
+          merchant: {
+            id: response.id,
+            first_name: response.first_name,
+            last_name: response.last_name,
+            email_address: response.email_address,
+            phone_number: response.phone_number,
+            joined: response.joined,
+            updated: response.updated,
+          },
+          token: response.access_token,
+        }),
+        secretKey
+      ).toString();
+      Cookies.set('auth_data', encryptedData, { expires: 250, secure: true });
       toast.success('Login successful!');
-      localStorage.setItem('authToken', response.token);
       window.location.href = '/dashboard';
     } catch (error) {
       console.error('Login error:', error);
@@ -31,6 +51,7 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} min-h-screen flex items-center justify-center`}>
