@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { signupUser } from '../../services/api_service';
+import CryptoJS from 'crypto-js';
+import Cookies from 'js-cookie';
 
 const SignupPage = () => {
     const [darkMode, setDarkMode] = useState(false);
@@ -24,9 +26,23 @@ const SignupPage = () => {
 
         try {
             const response = await signupUser(formData);
-            toast.success('Signup successful! Redirecting to login...');
+
+            // Encrypt token and merchant data
+            const secretKey = 'your_secret_key'; // Use a secure, environment-protected key
+            const encryptedData = CryptoJS.AES.encrypt(
+                JSON.stringify({
+                    merchant: response.merchant,
+                    token: response.access_token,
+                }),
+                secretKey
+            ).toString();
+
+            // Store encrypted data in cookies
+            Cookies.set('auth_data', encryptedData, { expires: 1, secure: true });
+
+            toast.success('Signup successful! Redirecting...');
             setTimeout(() => {
-                window.location.href = '/accounts/sign-in';
+                window.location.href = '/stores/create';
             }, 1500);
         } catch (error) {
             console.error('Signup error:', error);
