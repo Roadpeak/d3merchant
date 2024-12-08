@@ -13,8 +13,14 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     (config) => {
         try {
+            const apiKey = import.meta.env.VITE_API_KEY;
+            if (apiKey) {
+                config.headers['api-key'] = apiKey;
+            }
+
             const encryptedData = Cookies.get('auth_data');
             const secretKey = import.meta.env.VITE_SECRET_KEY;
+
             if (encryptedData) {
                 const bytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
                 const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
@@ -24,15 +30,10 @@ axiosInstance.interceptors.request.use(
                 }
             }
         } catch (error) {
-            console.error('Error decrypting token:', error);
+            console.error('Error decrypting token or setting API key:', error);
         }
         return config;
     },
-    (error) => Promise.reject(error)
-);
-
-axiosInstance.interceptors.response.use(
-    (response) => response,
     (error) => Promise.reject(error)
 );
 

@@ -25,7 +25,7 @@ const LoginPage = () => {
       const response = await loginUser(formData);
 
       // Encrypt merchant data and token
-      const secretKey = 'your_secret_key'; // Use a secure, environment-protected key
+      const secretKey = import.meta.env.VITE_SECRET_KEY;
       const encryptedData = CryptoJS.AES.encrypt(
         JSON.stringify({
           merchant: {

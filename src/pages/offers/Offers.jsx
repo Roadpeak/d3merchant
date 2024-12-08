@@ -51,7 +51,7 @@ const OfferPage = () => {
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-primary text-white py-2 px-4 rounded-lg shadow-md hover:bg-primary-dark transition"
+                    className="bg-primary text-white py-1 px-6 text-[14px] rounded-lg shadow-md hover:bg-primary-dark transition"
                 >
                     Create Offer
                 </button>
@@ -59,7 +59,7 @@ const OfferPage = () => {
         >
             <div className="overflow-x-auto mt-6">
                 <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg">
-                    <thead className="bg-primary text-white">
+                    <thead className="bg-gray-100 text-primary">
                         <tr>
                             <th className="py-3 px-4 text-left text-sm font-medium">Service</th>
                             <th className="py-3 px-4 text-left text-sm font-medium">Discount</th>

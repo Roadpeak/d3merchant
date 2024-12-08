@@ -45,20 +45,24 @@ const ServicesPage = () => {
         >
             <div className="overflow-x-auto mt-6">
                 <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg">
-                    <thead className="bg-primary text-white">
+                    <thead className="bg-gray-100 text-primary">
                         <tr>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Service Name</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Price</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Duration</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Actions</th>
+                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Img</th>
+                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Service Name</th>
+                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Price (KES)</th>
+                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Duration</th>
+                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {services?.length > 0 ? (
                             services.map((service) => (
                                 <tr key={service.id} className="border-t border-gray-200 hover:bg-gray-50">
+                                    <td className="py-3 px-4 text-sm text-gray-900">
+                                        <img src={service.image_url} className='w-[60px] h-[60px] object-cover rounded-full' alt="" />
+                                    </td>
                                     <td className="py-3 px-4 text-sm text-gray-900">{service.name}</td>
-                                    <td className="py-3 px-4 text-sm text-gray-600">${service.price}</td>
+                                    <td className="py-3 px-4 text-sm text-gray-600">{service.price}</td>
                                     <td className="py-3 px-4 text-sm text-gray-600">{service.duration} mins</td>
                                     <td className="py-3 px-4">
                                         <button

@@ -27,8 +27,7 @@ const SignupPage = () => {
         try {
             const response = await signupUser(formData);
 
-            // Encrypt token and merchant data
-            const secretKey = 'your_secret_key'; // Use a secure, environment-protected key
+            const secretKey = import.meta.env.VITE_SECRET_KEY;
             const encryptedData = CryptoJS.AES.encrypt(
                 JSON.stringify({
                     merchant: response.merchant,
@@ -37,7 +36,6 @@ const SignupPage = () => {
                 secretKey
             ).toString();
 
-            // Store encrypted data in cookies
             Cookies.set('auth_data', encryptedData, { expires: 1, secure: true });
 
             toast.success('Signup successful! Redirecting...');

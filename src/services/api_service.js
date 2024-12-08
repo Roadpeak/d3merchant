@@ -105,3 +105,129 @@ export const deleteOffer = async (offerId) => {
         throw error;
     }
 };
+
+export const fetchBookings = async () => {
+    try {
+        const response = await axiosInstance.get('/bookings/store/eff53f50-b48a-11ef-915d-a3ac7236b7f5');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        throw error;
+    }
+}
+
+export const fetchSingleBooking = async (bookingId) => {
+    try {
+        const response = await axiosInstance.get(`/bookings/${bookingId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching booking:', error);
+        throw error;
+    }
+}
+
+export const fetchStaff = async () => {
+    try {
+        const response = await axiosInstance.get('/staff/store/eff53f50-b48a-11ef-915d-a3ac7236b7f5');
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const addStaff = async (staffData) => {
+    try {
+        const response = await axiosInstance.post('/staff', staffData);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const deleteStaff = async (staffId) => {
+    try {
+        await axiosInstance.delete(`/${staffId}`);
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const getStaffById = async (id) => {
+    try {
+        const response = await axiosInstance.get(`/staff/${id}`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const assignService = async (data) => {
+    try {
+        const response = await axiosInstance.post('/staff/assign-service', data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+} 
+
+export const getStaffAssignedServices = async (id) => {
+    try {
+        const response = await axiosInstance.get(`/staff/${id}/services`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const getBookingsByStaffId = async (id) => {
+    try {
+        const response = await axiosInstance.get(`/staff/${id}/bookings`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Fetch all socials for a store
+export const fetchSocials = async (storeId) => {
+    try {
+        const response = await axiosInstance.get(`/socials/${storeId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching socials:', error);
+        throw error;
+    }
+};
+
+// Create a new social media link
+export const createSocial = async (socialData) => {
+    try {
+        const response = await axiosInstance.post('/socials', socialData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating social media link:', error);
+        throw error;
+    }
+};
+
+// Update an existing social media link
+export const updateSocial = async (socialId, socialData) => {
+    try {
+        const response = await axiosInstance.put(`/socials/${socialId}`, socialData);
+        return response.data;
+    } catch (error) {
+        console.error('Error updating social media link:', error);
+        throw error;
+    }
+};
+
+// Delete a social media link
+export const deleteSocial = async (socialId) => {
+    try {
+        const response = await axiosInstance.delete(`/socials/${socialId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting social media link:', error);
+        throw error;
+    }
+};

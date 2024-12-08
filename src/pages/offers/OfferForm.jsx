@@ -40,7 +40,7 @@ const OfferForm = ({ onClose, onOfferCreated }) => {
                 <select
                     id="service_id"
                     {...register('service_id', { required: 'Service is required' })}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.service_id ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${errors.service_id ? 'border-red-500' : ''}`}
                 >
                     <option value="">Select a Service</option>
                     {services.map((service) => (
@@ -64,7 +64,7 @@ const OfferForm = ({ onClose, onOfferCreated }) => {
                         min: { value: 0, message: 'Discount must be at least 0%' },
                         max: { value: 100, message: 'Discount cannot exceed 100%' },
                     })}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.discount ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${errors.discount ? 'border-red-500' : ''}`}
                 />
                 {errors.discount && <p className="text-red-500 text-sm">{errors.discount.message}</p>}
             </div>
@@ -77,7 +77,7 @@ const OfferForm = ({ onClose, onOfferCreated }) => {
                     type="date"
                     id="expiration_date"
                     {...register('expiration_date', { required: 'Expiration date is required' })}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.expiration_date ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${errors.expiration_date ? 'border-red-500' : ''}`}
                 />
                 {errors.expiration_date && <p className="text-red-500 text-sm">{errors.expiration_date.message}</p>}
             </div>
@@ -89,7 +89,7 @@ const OfferForm = ({ onClose, onOfferCreated }) => {
                 <textarea
                     id="description"
                     {...register('description', { required: 'Description is required' })}
-                    className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm ${errors.description ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${errors.description ? 'border-red-500' : ''}`}
                 />
                 {errors.description && <p className="text-red-500 text-sm">{errors.description.message}</p>}
             </div>
@@ -101,7 +101,7 @@ const OfferForm = ({ onClose, onOfferCreated }) => {
                 <select
                     id="status"
                     {...register('status')}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>

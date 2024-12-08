@@ -5,15 +5,31 @@ import LoginPage from './pages/auth/Login'
 import ServicesPage from './pages/services/Service'
 import OfferPage from './pages/offers/Offers'
 import CreateStore from './pages/stores/CreateStore'
+import Calendar from './pages/Calendar'
+import Page404 from './pages/Page404'
+import Booking from './pages/bookings/Bookings'
+import BookingDetails from './pages/bookings/BookingDetails'
+import StaffManagement from './pages/staff/StaffManagement'
+import StaffMetricsPage from './pages/staff/StaffMetrics'
+import Socials from './pages/socials/Socials'
 
 const AppRoutes = () => {
   return (
     <Routes>
-        <Route path="/accounts/sign-up" element={<SignupPage />} />
-        <Route path="/accounts/sign-in" element={<LoginPage />} />
-        <Route path="/dashboard/services" element={<ServicesPage />} />
-        <Route path='/dashboard/offers' element={<OfferPage />} />
-        <Route path='/stores/create' element={<CreateStore />} />
+      <Route path="/accounts/sign-up" element={<SignupPage />} />
+      <Route path="/accounts/sign-in" element={<LoginPage />} />
+      <Route path="/dashboard/services" element={<ServicesPage />} />
+      <Route path='/dashboard/offers' element={<OfferPage />} />
+      <Route path='/dashboard/calendar' element={<Calendar />} />
+      <Route path='/stores/create' element={<CreateStore />} />
+      <Route path="/dashboard/bookings" element={<Booking />} />
+      <Route path="/dashboard/bookings/:id/view" element={<BookingDetails />} />
+      <Route path='/dashboard/staff' element={<StaffManagement />} />
+      <Route path='/dashboard/staff/:id/view' element={<StaffMetricsPage />} />
+
+      <Route path='/dashboard/socials' element={<Socials />} />
+
+      <Route path="*" element={<Page404 />} />
     </Routes>
   )
 }

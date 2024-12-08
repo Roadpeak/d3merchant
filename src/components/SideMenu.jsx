@@ -13,20 +13,22 @@ import {
     FaLayerGroup,
     FaUserCircle,
 } from "react-icons/fa";
+import { useLocation } from "react-router-dom"; // Import useLocation hook from react-router-dom
 
 const Sidebar = () => {
     const [darkMode, setDarkMode] = useState(false);
+    const location = useLocation(); // Get the current location from React Router
 
     const menuItems = [
         { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
-        { name: "Services", icon: <FaLayerGroup />, path: "/services" },
-        { name: "Offers", icon: <FaHandshake />, path: "/offers" },
-        { name: "Analytics", icon: <FaChartLine />, path: "/analytics" },
-        { name: "Calendar", icon: <FaCalendarAlt />, path: "/calendar" },
-        { name: "Staff", icon: <FaUsers />, path: "/staff" },
-        { name: "Bookings", icon: <FaBook />, path: "/bookings" },
+        { name: "Services", icon: <FaLayerGroup />, path: "/dashboard/services" },
+        { name: "Offers", icon: <FaHandshake />, path: "/dashboard/offers" },
+        { name: "Analytics", icon: <FaChartLine />, path: "/dashboard/analytics" },
+        { name: "Calendar", icon: <FaCalendarAlt />, path: "/dashboard/dcalendar" },
+        { name: "Staff", icon: <FaUsers />, path: "/dashboard/staff" },
+        { name: "Bookings", icon: <FaBook />, path: "/dashboard/bookings" },
         { name: "Reviews", icon: <FaComments />, path: "/reviews" },
-        { name: "Socials", icon: <FaEnvelopeOpenText />, path: "/socials" },
+        { name: "Socials", icon: <FaEnvelopeOpenText />, path: "/dashboard/socials" },
         { name: "Settings", icon: <FaCog />, path: "/settings" },
         { name: "Account", icon: <FaUserCircle />, path: "/account" },
         { name: "Logout", icon: <FaSignOutAlt />, path: "/logout" },
@@ -49,7 +51,8 @@ const Sidebar = () => {
                     <a
                         key={index}
                         href={item.path}
-                        className="flex items-center gap-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-primary hover:text-white dark:hover:bg-gray-700"
+                        className={`flex items-center gap-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors 
+                            ${location.pathname === item.path ? 'bg-primary text-white' : 'hover:bg-primary hover:text-white dark:hover:bg-gray-700'}`}
                     >
                         {item.icon}
                         <span>{item.name}</span>
