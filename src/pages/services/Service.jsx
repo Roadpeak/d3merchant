@@ -37,7 +37,7 @@ const ServicesPage = () => {
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-primary text-white py-2 px-4 rounded-lg shadow-md hover:bg-primary-dark transition"
+                    className="bg-primary text-white py-1 px-6 rounded-md text-[13px] -mb-4 hover:bg-primary-dark transition"
                 >
                     Add Service
                 </button>

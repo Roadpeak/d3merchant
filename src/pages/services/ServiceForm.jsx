@@ -68,7 +68,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                     value={serviceData.name}
                     onChange={handleInputChange}
                     placeholder="Enter Service Name"
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
             </div>
 
@@ -83,7 +83,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                     value={serviceData.price}
                     onChange={handleInputChange}
                     placeholder="Enter Service Price"
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
             </div>
 
@@ -98,7 +98,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                     value={serviceData.duration}
                     onChange={handleInputChange}
                     placeholder="Service Duration"
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
             </div>
 
@@ -113,7 +113,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                     onChange={handleInputChange}
                     placeholder="Describe your service"
                     rows="4"
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 ></textarea>
             </div>
 
@@ -126,7 +126,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                     name="category"
                     value={serviceData.category}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                     <option value="">Select Category</option>
                     <option value="Category1">Category 1</option>
@@ -143,7 +143,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                     name="type"
                     value={serviceData.type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                     <option value="fixed">Fixed</option>
                     <option value="dynamic">Dynamic</option>
@@ -194,7 +194,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
             <div>
                 <button
                     onClick={handleCreateService}
-                    className={`w-full py-1 text-white rounded-md ${loading ? 'bg-gray-400' : 'bg-primary'} transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none`}
+                    className={`w-full py-1 text-white text-[13px] rounded-md ${loading ? 'bg-gray-400' : 'bg-primary'} transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none`}
                     disabled={loading}
                 >
                     {loading ? 'Saving...' : 'Save Service'}
