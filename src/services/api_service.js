@@ -241,3 +241,13 @@ export const fetchReviews = async () => {
         throw error;
     }
 }
+
+export const getProfile = async (id) => {
+    try {
+        const response = await axiosInstance.get('/merchants/profile/1c06e55f-0d0f-41f3-8943-56a6723f1020');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+    }
+}

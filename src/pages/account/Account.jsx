@@ -1,25 +1,23 @@
-import React, { useState } from 'react';
-import { FaUser, FaLock, FaEnvelope, FaPhone, FaHistory, FaBell } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
 import Layout from '../../elements/Layout';
+import { getProfile } from '../../services/api_service';
 
 const AccountPage = () => {
     const [activeTab, setActiveTab] = useState(0);
-    const [userInfo, setUserInfo] = useState({
-        name: "John Doe",
-        email: "john.doe@example.com",
-        phone: "+1234567890",
-        businessName: "FinTech Corp",
-        businessType: "Finance",
-        subscriptionPlan: "Premium",
-    });
+    const [info, setInfo] = useState(null);
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setUserInfo((prevState) => ({
-            ...prevState,
-            [name]: value,
-        }));
-    };
+    const getInfo = async () => {
+        try {
+            const response = await getProfile();
+            setInfo(response.merchantProfile); 
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    useEffect(() => {
+        getInfo();
+    }, []);
 
     return (
         <Layout title="Account Settings">
@@ -52,69 +50,38 @@ const AccountPage = () => {
                         </button>
                     </div>
 
-                    {/* Profile Tab */}
-                    {activeTab === 0 && (
+                    {activeTab === 0 && info && (
                         <div className="mt-4 bg-white p-6 rounded-md border">
                             <h3 className="text-xl font-semibold">Profile Information</h3>
                             <div className="mt-6 space-y-4">
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">Name</label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={userInfo.name}
-                                        onChange={handleInputChange}
-                                        className="p-2 border border-gray-300 rounded-md w-1/2"
-                                    />
+                                    <div className="text-gray-700">{info.first_name} {info.last_name}</div>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">Email</label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={userInfo.email}
-                                        onChange={handleInputChange}
-                                        className="p-2 border border-gray-300 rounded-md w-1/2"
-                                    />
+                                    <div className="text-gray-700">{info.email_address}</div>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">Phone</label>
-                                    <input
-                                        type="text"
-                                        name="phone"
-                                        value={userInfo.phone}
-                                        onChange={handleInputChange}
-                                        className="p-2 border border-gray-300 rounded-md w-1/2"
-                                    />
+                                    <div className="text-gray-700">{info.phone_number}</div>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">Business Name</label>
-                                    <input
-                                        type="text"
-                                        name="businessName"
-                                        value={userInfo.businessName}
-                                        onChange={handleInputChange}
-                                        className="p-2 border border-gray-300 rounded-md w-1/2"
-                                    />
+                                    <div className="text-gray-700">{info.store?.name}</div>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium">Business Type</label>
-                                    <select
-                                        name="businessType"
-                                        value={userInfo.businessType}
-                                        onChange={handleInputChange}
-                                        className="p-2 border border-gray-300 rounded-md w-1/2"
-                                    >
-                                        <option value="finance">Finance</option>
-                                        <option value="insurance">Insurance</option>
-                                        <option value="investment">Investment</option>
-                                    </select>
+                                    <label className="text-sm font-medium">Location</label>
+                                    <div className="text-gray-700">{info.store?.location}</div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium">Store Email</label>
+                                    <div className="text-gray-700">{info.store?.primary_email}</div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Security Tab */}
                     {activeTab === 1 && (
                         <div className="mt-4 bg-white p-6 rounded-md shadow-md">
                             <h3 className="text-xl font-semibold">Security Settings</h3>
@@ -135,7 +102,6 @@ const AccountPage = () => {
                         </div>
                     )}
 
-                    {/* Subscription Tab */}
                     {activeTab === 2 && (
                         <div className="mt-4 bg-white p-6 rounded-md shadow-md">
                             <h3 className="text-xl font-semibold">Subscription</h3>
@@ -152,7 +118,6 @@ const AccountPage = () => {
                         </div>
                     )}
 
-                    {/* Activity Tab */}
                     {activeTab === 3 && (
                         <div className="mt-4 bg-white p-6 rounded-md shadow-md">
                             <h3 className="text-xl font-semibold">Account Activity</h3>
