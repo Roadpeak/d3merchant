@@ -13,11 +13,11 @@ import {
     FaLayerGroup,
     FaUserCircle,
 } from "react-icons/fa";
-import { useLocation } from "react-router-dom"; // Import useLocation hook from react-router-dom
+import { useLocation } from "react-router-dom";
 
 const Sidebar = () => {
     const [darkMode, setDarkMode] = useState(false);
-    const location = useLocation(); // Get the current location from React Router
+    const location = useLocation();
 
     const menuItems = [
         { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
@@ -29,8 +29,8 @@ const Sidebar = () => {
         { name: "Bookings", icon: <FaBook />, path: "/dashboard/bookings" },
         { name: "Reviews", icon: <FaComments />, path: "/dashboard/reviews" },
         { name: "Socials", icon: <FaEnvelopeOpenText />, path: "/dashboard/socials" },
-        { name: "Settings", icon: <FaCog />, path: "/settings" },
-        { name: "Account", icon: <FaUserCircle />, path: "/account" },
+        { name: "Settings", icon: <FaCog />, path: "/dashboard/settings" },
+        { name: "Account", icon: <FaUserCircle />, path: "/dashboard/account" },
         { name: "Logout", icon: <FaSignOutAlt />, path: "/logout" },
     ];
 
@@ -62,7 +62,7 @@ const Sidebar = () => {
 
             <footer className="px-4 py-3 border-t dark:border-gray-700">
                 <p className="text-xs text-center">
-                    © {new Date().getFullYear()} Business Panel
+                    © {new Date().getFullYear()} d3 ltd.
                 </p>
             </footer>
         </div>
