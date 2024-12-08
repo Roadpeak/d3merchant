@@ -23,13 +23,13 @@ const StaffFilter = ({ onFilterChange }) => {
                 value={filters.name}
                 onChange={handleChange}
                 placeholder="Search by name"
-                className="border px-4 py-2 rounded-md"
+                className="border px-4 py-1 rounded-md"
             />
             <select
                 name="status"
                 value={filters.status}
                 onChange={handleChange}
-                className="border px-4 py-2 rounded-md"
+                className="border px-4 py-1 rounded-md"
             >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>

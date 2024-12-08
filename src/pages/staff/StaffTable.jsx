@@ -1,57 +1,71 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { fetchStaff } from '../../services/api_service';
 
 const StaffTable = () => {
     const [staff, setStaff] = useState([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const getStaff = async () => {
-        try {
-            const response = await fetchStaff();
-            setStaff(response)
-        } catch (error) {
-            console.log(error);
-        }
-    }
-
     useEffect(() => {
-        getStaff()
+        const getStaff = async () => {
+            try {
+                const response = await fetchStaff();
+                setStaff(response);
+            } catch (error) {
+                console.error('Error fetching staff:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        getStaff();
     }, []);
 
     return (
-        <div className="overflow-x-auto bg-white rounded-lg border">
-            <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg">
-                <thead className="bg-gray-100 text-primary">
-                    <tr>
-                        <th className="py-3 px-4 text-left text-sm font-medium uppercase">Name</th>
-                        <th className="py-3 px-4 text-left text-sm font-medium uppercase">Email</th>
-                        <th className="py-3 px-4 text-left text-sm font-medium uppercase">Phone</th>
-                        <th className="py-3 px-4 text-left text-sm font-medium uppercase">Status</th>
-                        <th className="py-3 px-4 text-left text-sm font-medium uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {staff.map(staffMember => (
-                        <tr key={staffMember.id} className='text-[14px] text-gray-700'>
-                            <td className="p-4">{staffMember.name}</td>
-                            <td className="p-4">{staffMember.email}</td>
-                            <td className="p-4">{staffMember.phoneNumber}</td>
-                            <td className="p-4">{staffMember.status}</td>
-                            <td className="p-4 flex space-x-2">
+        <div className="min-h-screen">
+            {loading ? (
+                <div className="flex justify-center items-center h-48">
+                    <div className="loader border-t-2 border-blue-500 rounded-full w-12 h-12 animate-spin"></div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {staff.map((staffMember) => (
+                        <div
+                            key={staffMember.id}
+                            className="bg-white rounded-lg shadow-lg border  hover:shadow-xl transition-shadow duration-300 p-6"
+                        >
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-xl font-medium text-gray-800">{staffMember.name}</h2>
+                                <span
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${staffMember.status === 'active'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-red-100 text-red-700'
+                                        }`}
+                                >
+                                    {staffMember.status}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-2">{staffMember.email}</p>
+                            <p className="text-sm text-gray-600">{staffMember.phoneNumber}</p>
+
+                            <div className="mt-4 flex space-x-3">
                                 <button
                                     onClick={() => navigate(`/dashboard/staff/${staffMember.id}/view`)}
-                                    className="bg-green-500 text-white px-6 py-1 rounded-md">View Metrics</button>
+                                    className="bg-primary text-white px-6 py-1 text-[13px] rounded-md hover:bg-blue-600 transition"
+                                >
+                                    View Metrics
+                                </button>
                                 <button
-                                    className="bg-red-400 text-white px-6 py-1 rounded-md"
+                                    className="bg-red-500 text-white px-6 py-1 text-[13px] rounded-md hover:bg-red-600 transition"
                                 >
                                     Delete
                                 </button>
-                            </td>
-                        </tr>
+                            </div>
+                        </div>
                     ))}
-                </tbody>
-            </table>
+                </div>
+            )}
         </div>
     );
 };

@@ -12,6 +12,7 @@ import BookingDetails from './pages/bookings/BookingDetails'
 import StaffManagement from './pages/staff/StaffManagement'
 import StaffMetricsPage from './pages/staff/StaffMetrics'
 import Socials from './pages/socials/Socials'
+import Reviews from './pages/reviews/Reviews'
 
 const AppRoutes = () => {
   return (
@@ -28,6 +29,7 @@ const AppRoutes = () => {
       <Route path='/dashboard/staff/:id/view' element={<StaffMetricsPage />} />
 
       <Route path='/dashboard/socials' element={<Socials />} />
+      <Route path="/dashboard/reviews" element={<Reviews />} />
 
       <Route path="*" element={<Page404 />} />
     </Routes>

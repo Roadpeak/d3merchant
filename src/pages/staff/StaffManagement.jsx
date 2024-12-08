@@ -59,14 +59,14 @@ const StaffManagement = () => {
     };
 
     return (
-        <Layout>
-            <div className="container mx-auto px-6">
+        <Layout title="Staff">
+            <div className="mx-auto mt-4 w-full">
                 <div className="flex justify-between mb-4">
                     <StaffFilter onFilterChange={handleFilterChange} />
                     <div className="h-fit">
                         <button
                             onClick={handleOpenModal}
-                            className="bg-primary text-white px-6 py-1 rounded-md"
+                            className="bg-primary text-white px-6 py-1 text-[13px]  rounded-md"
                         >
                             Add Staff
                         </button>

@@ -231,3 +231,13 @@ export const deleteSocial = async (socialId) => {
         throw error;
     }
 };
+
+export const fetchReviews = async () => {
+    try {
+        const response = await axiosInstance.get('/stores/eff53f50-b48a-11ef-915d-a3ac7236b7f5/reviews');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        throw error;
+    }
+}

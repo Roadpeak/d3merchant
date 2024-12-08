@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import { createSocial, fetchSocials, updateSocial, deleteSocial } from '../../services/api_service';
-import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin } from 'react-icons/fa'; // Example social icons
+import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube, FaTiktok, FaPinterest, FaSnapchat, FaWhatsapp, FaDiscord, FaTumblr, FaReddit, FaVimeo, FaGithub, FaFlickr } from 'react-icons/fa';
 import { FiEdit, FiTrash } from 'react-icons/fi';
 import Modal from '../../elements/Modal';
+import { socialMediaPlatforms } from '../../utils/data';
 
 const Socials = () => {
     const [socialLinks, setSocialLinks] = useState([]);
@@ -87,10 +88,33 @@ const Socials = () => {
                 return <FaTwitter className="text-blue-400" />;
             case 'linkedin':
                 return <FaLinkedin className="text-blue-700" />;
+            case 'youtube':
+                return <FaYoutube className="text-red-600" />;
+            case 'tiktok':
+                return <FaTiktok className="text-black" />;
+            case 'pinterest':
+                return <FaPinterest className="text-red-500" />;
+            case 'snapchat':
+                return <FaSnapchat className="text-yellow-400" />;
+            case 'whatsapp':
+                return <FaWhatsapp className="text-green-600" />;
+            case 'discord':
+                return <FaDiscord className="text-blue-500" />;
+            case 'tumblr':
+                return <FaTumblr className="text-indigo-600" />;
+            case 'reddit':
+                return <FaReddit className="text-orange-600" />;
+            case 'vimeo':
+                return <FaVimeo className="text-blue-600" />;
+            case 'github':
+                return <FaGithub className="text-black" />;
+            case 'flickr':
+                return <FaFlickr className="text-blue-500" />;
             default:
                 return <span className="text-gray-600">🌐</span>;
         }
     };
+
 
     return (
         <Layout title="Socials">
@@ -159,20 +183,24 @@ const Socials = () => {
                 </div>
             </div>
 
-            {/* Modal for adding/editing social links */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? 'Edit Social Media Link' : 'Add Social Media Link'}>
                 <form onSubmit={editing ? handleUpdateSocial : handleCreateSocial} className="space-y-4">
                     <div>
                         <label htmlFor="platform" className="block text-sm font-medium">Platform</label>
-                        <input
-                            type="text"
+                        <select
                             id="platform"
                             value={newSocial.platform}
                             onChange={(e) => setNewSocial({ ...newSocial, platform: e.target.value })}
                             className="mt-1 p-2 w-full border rounded"
-                            placeholder="e.g. Facebook, Instagram"
                             required
-                        />
+                        >
+                            <option value="">Select a Platform</option>
+                            {socialMediaPlatforms.map((platform) => (
+                                <option key={platform} value={platform}>
+                                    {platform.charAt(0).toUpperCase() + platform.slice(1)} {/* Capitalize first letter */}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label htmlFor="link" className="block text-sm font-medium">Link</label>
