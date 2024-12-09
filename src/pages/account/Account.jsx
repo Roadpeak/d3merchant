@@ -9,7 +9,7 @@ const AccountPage = () => {
     const getInfo = async () => {
         try {
             const response = await getProfile();
-            setInfo(response.merchantProfile); 
+            setInfo(response.merchantProfile);
         } catch (error) {
             console.error(error);
         }
@@ -23,27 +23,27 @@ const AccountPage = () => {
         <Layout title="Account Settings">
             <div className="flex h-screen">
                 <div className="flex-1 space-y-6 overflow-y-auto">
-                    <div className="flex space-x-4">
+                    <div className="flex mt-2 border-b">
                         <button
-                            className={`py-2 px-4 w-full text-left ${activeTab === 0 ? 'border-b-2 border-primary font-semibold' : 'text-primary hover:text-primary-dark'}`}
+                            className={`py-1 px-4 w-full text-center text-[14px] hover:bg-gray-100 rounded-md ${activeTab === 0 ? 'bg-gray-200 rounded-md font-medium' : 'text-primary hover:text-primary-dark'}`}
                             onClick={() => setActiveTab(0)}
                         >
                             Profile
                         </button>
                         <button
-                            className={`py-2 px-4 w-full text-left ${activeTab === 1 ? 'border-b-2 border-primary font-semibold' : 'text-primary hover:text-primary-dark'}`}
+                            className={`py-1 px-4 w-full text-center text-[14px] hover:bg-gray-100 rounded-md  ${activeTab === 1 ? 'bg-gray-200 rounded-md font-medium' : 'text-primary hover:text-primary-dark'}`}
                             onClick={() => setActiveTab(1)}
                         >
                             Security
                         </button>
                         <button
-                            className={`py-2 px-4 w-full text-left ${activeTab === 2 ? 'border-b-2 border-primary font-semibold' : 'text-primary hover:text-primary-dark'}`}
+                            className={`py-1 px-4 w-full text-center text-[14px] hover:bg-gray-100 rounded-md ${activeTab === 2 ? 'bg-gray-200 rounded-md font-medium' : 'text-primary hover:text-primary-dark'}`}
                             onClick={() => setActiveTab(2)}
                         >
                             Subscription
                         </button>
                         <button
-                            className={`py-2 px-4 w-full text-left ${activeTab === 3 ? 'border-b-2 border-primary font-semibold' : 'text-primary hover:text-primary-dark'}`}
+                            className={`py-1 px-4 w-full text-center text-[14px] hover:bg-gray-100 rounded-md ${activeTab === 3 ? 'bg-gray-200 rounded-md font-medium' : 'text-primary hover:text-primary-dark'}`}
                             onClick={() => setActiveTab(3)}
                         >
                             Activity
@@ -111,7 +111,7 @@ const AccountPage = () => {
                                     <p className="text-gray-700">{userInfo.subscriptionPlan}</p>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <button className="bg-primary text-white py-2 px-4 rounded-md">Upgrade Plan</button>
+                                    <button className="bg-primary text-white py-1 px-4 rounded-md">Upgrade Plan</button>
                                     <button className="text-primary hover:underline">Cancel Subscription</button>
                                 </div>
                             </div>
