@@ -11,6 +11,16 @@ export const fetchServices = async () => {
     }
 };
 
+export const fetchServiceById = async (serviceId) => {
+    try {
+        const response = await axiosInstance.get(`/services/${serviceId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching service:', error);
+        throw error;
+    }
+}
+
 // Create a new service
 export const createService = async (serviceData) => {
     try {
@@ -168,7 +178,7 @@ export const assignService = async (data) => {
     } catch (error) {
         throw error;
     }
-} 
+}
 
 export const getStaffAssignedServices = async (id) => {
     try {
@@ -251,3 +261,13 @@ export const getProfile = async (id) => {
         throw error;
     }
 }
+
+export const createForm = async (formData) => {
+    try {
+        const response = await axiosInstance.post('/forms', formData);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating form:', error);
+        throw error;
+    }
+};

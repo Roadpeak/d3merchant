@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for routing
 import { createService, uploadImage } from '../../services/api_service';
 
 const ServiceForm = ({ onClose, onServiceAdded }) => {
@@ -11,9 +12,11 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
         category: '',
         description: '',
         type: 'fixed',
-        store_id: 'eff53f50-b48a-11ef-915d-a3ac7236b7f5'
+        store_id: 'eff53f50-b48a-11ef-915d-a3ac7236b7f5',
+        dynamicFields: [] // Dynamic fields for dynamic services
     });
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate(); // Hook for navigation
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -37,15 +40,22 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
     };
 
     const handleCreateService = async () => {
-        if (!serviceData.name || !serviceData.price || !serviceData.image_url) {
+        if (!serviceData.name || !serviceData.image_url || (serviceData.type === 'fixed' && (!serviceData.price || !serviceData.duration))) {
             toast.error('Please fill out all required fields');
             return;
         }
 
         setLoading(true);
         try {
-            await createService(serviceData);
+            // First, create the service
+            const serviceResponse = await createService(serviceData);
             toast.success('Service created successfully');
+
+            if (serviceData.type === 'dynamic') {
+                navigate(`/dynamic-form/${serviceResponse.newService.id}`);
+                return;
+            }
+
             onClose();
             onServiceAdded();
         } catch (error) {
@@ -58,9 +68,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
     return (
         <div className="space-y-6">
             <div>
-                <label htmlFor="name" className="text-sm font-semibold text-gray-600">
-                    Service Name
-                </label>
+                <label htmlFor="name" className="text-sm font-semibold text-gray-600">Service Name</label>
                 <input
                     id="name"
                     type="text"
@@ -72,40 +80,54 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                 />
             </div>
 
+            {/* Service Type */}
             <div>
-                <label htmlFor="price" className="text-sm font-semibold text-gray-600">
-                    Service Price
-                </label>
-                <input
-                    id="price"
-                    type="number"
-                    name="price"
-                    value={serviceData.price}
+                <label htmlFor="type" className="text-sm font-semibold text-gray-600">Type</label>
+                <select
+                    id="type"
+                    name="type"
+                    value={serviceData.type}
                     onChange={handleInputChange}
-                    placeholder="Enter Service Price"
                     className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
+                >
+                    <option value="fixed">Fixed</option>
+                    <option value="dynamic">Dynamic</option>
+                </select>
             </div>
 
-            <div>
-                <label htmlFor="duration" className="text-sm font-semibold text-gray-600">
-                    Duration (e.g., 30 min)
-                </label>
-                <input
-                    id="duration"
-                    type="text"
-                    name="duration"
-                    value={serviceData.duration}
-                    onChange={handleInputChange}
-                    placeholder="Service Duration"
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-            </div>
+            {serviceData.type === 'fixed' && (
+                <>
+                    <div>
+                        <label htmlFor="price" className="text-sm font-semibold text-gray-600">Service Price</label>
+                        <input
+                            id="price"
+                            type="number"
+                            name="price"
+                            value={serviceData.price}
+                            onChange={handleInputChange}
+                            placeholder="Enter Service Price"
+                            className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                    </div>
 
+                    <div>
+                        <label htmlFor="duration" className="text-sm font-semibold text-gray-600">Duration (e.g., 30 min)</label>
+                        <input
+                            id="duration"
+                            type="text"
+                            name="duration"
+                            value={serviceData.duration}
+                            onChange={handleInputChange}
+                            placeholder="Service Duration"
+                            className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                    </div>
+                </>
+            )}
+
+            {/* Description */}
             <div>
-                <label htmlFor="description" className="text-sm font-semibold text-gray-600">
-                    Description
-                </label>
+                <label htmlFor="description" className="text-sm font-semibold text-gray-600">Description</label>
                 <textarea
                     id="description"
                     name="description"
@@ -117,10 +139,9 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                 ></textarea>
             </div>
 
+            {/* Category */}
             <div>
-                <label htmlFor="category" className="text-sm font-semibold text-gray-600">
-                    Category
-                </label>
+                <label htmlFor="category" className="text-sm font-semibold text-gray-600">Category</label>
                 <select
                     id="category"
                     name="category"
@@ -134,32 +155,14 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
                 </select>
             </div>
 
-            <div>
-                <label htmlFor="type" className="text-sm font-semibold text-gray-600">
-                    Type
-                </label>
-                <select
-                    id="type"
-                    name="type"
-                    value={serviceData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-1 mt-1 border border-gray-300 rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                    <option value="fixed">Fixed</option>
-                    <option value="dynamic">Dynamic</option>
-                </select>
-            </div>
-
             <div className="space-y-2">
-                <label htmlFor="image" className="text-sm font-semibold text-gray-600">
-                    Upload Image
-                </label>
-                <div className="flex items-center justify-center p-4 border-2 border-dotted border-gray-300 rounded-md cursor-pointer hover:border-primary transition-all ease-in-out">
+                <label htmlFor="image" className="text-sm font-semibold text-gray-600">Upload Image</label>
+                <div className="flex items-center justify-center p-4 border-2 border-dotted border-gray-300 rounded-md cursor-pointer hover:border-primary transition-all ease-in-out relative">
                     <input
                         id="image"
                         type="file"
                         onChange={handleImageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                     <span className="flex items-center space-x-2 text-gray-600">
                         <svg

@@ -9,7 +9,6 @@ const OfferPage = () => {
     const [offers, setOffers] = useState([]);
     const [isModalOpen, setModalOpen] = useState(false);
 
-    // Fetch the offers on page load
     useEffect(() => {
         const loadOffers = async () => {
             try {
@@ -23,7 +22,6 @@ const OfferPage = () => {
         loadOffers();
     }, []);
 
-    // Refresh offers after adding new one
     const refreshOffers = async () => {
         try {
             const response = await fetchOffers();
@@ -33,7 +31,6 @@ const OfferPage = () => {
         }
     };
 
-    // Handle offer creation
     const handleCreateOffer = async (offerData) => {
         try {
             await createOffer(offerData);
@@ -51,41 +48,50 @@ const OfferPage = () => {
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-primary text-white py-1 px-6 text-[14px] rounded-lg shadow-md hover:bg-primary-dark transition"
+                    className="bg-primary text-white py-2 px-6 text-sm font-semibold rounded-md shadow-md hover:bg-primary-dark transition duration-300"
                 >
                     Create Offer
                 </button>
             }
         >
             <div className="overflow-x-auto mt-6">
-                <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg">
-                    <thead className="bg-gray-100 text-primary">
+                <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                    <thead className="bg-gray-100 dark:bg-gray-700 text-primary">
                         <tr>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Service</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Discount</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Expiration Date</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Status</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium">Actions</th>
+                            <th className="py-3 px-6 text-left text-sm font-medium">Service</th>
+                            <th className="py-3 px-6 text-left text-sm font-medium">Discount</th>
+                            <th className="py-3 px-6 text-left text-sm font-medium">Expiration Date</th>
+                            <th className="py-3 px-6 text-left text-sm font-medium">Status</th>
+                            <th className="py-3 px-6 text-left text-sm font-medium">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {offers?.length > 0 ? (
                             offers.map((offer) => (
-                                <tr key={offer.id} className="border-t border-gray-200 hover:bg-gray-50">
-                                    <td className="py-3 px-4 text-sm text-gray-900">{offer.service_name}</td>
-                                    <td className="py-3 px-4 text-sm text-gray-600">{offer.discount}%</td>
-                                    <td className="py-3 px-4 text-sm text-gray-600">{new Date(offer.expiration_date).toLocaleDateString()}</td>
-                                    <td className="py-3 px-4 text-sm text-gray-600">{offer.status}</td>
-                                    <td className="py-3 px-4">
+                                <tr key={offer.id} className="border-t border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td className="py-3 px-6 text-sm text-gray-900 dark:text-gray-100">{offer.service_name}</td>
+                                    <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">{offer.discount}%</td>
+                                    <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">
+                                        {new Date(offer.expiration_date).toLocaleDateString()}
+                                    </td>
+                                    <td className="py-3 px-6 text-sm text-gray-600 dark:text-gray-400">
+                                        <span
+                                            className={`${offer.status === 'active' ? 'text-green-600' : 'text-red-600'
+                                                } font-semibold`}
+                                        >
+                                            {offer.status}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-6 flex gap-2">
                                         <button
                                             onClick={() => { } /* Implement edit */}
-                                            className="bg-blue-500 text-white py-1 px-3 rounded-lg text-xs hover:bg-blue-600"
+                                            className="bg-blue-500 text-white py-1 px-3 rounded-lg text-xs font-semibold hover:bg-blue-600 transition duration-300"
                                         >
                                             Edit
                                         </button>
                                         <button
                                             onClick={() => { } /* Implement delete */}
-                                            className="bg-red-500 text-white py-1 px-3 rounded-lg text-xs ml-2 hover:bg-red-600"
+                                            className="bg-red-500 text-white py-1 px-3 rounded-lg text-xs font-semibold hover:bg-red-600 transition duration-300"
                                         >
                                             Delete
                                         </button>
@@ -94,7 +100,7 @@ const OfferPage = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="5" className="py-3 px-4 text-center text-gray-600">
+                                <td colSpan="5" className="py-3 px-6 text-center text-gray-600 dark:text-gray-400">
                                     No offers available. Add a new offer to get started.
                                 </td>
                             </tr>

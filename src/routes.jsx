@@ -15,13 +15,17 @@ import Socials from './pages/socials/Socials'
 import Reviews from './pages/reviews/Reviews'
 import SettingsPage from './pages/settings/Settings'
 import AccountPage from './pages/account/Account'
+import Dashboard from './pages/dashboard/Dashboard'
+import DynamicFormPage from './pages/services/DynamicFormPage'
 
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/accounts/sign-up" element={<SignupPage />} />
       <Route path="/accounts/sign-in" element={<LoginPage />} />
+      <Route path='/dashboard' element={<Dashboard />} />
       <Route path="/dashboard/services" element={<ServicesPage />} />
+      <Route path='/dashboard/dynamic-form/:id' element={<DynamicFormPage />} />
       <Route path='/dashboard/offers' element={<OfferPage />} />
       <Route path='/dashboard/calendar' element={<Calendar />} />
       <Route path='/stores/create' element={<CreateStore />} />
@@ -29,7 +33,6 @@ const AppRoutes = () => {
       <Route path="/dashboard/bookings/:id/view" element={<BookingDetails />} />
       <Route path='/dashboard/staff' element={<StaffManagement />} />
       <Route path='/dashboard/staff/:id/view' element={<StaffMetricsPage />} />
-
       <Route path='/dashboard/socials' element={<Socials />} />
       <Route path="/dashboard/reviews" element={<Reviews />} />
       <Route path="/dashboard/settings" element={<SettingsPage />} />

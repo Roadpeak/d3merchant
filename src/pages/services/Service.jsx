@@ -37,58 +37,54 @@ const ServicesPage = () => {
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-primary text-white py-1 px-6 rounded-md text-[13px] -mb-4 hover:bg-primary-dark transition"
+                    className="bg-primary text-white py-2 px-6 rounded-md text-sm font-semibold hover:bg-primary-dark transition duration-300"
                 >
                     Add Service
                 </button>
             }
         >
-            <div className="overflow-x-auto mt-6">
-                <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg">
-                    <thead className="bg-gray-100 text-primary">
-                        <tr>
-                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Img</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Service Name</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Price (KES)</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Duration</th>
-                            <th className="py-3 px-4 text-left text-sm font-medium uppercase">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {services?.length > 0 ? (
-                            services.map((service) => (
-                                <tr key={service.id} className="border-t border-gray-200 hover:bg-gray-50">
-                                    <td className="py-3 px-4 text-sm text-gray-900">
-                                        <img src={service.image_url} className='w-[60px] h-[60px] object-cover rounded-full' alt="" />
-                                    </td>
-                                    <td className="py-3 px-4 text-sm text-gray-900">{service.name}</td>
-                                    <td className="py-3 px-4 text-sm text-gray-600">{service.price}</td>
-                                    <td className="py-3 px-4 text-sm text-gray-600">{service.duration} mins</td>
-                                    <td className="py-3 px-4">
-                                        <button
-                                            onClick={() => { } /* Implement edit */}
-                                            className="bg-blue-500 text-white py-1 px-3 rounded-lg text-xs hover:bg-blue-600"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            onClick={() => { } /* Implement delete */}
-                                            className="bg-red-500 text-white py-1 px-3 rounded-lg text-xs ml-2 hover:bg-red-600"
-                                        >
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="4" className="py-3 px-4 text-center text-gray-600">
-                                    No services available. Add a new service to get started.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-6">
+                {services?.length > 0 ? (
+                    services.map((service) => (
+                        <div key={service.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300">
+                            <img
+                                src={service.image_url}
+                                alt={service.name}
+                                className="w-full h-48 object-cover"
+                            />
+                            <div className="p-6">
+                                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 capitalize">
+                                    {service.name}
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    Price: <span className="font-semibold text-primary">KES {service.price}</span>
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Duration: <span className="font-semibold">{service.duration} mins</span>
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 truncate">{service.description}</p>
+                                <div className="mt-6 flex items-center justify-end gap-3">
+                                    <button
+                                        onClick={() => { } /* Implement edit */}
+                                        className="bg-primary text-white px-6 py-1 rounded-md text-sm font-semibold hover:bg-blue-600 transition duration-300"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => { } /* Implement delete */}
+                                        className="bg-red-500 text-white px-6 py-1 rounded-md text-sm font-semibold hover:bg-red-600 transition duration-300"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="col-span-full text-center text-gray-600 dark:text-gray-400">
+                        No services available. Add a new service to get started.
+                    </div>
+                )}
             </div>
 
             <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title="Add Service">

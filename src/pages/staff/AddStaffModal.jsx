@@ -24,12 +24,12 @@ const AddStaffModal = ({ isOpen, onClose }) => {
         setError(null);
 
         try {
-            const result = await addStaff(staffData);  // Use the addStaff function
+            const result = await addStaff(staffData);
             console.log('Staff added successfully:', result);
             onClose();
         } catch (error) {
             console.error('Error adding staff:', error);
-            setError(error.response?.data?.error || 'Failed to add staff'); // Handle error
+            setError(error.response?.data?.error || 'Failed to add staff');
         } finally {
             setIsLoading(false);
         }
@@ -38,62 +38,89 @@ const AddStaffModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <Modal title="Add new staff" isOpen={isOpen} onClose={onClose}>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    name="name"
-                    value={staffData.name}
-                    onChange={handleChange}
-                    placeholder="Name"
-                    className="border w-full px-4 py-2 mb-4 rounded-md"
-                    required
-                />
-                <input
-                    type="email"
-                    name="email"
-                    value={staffData.email}
-                    onChange={handleChange}
-                    placeholder="Email"
-                    className="border w-full px-4 py-2 mb-4 rounded-md"
-                    required
-                />
-                <input
-                    type="text"
-                    name="phoneNumber"
-                    value={staffData.phoneNumber}
-                    onChange={handleChange}
-                    placeholder="Phone Number"
-                    className="border w-full px-4 py-2 mb-4 rounded-md"
-                />
-                <select
-                    name="status"
-                    value={staffData.status}
-                    onChange={handleChange}
-                    className="border w-full px-4 py-2 mb-4 rounded-md"
-                >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
+        <Modal title="Add New Staff" isOpen={isOpen} onClose={onClose}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Name
+                    </label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={staffData.name}
+                        onChange={handleChange}
+                        placeholder="Enter staff name"
+                        className="border w-full px-4 py-1.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={staffData.email}
+                        onChange={handleChange}
+                        placeholder="Enter email address"
+                        className="border w-full px-4 py-1.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number
+                    </label>
+                    <input
+                        type="text"
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        value={staffData.phoneNumber}
+                        onChange={handleChange}
+                        placeholder="Enter phone number"
+                        className="border w-full px-4 py-1.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                    </label>
+                    <select
+                        id="status"
+                        name="status"
+                        value={staffData.status}
+                        onChange={handleChange}
+                        className="border w-full px-4 py-1.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
 
                 {error && (
-                    <div className="text-red-500 text-sm mb-4">
+                    <div className="text-red-500 text-sm">
                         {error}
                     </div>
                 )}
 
-                <div className="flex justify-between">
+                <div className="flex justify-end gap-2">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="bg-gray-400 text-white px-4 py-2 rounded-md"
+                        className="bg-gray-300 text-gray-700 px-6 text-[14px] py-1 rounded-md hover:bg-gray-400"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
-                        className="bg-blue-500 text-white px-4 py-2 rounded-md"
-                        disabled={isLoading}  // Disable the button while loading
+                        className="bg-primary text-white px-6 py-1 text-[14px] rounded-md disabled:bg-blue-300"
+                        disabled={isLoading}
                     >
                         {isLoading ? 'Adding...' : 'Add Staff'}
                     </button>
