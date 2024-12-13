@@ -106,17 +106,39 @@ const AccountPage = () => {
                         <div className="mt-4 bg-white p-6 rounded-md shadow-md">
                             <h3 className="text-xl font-semibold">Subscription</h3>
                             <div className="mt-6 space-y-4">
+                                {/* Plan Info */}
                                 <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium">Plan</label>
-                                    <p className="text-gray-700">{userInfo.subscriptionPlan}</p>
+                                    <label className="text-sm font-medium">Your Current Plan</label>
+                                    <p className="text-gray-700 font-semibold">Pro Plan</p> {/* Placeholder for subscription plan */}
                                 </div>
+
+                                {/* Plan Benefits */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium">Features</label>
+                                        <p className="text-gray-700">Access to basic features, advanced analytics</p> {/* Placeholder for features */}
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium">Usage</label>
+                                        <p className="text-gray-700">10 GB used of 50 GB</p> {/* Placeholder for usage */}
+                                    </div>
+                                </div>
+
+                                {/* Upgrade Option */}
                                 <div className="flex justify-between items-center">
-                                    <button className="bg-primary text-white py-1 px-4 rounded-md">Upgrade Plan</button>
-                                    <button className="text-primary hover:underline">Cancel Subscription</button>
+                                    <button className="bg-primary text-white py-2 px-6 rounded-md">Upgrade Plan</button>
+                                    <div className="text-sm text-gray-500">Unlock advanced features, higher usage limits, and priority support.</div>
+                                </div>
+
+                                {/* Cancel Subscription */}
+                                <div className="flex justify-between items-center mt-4">
+                                    <button className="text-red-500 hover:underline">Cancel Subscription</button>
+                                    <div className="text-sm text-gray-500">Note: You will lose access to premium features upon cancellation.</div>
                                 </div>
                             </div>
                         </div>
                     )}
+
 
                     {activeTab === 3 && (
                         <div className="mt-4 bg-white p-6 rounded-md shadow-md">

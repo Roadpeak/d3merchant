@@ -118,6 +118,7 @@ const SettingsPage = () => {
                             <h3 className="text-xl font-semibold">Billing Settings</h3>
                             <div className="mt-4 bg-white p-6 rounded-md shadow-md space-y-6">
                                 <div className="space-y-4">
+                                    {/* Payment Method */}
                                     <div className="flex justify-between items-center">
                                         <label className="text-sm font-medium">Payment Method</label>
                                         <select
@@ -129,6 +130,8 @@ const SettingsPage = () => {
                                             <option value="bank-transfer">Bank Transfer</option>
                                         </select>
                                     </div>
+
+                                    {/* Billing Address */}
                                     <div className="flex justify-between items-center">
                                         <label className="text-sm font-medium">Billing Address</label>
                                         <input
@@ -136,6 +139,29 @@ const SettingsPage = () => {
                                             className="p-2 border border-gray-300 rounded-md"
                                             placeholder="Enter billing address"
                                         />
+                                    </div>
+
+                                    {/* Billing History */}
+                                    <div className="space-y-4 mt-6">
+                                        <h4 className="text-lg font-semibold">Billing History</h4>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-medium">Last Payment</label>
+                                            <p className="text-gray-700">$99.99 (Completed)</p>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-medium">Next Payment</label>
+                                            <p className="text-gray-700">$99.99 (Due in 15 days)</p>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-medium">Payment Method</label>
+                                            <p className="text-gray-700">Credit Card - **** 1234</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Change Payment Method */}
+                                    <div className="flex justify-between items-center mt-6">
+                                        <button className="text-primary hover:underline">Update Payment Method</button>
+                                        <div className="text-sm text-gray-500">Switch to a new card or payment provider.</div>
                                     </div>
                                 </div>
                             </div>
