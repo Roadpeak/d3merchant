@@ -106,17 +106,16 @@ const AccountPage = () => {
                         <div className="mt-4 bg-white p-6 rounded-md shadow-md">
                             <h3 className="text-xl font-semibold">Subscription</h3>
                             <div className="mt-6 space-y-4">
-                                {/* Plan Info */}
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">Your Current Plan</label>
-                                    <p className="text-gray-700 font-semibold">Pro Plan</p> {/* Placeholder for subscription plan */}
+                                    <p className="text-gray-700 font-semibold">Pro Plan</p>
                                 </div>
 
                                 {/* Plan Benefits */}
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
                                         <label className="text-sm font-medium">Features</label>
-                                        <p className="text-gray-700">Access to basic features, advanced analytics</p> {/* Placeholder for features */}
+                                        <p className="text-gray-700">Access to basic features, advanced analytics</p>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <label className="text-sm font-medium">Usage</label>

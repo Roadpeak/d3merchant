@@ -24,7 +24,7 @@ const Sidebar = () => {
         { name: "Services", icon: <FaLayerGroup />, path: "/dashboard/services" },
         { name: "Offers", icon: <FaHandshake />, path: "/dashboard/offers" },
         { name: "Analytics", icon: <FaChartLine />, path: "/dashboard/analytics" },
-        { name: "Calendar", icon: <FaCalendarAlt />, path: "/dashboard/dcalendar" },
+        { name: "Calendar", icon: <FaCalendarAlt />, path: "/dashboard/calendar" },
         { name: "Staff", icon: <FaUsers />, path: "/dashboard/staff" },
         { name: "Bookings", icon: <FaBook />, path: "/dashboard/bookings" },
         { name: "Reviews", icon: <FaComments />, path: "/dashboard/reviews" },
