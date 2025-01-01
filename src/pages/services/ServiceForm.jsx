@@ -13,10 +13,10 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
         description: '',
         type: 'fixed',
         store_id: 'eff53f50-b48a-11ef-915d-a3ac7236b7f5',
-        dynamicFields: [] // Dynamic fields for dynamic services
+        dynamicFields: []
     });
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate(); // Hook for navigation
+    const navigate = useNavigate();
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
