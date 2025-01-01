@@ -70,7 +70,6 @@ const Invoice = () => {
             </table>
           </div>
 
-          {/* Payment Instructions */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold text-gray-800">Payment Instructions:</h3>
             <p className="text-sm text-gray-500 mt-1">
@@ -81,7 +80,6 @@ const Invoice = () => {
             </p>
           </div>
 
-          {/* Actions */}
           <div className="mt-6 flex flex-col md:flex-row gap-4">
             <button className="w-full md:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg font-medium shadow hover:bg-blue-700 flex items-center gap-2">
               <FaFilePdf />
