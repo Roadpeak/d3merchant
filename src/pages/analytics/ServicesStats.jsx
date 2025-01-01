@@ -1,6 +1,7 @@
 import React from 'react';
 import { Line, Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, ArcElement } from 'chart.js';
+import FollowersBarChart from './FollowersBarChart';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, ArcElement);
 
@@ -99,7 +100,7 @@ const ServicesStats = () => {
     };
 
     return (
-        <div className="bg-white border mt-4 p-4 rounded-lg border-gray-100 h-auto">
+        <div className="bg-white mt-4 rounded-lg h-auto">
             <div className="flex w-full items-start gap-4">
                 <div className="w-full md:w-[35%] mb-8 border p-4 rounded-md">
                     <h3 className="text-xl font-medium text-gray-800 mb-4">Most Popular Services</h3>
@@ -118,23 +119,24 @@ const ServicesStats = () => {
                 </div>
             </div>
 
-            <div className="border p-4 rounded-lg">
-                <div className="flex w-full gap-4 flex-col md:flex-row">
-                    <div className="h-auto rounded-md border border-gray-100 w-full md:w-[35%]"></div>
-                    <div className="w-full md:w-[65%] border p-4 border-gray-100 rounded-md">
-                        <h3 className="text-xl font-medium text-gray-800 mb-4">Service Rating</h3>
-                        <Bar
-                            data={serviceFeedbackData}
-                            options={{
-                                ...commonOptions,
-                                elements: {
-                                    bar: {
-                                        borderRadius: 10,
-                                    },
+            <div className="flex w-full gap-4 flex-col md:flex-row">
+                <div className="w-full md:w-[50%] mb-8 border p-4 rounded-md">
+                    <h3 className="text-xl font-medium text-gray-800 mb-4">Followers over time</h3>
+                    <FollowersBarChart />
+                </div>
+                <div className="w-full md:w-[50%] border p-4 border-gray-100 rounded-md">
+                    <h3 className="text-xl font-medium text-gray-800 mb-4">Service Rating</h3>
+                    <Bar
+                        data={serviceFeedbackData}
+                        options={{
+                            ...commonOptions,
+                            elements: {
+                                bar: {
+                                    borderRadius: 10,
                                 },
-                            }}
-                        />
-                    </div>
+                            },
+                        }}
+                    />
                 </div>
             </div>
         </div>
