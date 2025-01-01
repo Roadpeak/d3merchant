@@ -17,6 +17,7 @@ import SettingsPage from './pages/settings/Settings'
 import AccountPage from './pages/account/Account'
 import Dashboard from './pages/dashboard/Dashboard'
 import DynamicFormPage from './pages/services/DynamicFormPage'
+import Analytics from './pages/analytics/Analytics'
 
 const AppRoutes = () => {
   return (
@@ -26,6 +27,7 @@ const AppRoutes = () => {
       <Route path='/dashboard' element={<Dashboard />} />
       <Route path="/dashboard/services" element={<ServicesPage />} />
       <Route path='/dashboard/dynamic-form/:id' element={<DynamicFormPage />} />
+      <Route path='/dashboard/analytics' element={<Analytics />} />
       <Route path='/dashboard/offers' element={<OfferPage />} />
       <Route path='/dashboard/calendar' element={<Calendar />} />
       <Route path='/stores/create' element={<CreateStore />} />

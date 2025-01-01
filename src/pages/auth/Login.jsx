@@ -52,64 +52,77 @@ const LoginPage = () => {
     }
   };
 
-
   return (
-    <div className={`${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} min-h-screen flex items-center justify-center`}>
-      <div className="absolute top-4 right-4">
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="text-sm px-3 py-2 bg-gray-200 dark:bg-gray-700 rounded-md shadow hover:bg-gray-300 dark:hover:bg-gray-600"
-        >
-          {darkMode ? 'Light Mode' : 'Dark Mode'}
-        </button>
-      </div>
+    <div
+      className={`${darkMode ? 'bg-black text-white' : 'bg-gray-900 text-gray-100'} min-h-screen flex items-center justify-center relative`}
+    >
+      {/* Background animation */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#1A3664] to-[#1A3664] opacity-30 animate-pulse"></div>
 
-      <div className="w-full max-w-md px-6 py-8 bg-white dark:bg-gray-800 shadow-md rounded-lg">
-        <h2 className="text-2xl font-semibold text-center mb-6">Login</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className="w-full px-4 py-2 border dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              className="w-full px-4 py-2 border dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <label className="flex items-center">
-              <input type="checkbox" className="mr-2 rounded" />
-              Remember Me
-            </label>
-            <a href="/forgot-password" className="text-primary hover:underline">
-              Forgot Password?
+      <div className="w-full max-w-7xl flex items-center justify-center space-x-8 px-8 py-12">
+        {/* Left Column - Login Form */}
+        <div className="w-full max-w-md bg-gradient-to-r from-[#1A3664] via-[#1A3664] to-[#1A3664] dark:bg-gradient-to-r dark:from-[#1A3664] dark:via-[#1A3664] dark:to-[#1A3664] shadow-xl rounded-lg p-8 z-10 text-center transform transition-transform duration-300 ease-in-out hover:scale-105">
+          <h2 className="text-3xl font-semibold text-white mb-6">Login to Your Account</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="relative">
+              <label className="absolute text-sm text-white left-4 top-2 transform -translate-y-1/2 transition-all ease-in-out">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border-b-2 border-white dark:border-gray-700 bg-transparent text-white dark:text-gray-100 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-[#1A3664] rounded-md transition-all ease-in-out"
+                placeholder="Enter your email"
+              />
+            </div>
+
+            <div className="relative">
+              <label className="absolute text-sm text-white left-4 top-2 transform -translate-y-1/2 transition-all ease-in-out">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border-b-2 border-white dark:border-gray-700 bg-transparent text-white dark:text-gray-100 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-[#1A3664] rounded-md transition-all ease-in-out"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <div className="flex justify-between items-center text-sm">
+              <label className="flex items-center text-white">
+                <input type="checkbox" className="mr-2 rounded" />
+                Remember Me
+              </label>
+              <a href="/forgot-password" className="text-[#1A3664] hover:text-[#1A3664]">
+                Forgot Password?
+              </a>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-3 text-white bg-[#1A3664] hover:bg-[#1A3664] focus:outline-none focus:ring-2 focus:ring-[#1A3664] rounded-md transition-all ease-in-out ${loading && 'opacity-50 cursor-not-allowed'}`}
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-300 mt-4">
+            Don’t have an account?{' '}
+            <a href="/signup" className="text-[#1A3664] hover:text-[#1A3664]">
+              Sign Up
             </a>
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2 text-white bg-primary rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${loading && 'opacity-50 cursor-not-allowed'
-              }`}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-          Don't have an account? <a href="/signup" className="text-primary hover:underline">Sign Up</a>
-        </p>
+          </p>
+        </div>
+
+        <div className="w-1/2 hidden md:block">
+        </div>
       </div>
     </div>
   );
