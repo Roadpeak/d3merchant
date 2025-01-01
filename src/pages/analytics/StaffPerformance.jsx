@@ -12,7 +12,7 @@ const StaffPerformance = () => {
                 label: 'Bookings Completed',
                 data: [150, 120, 180, 90],
                 backgroundColor: '#1A3664',
-                borderRadius: 10, 
+                borderRadius: 10,
             },
         ],
     };
@@ -67,8 +67,6 @@ const StaffPerformance = () => {
 
     return (
         <div className="bg-white p-4 rounded-lg shadow-lg border-t mt-4">
-            <h2 className="text-2xl font-semibold text-center text-gray-800 mb-8">Staff Performance Analytics</h2>
-
             <div className="flex w-full flex-col md:flex-row gap-4">
                 <div className="mb-8 border border-gray-100 p-4 rounded-md w-full md:w-[65%]">
                     <h3 className="text-xl font-medium text-gray-800 mb-4">Staff Bookings Completed</h3>
