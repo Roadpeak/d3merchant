@@ -13,11 +13,12 @@ import StaffManagement from './pages/staff/StaffManagement'
 import StaffMetricsPage from './pages/staff/StaffMetrics'
 import Socials from './pages/socials/Socials'
 import Reviews from './pages/reviews/Reviews'
-import SettingsPage from './pages/settings/Settings'
 import AccountPage from './pages/account/Account'
 import Dashboard from './pages/dashboard/Dashboard'
 import DynamicFormPage from './pages/services/DynamicFormPage'
 import Analytics from './pages/analytics/Analytics'
+import BillingPage from './pages/account/Billings'
+import Invoice from './pages/account/Invoice'
 
 const AppRoutes = () => {
   return (
@@ -37,7 +38,8 @@ const AppRoutes = () => {
       <Route path='/dashboard/staff/:id/view' element={<StaffMetricsPage />} />
       <Route path='/dashboard/socials' element={<Socials />} />
       <Route path="/dashboard/reviews" element={<Reviews />} />
-      <Route path="/dashboard/settings" element={<SettingsPage />} />
+      <Route path="/dashboard/billing" element={<BillingPage />} />
+      <Route path="/dashboard/invoice" element={<Invoice />} />
       <Route path="/dashboard/account" element={<AccountPage />} />
 
       <Route path="*" element={<Page404 />} />

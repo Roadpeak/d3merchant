@@ -48,7 +48,7 @@ const RevenueAndPaymentsChart = () => {
         },
         elements: {
             bar: {
-                borderRadius: 10, // Round the top edges of the bars
+                borderRadius: 10,
             },
         },
     };

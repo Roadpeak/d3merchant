@@ -12,6 +12,8 @@ import {
     FaHandshake,
     FaLayerGroup,
     FaUserCircle,
+    FaFileInvoice,
+    FaMoneyBillWave,
 } from "react-icons/fa";
 import { useLocation } from "react-router-dom";
 
@@ -29,7 +31,7 @@ const Sidebar = () => {
         { name: "Bookings", icon: <FaBook />, path: "/dashboard/bookings" },
         { name: "Reviews", icon: <FaComments />, path: "/dashboard/reviews" },
         { name: "Socials", icon: <FaEnvelopeOpenText />, path: "/dashboard/socials" },
-        { name: "Settings", icon: <FaCog />, path: "/dashboard/settings" },
+        { name: "Billing", icon: <FaMoneyBillWave />, path: "/dashboard/billing" },
         { name: "Account", icon: <FaUserCircle />, path: "/dashboard/account" },
         { name: "Logout", icon: <FaSignOutAlt />, path: "/logout" },
     ];
