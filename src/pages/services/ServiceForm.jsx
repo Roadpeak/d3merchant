@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for routing
+import { useNavigate } from 'react-router-dom'; 
 import { createService, uploadImage } from '../../services/api_service';
 
 const ServiceForm = ({ onClose, onServiceAdded }) => {
