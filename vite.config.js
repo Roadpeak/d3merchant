@@ -7,4 +7,15 @@ export default defineConfig({
   build: {
     sourcemap: false,
   },
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      crypto: 'crypto-browserify',
+    },
+  },
+  optimizeDeps: {
+    include: ['crypto-browserify']
+  }
 })

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, Navigate } from 'react-router-dom';
 import SignupPage from './pages/auth/SignUp'
 import LoginPage from './pages/auth/Login'
 import ServicesPage from './pages/services/Service'
@@ -19,13 +19,19 @@ import DynamicFormPage from './pages/services/DynamicFormPage'
 import Analytics from './pages/analytics/Analytics'
 import BillingPage from './pages/account/Billings'
 import Invoice from './pages/account/Invoice'
+import MerchantChatInterface from './pages/dashboard/MerchantChatInterface';
+
+// In your dashboard
+
 
 const AppRoutes = () => {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" />} />
       <Route path="/accounts/sign-up" element={<SignupPage />} />
       <Route path="/accounts/sign-in" element={<LoginPage />} />
       <Route path='/dashboard' element={<Dashboard />} />
+      <Route path='/dashboard/MerchantChatInterface' element={<MerchantChatInterface />} />
       <Route path="/dashboard/services" element={<ServicesPage />} />
       <Route path='/dashboard/dynamic-form/:id' element={<DynamicFormPage />} />
       <Route path='/dashboard/analytics' element={<Analytics />} />

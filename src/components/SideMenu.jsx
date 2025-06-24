@@ -14,6 +14,7 @@ import {
     FaUserCircle,
     FaFileInvoice,
     FaMoneyBillWave,
+
 } from "react-icons/fa";
 import { useLocation } from "react-router-dom";
 
@@ -23,6 +24,7 @@ const Sidebar = () => {
 
     const menuItems = [
         { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
+        { name: "Chat", icon: <FaTachometerAlt />, path: "/dashboard/MerchantChatInterface" },
         { name: "Services", icon: <FaLayerGroup />, path: "/dashboard/services" },
         { name: "Offers", icon: <FaHandshake />, path: "/dashboard/offers" },
         { name: "Analytics", icon: <FaChartLine />, path: "/dashboard/analytics" },

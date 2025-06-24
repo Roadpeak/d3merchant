@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { uploadImage } from '../../services/api_service';
+import Cookies from 'js-cookie';
+import CryptoJS from 'crypto-js';
 
 const CreateStore = () => {
     const [step, setStep] = useState(1); // Step tracker
@@ -21,6 +23,7 @@ const CreateStore = () => {
     });
     const [logoFile, setLogoFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Handle input changes
     const handleChange = (e) => {
@@ -39,7 +42,7 @@ const CreateStore = () => {
             } else {
                 days.add(day);
             }
-            return { ...prevData, working_days: Array.from(days) }; 
+            return { ...prevData, working_days: Array.from(days) };
         });
     };
 
@@ -63,12 +66,147 @@ const CreateStore = () => {
         }
     };
 
+    // Validate form data
+    const validateForm = () => {
+        const requiredFields = ['name', 'location', 'primary_email', 'phone_number', 'description', 'opening_time', 'closing_time'];
+
+        for (const field of requiredFields) {
+            if (!formData[field].trim()) {
+                toast.error(`${field.replace('_', ' ')} is required`);
+                return false;
+            }
+        }
+
+        if (formData.working_days.length === 0) {
+            toast.error('Please select at least one working day');
+            return false;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.primary_email)) {
+            toast.error('Please enter a valid email address');
+            return false;
+        }
+
+        return true;
+    };
+
+    // Function to decrypt and get auth data
+    const getAuthData = () => {
+        try {
+            const encryptedData = Cookies.get('auth_data');
+            console.log('Encrypted data from cookie:', encryptedData);
+
+            if (!encryptedData) {
+                throw new Error('No authentication data found');
+            }
+
+            const secretKey = import.meta.env.VITE_SECRET_KEY;
+            console.log('Secret key exists:', !!secretKey);
+
+            const decryptedBytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
+            const decryptedData = JSON.parse(decryptedBytes.toString(CryptoJS.enc.Utf8));
+
+            console.log('Decrypted auth data:', decryptedData);
+
+            return decryptedData;
+        } catch (error) {
+            console.error('Error decrypting auth data:', error);
+            throw new Error('Failed to retrieve authentication data. Please log in again.');
+        }
+    };
+
+    // Submit store data to API
+    const submitStoreData = async (storeData) => {
+        try {
+            // Get decrypted auth data
+            const authData = getAuthData();
+            const token = authData.token;
+            const merchantId = authData.merchant.id;
+
+            console.log('Token extracted:', token ? 'Token exists' : 'No token');
+            console.log('Merchant ID:', merchantId);
+
+            if (!token) {
+                throw new Error('Authentication token not found. Please log in again.');
+            }
+
+            // Add merchant_id to store data
+            const storeDataWithMerchant = {
+                ...storeData,
+                merchant_id: merchantId
+            };
+
+            console.log('Request headers:', {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token.substring(0, 10)}...`, // Log first 10 chars only for security
+            });
+
+            console.log('Store data being sent:', storeDataWithMerchant);
+
+            const response = await fetch('http://localhost:4000/api/v1/stores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(storeDataWithMerchant),
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.log('Error response:', errorData);
+                throw new Error(errorData.message || 'Failed to create store');
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error submitting store data:', error);
+            throw error;
+        }
+    };
+
     // Handle form submission
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Perform validation or API call here
-        console.log('Form Data:', formData);
-        toast.success('Store created successfully!');
+
+        if (!validateForm()) {
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+
+            // Prepare data for submission
+            const submissionData = {
+                ...formData,
+                // Ensure working_days is properly formatted
+                working_days: formData.working_days,
+                // Add any additional processing here
+            };
+
+            console.log('Submitting form data:', submissionData);
+
+            const result = await submitStoreData(submissionData);
+
+            toast.success('Store created successfully!');
+            console.log('Store created:', result);
+
+            // Optional: Reset form or redirect
+            // setFormData({ ... reset to initial state ... });
+            // navigate('/stores'); // if using react-router
+
+        } catch (error) {
+            toast.error(error.message || 'Failed to create store. Please try again.');
+            console.error('Submission error:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -208,7 +346,7 @@ const CreateStore = () => {
                                     type="button"
                                     onClick={handleLogoUpload}
                                     disabled={isUploading}
-                                    className="mt-2 bg-primary text-white py-1 px-6 rounded-md"
+                                    className="mt-2 bg-primary text-white py-1 px-6 rounded-md disabled:opacity-50"
                                 >
                                     {isUploading ? 'Uploading...' : 'Upload Logo'}
                                 </button>
@@ -276,7 +414,8 @@ const CreateStore = () => {
                             <button
                                 type="button"
                                 onClick={() => setStep((prevStep) => prevStep - 1)}
-                                className="bg-gray-300 text-black py-1 px-6 rounded-md"
+                                disabled={isSubmitting}
+                                className="bg-gray-300 text-black py-1 px-6 rounded-md disabled:opacity-50"
                             >
                                 Back
                             </button>
@@ -292,9 +431,10 @@ const CreateStore = () => {
                         ) : (
                             <button
                                 type="submit"
-                                    className="bg-primary text-white py-1 px-6 rounded-md"
+                                disabled={isSubmitting}
+                                className="bg-primary text-white py-1 px-6 rounded-md disabled:opacity-50"
                             >
-                                Submit
+                                {isSubmitting ? 'Creating Store...' : 'Submit'}
                             </button>
                         )}
                     </div>

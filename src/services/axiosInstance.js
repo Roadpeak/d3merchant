@@ -3,7 +3,7 @@ import CryptoJS from 'crypto-js';
 import Cookies from 'js-cookie';
 
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
+    baseURL: 'http://localhost:4000/api/v1',
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
