@@ -10,7 +10,6 @@ import Page404 from './pages/Page404'
 import Booking from './pages/bookings/Bookings'
 import BookingDetails from './pages/bookings/BookingDetails'
 import StaffManagement from './pages/staff/StaffManagement'
-import StaffMetricsPage from './pages/staff/StaffMetrics'
 import Socials from './pages/socials/Socials'
 import Reviews from './pages/reviews/Reviews'
 import AccountPage from './pages/account/Account'
@@ -41,7 +40,6 @@ const AppRoutes = () => {
       <Route path="/dashboard/bookings" element={<Booking />} />
       <Route path="/dashboard/bookings/:id/view" element={<BookingDetails />} />
       <Route path='/dashboard/staff' element={<StaffManagement />} />
-      <Route path='/dashboard/staff/:id/view' element={<StaffMetricsPage />} />
       <Route path='/dashboard/socials' element={<Socials />} />
       <Route path="/dashboard/reviews" element={<Reviews />} />
       <Route path="/dashboard/billing" element={<BillingPage />} />
