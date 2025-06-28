@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Plus, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import Layout from '../../src/elements/Layout';
 
 const BookingCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -156,219 +157,209 @@ const BookingCalendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <CalendarDays className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">Booking Calendar</h1>
-                  <p className="text-blue-100">Manage your service appointments</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-colors duration-200 flex items-center space-x-2">
-                  <Plus className="w-4 h-4" />
-                  <span>New Booking</span>
-                </button>
-                <button className="p-2 bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-colors duration-200">
-                  <Users className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          {/* Navigation */}
-          <div className="p-6 bg-white border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => navigateMonth(-1)}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors duration-200"
-                >
-                  <ChevronLeft className="w-5 h-5 text-slate-600" />
-                </button>
-                <h2 className="text-xl font-semibold text-slate-800">
-                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </h2>
-                <button
-                  onClick={() => navigateMonth(1)}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors duration-200"
-                >
-                  <ChevronRight className="w-5 h-5 text-slate-600" />
-                </button>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentDate(new Date())}
-                  className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors duration-200"
-                >
-                  Today
-                </button>
-                <div className="flex bg-slate-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('month')}
-                    className={`px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
-                      viewMode === 'month' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'
-                    }`}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setViewMode('week')}
-                    className={`px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
-                      viewMode === 'week' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'
-                    }`}
-                  >
-                    Week
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+    <Layout
+      title="Booking Calendar"
+      rightContent={
+        <div className="flex items-center space-x-3">
+          <button className="bg-primary text-white py-2 px-4 text-sm font-semibold rounded-md shadow-md hover:bg-primary-dark transition duration-300 flex items-center space-x-2">
+            <Plus className="w-4 h-4" />
+            <span>New Booking</span>
+          </button>
+          <button className="bg-gray-500 text-white py-2 px-3 text-sm font-semibold rounded-md shadow-md hover:bg-gray-600 transition duration-300">
+            <Users className="w-4 h-4" />
+          </button>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Calendar Grid */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-              {/* Days of Week Header */}
-              <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
-                {daysOfWeek.map((day) => (
-                  <div key={day} className="p-4 text-center font-semibold text-slate-600 text-sm">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Calendar Days */}
-              <div className="grid grid-cols-7">
-                {calendarDays.map((day, index) => (
-                  <div
-                    key={index}
-                    onClick={() => setSelectedDate(day.date)}
-                    className={`
-                      min-h-[120px] p-3 border-b border-r border-slate-100 cursor-pointer transition-all duration-200
-                      ${!day.isCurrentMonth ? 'bg-slate-50/50 text-slate-400' : 'bg-white hover:bg-slate-50'}
-                      ${isToday(day.date) ? 'bg-blue-50 border-blue-200' : ''}
-                      ${isSelected(day.date) ? 'bg-blue-100 border-blue-300' : ''}
-                    `}
+      }
+    >
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Navigation */}
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 mb-6 overflow-hidden">
+            <div className="p-6 bg-white border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => navigateMonth(-1)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors duration-200"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`
-                        text-sm font-medium
-                        ${isToday(day.date) ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : ''}
-                        ${!day.isCurrentMonth ? 'text-slate-400' : 'text-slate-700'}
-                      `}>
-                        {day.date.getDate()}
-                      </span>
-                      {getBookingIndicator(day.bookings)}
-                    </div>
-                    
-                    <div className="space-y-1">
-                      {day.bookings.slice(0, 2).map((booking) => (
-                        <div
-                          key={booking.id}
-                          className={`
-                            text-xs p-1 rounded truncate flex items-center space-x-1
-                            ${booking.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : ''}
-                            ${booking.status === 'pending' ? 'bg-amber-100 text-amber-700' : ''}
-                            ${booking.status === 'completed' ? 'bg-blue-100 text-blue-700' : ''}
-                            ${booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : ''}
-                          `}
-                        >
-                          <span>{booking.time}</span>
-                          <span className="truncate">{booking.service}</span>
-                        </div>
-                      ))}
-                      {day.bookings.length > 2 && (
-                        <div className="text-xs text-slate-500 pl-1">
-                          +{day.bookings.length - 2} more
-                        </div>
-                      )}
-                    </div>
+                    <ChevronLeft className="w-5 h-5 text-slate-600" />
+                  </button>
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                  </h2>
+                  <button
+                    onClick={() => navigateMonth(1)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors duration-200"
+                  >
+                    <ChevronRight className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentDate(new Date())}
+                    className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors duration-200"
+                  >
+                    Today
+                  </button>
+                  <div className="flex bg-slate-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode('month')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
+                        viewMode === 'month' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'
+                      }`}
+                    >
+                      Month
+                    </button>
+                    <button
+                      onClick={() => setViewMode('week')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
+                        viewMode === 'week' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'
+                      }`}
+                    >
+                      Week
+                    </button>
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Selected Date Bookings */}
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-blue-600" />
-                {selectedDate ? `${selectedDate.toLocaleDateString()}` : "Today's"} Bookings
-              </h3>
-              <div className="space-y-3">
-                {getSelectedDateBookings().map((booking) => (
-                  <div key={booking.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(booking.status)}
-                        <span className="font-medium text-slate-800 text-sm">{booking.clientName}</span>
-                      </div>
-                      <span className="text-xs text-slate-500 uppercase">{booking.status}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Calendar Grid */}
+            <div className="lg:col-span-3">
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                {/* Days of Week Header */}
+                <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
+                  {daysOfWeek.map((day) => (
+                    <div key={day} className="p-4 text-center font-semibold text-slate-600 text-sm">
+                      {day}
                     </div>
-                    <div className="text-sm text-slate-600">
-                      <p className="font-medium">{booking.service}</p>
-                      <div className="flex justify-between items-center mt-1">
-                        <span>{booking.time} ({booking.duration}min)</span>
-                        <span className="font-semibold">${booking.price}</span>
-                      </div>
-                    </div>
-                  </div>
-                )) || (
-                  <p className="text-slate-500 text-sm">No bookings for this day</p>
-                )}
+                  ))}
+                </div>
                 
-                {getSelectedDateBookings().length > 0 && (
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-blue-800">Total Revenue:</span>
-                      <span className="text-lg font-bold text-blue-900">
-                        ${getTotalRevenue(getSelectedDateBookings())}
-                      </span>
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7">
+                  {calendarDays.map((day, index) => (
+                    <div
+                      key={index}
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`
+                        min-h-[120px] p-3 border-b border-r border-slate-100 cursor-pointer transition-all duration-200
+                        ${!day.isCurrentMonth ? 'bg-slate-50/50 text-slate-400' : 'bg-white hover:bg-slate-50'}
+                        ${isToday(day.date) ? 'bg-blue-50 border-blue-200' : ''}
+                        ${isSelected(day.date) ? 'bg-blue-100 border-blue-300' : ''}
+                      `}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`
+                          text-sm font-medium
+                          ${isToday(day.date) ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : ''}
+                          ${!day.isCurrentMonth ? 'text-slate-400' : 'text-slate-700'}
+                        `}>
+                          {day.date.getDate()}
+                        </span>
+                        {getBookingIndicator(day.bookings)}
+                      </div>
+                      
+                      <div className="space-y-1">
+                        {day.bookings.slice(0, 2).map((booking) => (
+                          <div
+                            key={booking.id}
+                            className={`
+                              text-xs p-1 rounded truncate flex items-center space-x-1
+                              ${booking.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : ''}
+                              ${booking.status === 'pending' ? 'bg-amber-100 text-amber-700' : ''}
+                              ${booking.status === 'completed' ? 'bg-blue-100 text-blue-700' : ''}
+                              ${booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : ''}
+                            `}
+                          >
+                            <span>{booking.time}</span>
+                            <span className="truncate">{booking.service}</span>
+                          </div>
+                        ))}
+                        {day.bookings.length > 2 && (
+                          <div className="text-xs text-slate-500 pl-1">
+                            +{day.bookings.length - 2} more
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Booking Status Legend */}
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">Status Legend</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm text-slate-600">Confirmed</span>
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Selected Date Bookings */}
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                  <Clock className="w-5 h-5 mr-2 text-blue-600" />
+                  {selectedDate ? `${selectedDate.toLocaleDateString()}` : "Today's"} Bookings
+                </h3>
+                <div className="space-y-3">
+                  {getSelectedDateBookings().map((booking) => (
+                    <div key={booking.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          {getStatusIcon(booking.status)}
+                          <span className="font-medium text-slate-800 text-sm">{booking.clientName}</span>
+                        </div>
+                        <span className="text-xs text-slate-500 uppercase">{booking.status}</span>
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        <p className="font-medium">{booking.service}</p>
+                        <div className="flex justify-between items-center mt-1">
+                          <span>{booking.time} ({booking.duration}min)</span>
+                          <span className="font-semibold">${booking.price}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )) || (
+                    <p className="text-slate-500 text-sm">No bookings for this day</p>
+                  )}
+                  
+                  {getSelectedDateBookings().length > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-800">Total Revenue:</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          ${getTotalRevenue(getSelectedDateBookings())}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center space-x-3">
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm text-slate-600">Pending</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-slate-600">Completed</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <XCircle className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-slate-600">Cancelled</span>
+              </div>
+
+              {/* Booking Status Legend */}
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">Status Legend</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span className="text-sm text-slate-600">Confirmed</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm text-slate-600">Pending</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm text-slate-600">Completed</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <XCircle className="w-4 h-4 text-red-500" />
+                    <span className="text-sm text-slate-600">Cancelled</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

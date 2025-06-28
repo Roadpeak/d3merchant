@@ -23,85 +23,85 @@ import { useLocation } from "react-router-dom";
 const Sidebar = () => {
     const [darkMode, setDarkMode] = useState(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('darkMode') === 'true' || 
-                   window.matchMedia('(prefers-color-scheme: dark)').matches;
+            return localStorage.getItem('darkMode') === 'true' ||
+                window.matchMedia('(prefers-color-scheme: dark)').matches;
         }
         return false;
     });
-    
+
     const [isCollapsed, setIsCollapsed] = useState(false);
     const location = useLocation();
 
     // Apply dark mode to document
-    useEffect(() => {
-        document.documentElement.classList.toggle('dark', darkMode);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('darkMode', darkMode.toString());
-        }
-    }, [darkMode]);
+    // useEffect(() => {
+    //     document.documentElement.classList.toggle('dark', darkMode);
+    //     if (typeof window !== 'undefined') {
+    //         localStorage.setItem('darkMode', darkMode.toString());
+    //     }
+    // }, [darkMode]);
 
     const menuItems = [
-        { 
-            name: "Dashboard", 
-            icon: <LayoutDashboard size={20} />, 
+        {
+            name: "Dashboard",
+            icon: <LayoutDashboard size={20} />,
             path: "/dashboard",
             badge: null
         },
-        { 
-            name: "Chat", 
-            icon: <MessageSquare size={20} />, 
+        {
+            name: "Chat",
+            icon: <MessageSquare size={20} />,
             path: "/dashboard/MerchantChatInterface",
             badge: "3"
         },
-        { 
-            name: "Services", 
-            icon: <Layers size={20} />, 
-            path: "/dashboard/services" 
+        {
+            name: "Services",
+            icon: <Layers size={20} />,
+            path: "/dashboard/services"
         },
-        { 
-            name: "Offers", 
-            icon: <HandHeart size={20} />, 
-            path: "/dashboard/offers" 
+        {
+            name: "Offers",
+            icon: <HandHeart size={20} />,
+            path: "/dashboard/offers"
         },
-        { 
-            name: "Analytics", 
-            icon: <TrendingUp size={20} />, 
-            path: "/dashboard/analytics" 
+        {
+            name: "Analytics",
+            icon: <TrendingUp size={20} />,
+            path: "/dashboard/analytics"
         },
-        { 
-            name: "Calendar", 
-            icon: <Calendar size={20} />, 
-            path: "/dashboard/calendar" 
+        {
+            name: "Calendar",
+            icon: <Calendar size={20} />,
+            path: "/dashboard/calendar"
         },
-        { 
-            name: "Staff", 
-            icon: <Users size={20} />, 
-            path: "/dashboard/staff" 
+        {
+            name: "Staff",
+            icon: <Users size={20} />,
+            path: "/dashboard/staff"
         },
-        { 
-            name: "Bookings", 
-            icon: <BookOpen size={20} />, 
-            path: "/dashboard/bookings" 
+        {
+            name: "Bookings",
+            icon: <BookOpen size={20} />,
+            path: "/dashboard/bookings"
         },
-        { 
-            name: "Reviews", 
-            icon: <MessageCircle size={20} />, 
-            path: "/dashboard/reviews" 
+        {
+            name: "Reviews",
+            icon: <MessageCircle size={20} />,
+            path: "/dashboard/reviews"
         },
-        { 
-            name: "Socials", 
-            icon: <Share2 size={20} />, 
-            path: "/dashboard/socials" 
+        {
+            name: "Socials",
+            icon: <Share2 size={20} />,
+            path: "/dashboard/socials"
         },
-        { 
-            name: "Billing", 
-            icon: <CreditCard size={20} />, 
-            path: "/dashboard/billing" 
+        {
+            name: "Billing",
+            icon: <CreditCard size={20} />,
+            path: "/dashboard/billing"
         },
-        { 
-            name: "Account", 
-            icon: <User size={20} />, 
-            path: "/dashboard/account" 
+        {
+            name: "Account",
+            icon: <User size={20} />,
+            path: "/dashboard/account"
         },
     ];
 
@@ -114,7 +114,7 @@ const Sidebar = () => {
     };
 
     return (
-        <aside 
+        <aside
             className={`
                 ${isCollapsed ? 'w-16' : 'w-64'} 
                 h-screen flex flex-col
@@ -134,41 +134,18 @@ const Sidebar = () => {
                             <span className="text-white font-bold text-sm">BP</span>
                         </div>
                         <h1 className="font-semibold text-gray-900 dark:text-white">
-                            Business Panel
+                            Store Admin
                         </h1>
                     </div>
                 )}
                 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={toggleDarkMode}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
-                    >
-                        {darkMode ? 
-                            <Sun size={16} className="text-gray-600 dark:text-gray-400" /> : 
-                            <Moon size={16} className="text-gray-600 dark:text-gray-400" />
-                        }
-                    </button>
-                    
-                    <button
-                        onClick={toggleCollapse}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    >
-                        {isCollapsed ? 
-                            <ChevronRight size={16} className="text-gray-600 dark:text-gray-400" /> :
-                            <ChevronLeft size={16} className="text-gray-600 dark:text-gray-400" />
-                        }
-                    </button>
-                </div>
             </header>
 
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                 {menuItems.map((item, index) => {
                     const isActive = location.pathname === item.path;
-                    
+
                     return (
                         <a
                             key={index}
@@ -176,8 +153,8 @@ const Sidebar = () => {
                             className={`
                                 group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
                                 transition-all duration-200 ease-in-out relative
-                                ${isActive 
-                                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25' 
+                                ${isActive
+                                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25'
                                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                                 }
                                 ${isCollapsed ? 'justify-center' : ''}
@@ -188,7 +165,7 @@ const Sidebar = () => {
                             <span className={`flex-shrink-0 ${isActive ? 'text-white' : ''}`}>
                                 {item.icon}
                             </span>
-                            
+
                             {!isCollapsed && (
                                 <>
                                     <span className="flex-1">{item.name}</span>
@@ -199,7 +176,7 @@ const Sidebar = () => {
                                     )}
                                 </>
                             )}
-                            
+
                             {/* Active indicator */}
                             {isActive && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
@@ -224,7 +201,7 @@ const Sidebar = () => {
                     <LogOut size={20} />
                     {!isCollapsed && <span>Logout</span>}
                 </button>
-                
+
                 {!isCollapsed && (
                     <p className="text-xs text-center text-gray-500 dark:text-gray-400">
                         © {new Date().getFullYear()} d3 ltd.

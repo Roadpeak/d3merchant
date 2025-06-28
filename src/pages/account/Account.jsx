@@ -1,16 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
-
-
-// Mock Layout component
-const Layout = ({ title, children }) => (
-    <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 py-4">
-            <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-        </div>
-        {children}
-    </div>
-);
+import Layout from '../../elements/Layout';
 
 // Mock API service
 const getProfile = async () => {

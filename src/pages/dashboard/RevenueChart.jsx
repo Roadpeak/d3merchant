@@ -1,85 +1,95 @@
 import React from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-} from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip);
 
 const RevenueChart = () => {
-    const data = {
-        labels: [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December',
-        ],
-        datasets: [
-            {
-                label: 'Offers Revenue',
-                data: [1200, 1500, 1700, 1900, 2200, 2500, 2700, 3000, 3200, 3500, 3700, 4000],
-                borderColor: '#1A3664',
-                backgroundColor: 'rgba(26, 54, 100, 0.2)',
-                borderWidth: 2,
-                tension: 0.4, // Adds curve to the line
-            },
-            {
-                label: 'Services Revenue',
-                data: [1000, 1300, 1600, 1800, 2000, 2300, 2600, 2900, 3100, 3300, 3500, 3800],
-                borderColor: '#FFA726',
-                backgroundColor: 'rgba(255, 167, 38, 0.2)',
-                borderWidth: 2,
-                tension: 0.4, // Adds curve to the line
-            },
-        ],
-    };
+  const products = [
+    {
+      name: 'Premium Headphones',
+      category: 'Electronics',
+      sales: '$12,450',
+      trend: '+15%',
+      positive: true,
+      image: '🎧'
+    },
+    {
+      name: 'Designer Backpack', 
+      category: 'Fashion',
+      sales: '$8,230',
+      trend: '+8%',
+      positive: true,
+      image: '🎒'
+    },
+    {
+      name: 'Smart Watch Pro',
+      category: 'Electronics', 
+      sales: '$15,680',
+      trend: '+22%',
+      positive: true,
+      image: '⌚'
+    },
+    {
+      name: 'Running Shoes',
+      category: 'Sports',
+      sales: '$6,940',
+      trend: '-3%',
+      positive: false,
+      image: '👟'
+    },
+    {
+      name: 'Coffee Maker',
+      category: 'Home',
+      sales: '$4,520',
+      trend: '+5%',
+      positive: true,
+      image: '☕'
+    }
+  ];
 
-    const options = {
-        responsive: true,
-        plugins: {
-            legend: {
-                display: false, // Hides the legend
-            },
-            title: {
-                display: true,
-                text: 'Revenue Over Time',
-                color: '#1A3664',
-                align: 'start',
-                font: {
-                    size: 16,
-                    weight: 'bold',
-                },
-            },
-        },
-        scales: {
-            x: {
-                grid: {
-                    display: false,
-                },
-                ticks: {
-                    color: '#1A3664',
-                },
-            },
-            y: {
-                grid: {
-                    drawBorder: false,
-                },
-                ticks: {
-                    color: '#1A3664',
-                },
-            },
-        },
-    };
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 w-full">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-gray-900">Most Booked</h3>
+        <button className="text-purple-600 text-sm font-medium bg-purple-50 px-3 py-1 rounded-lg hover:bg-purple-100 transition-colors">
+          View all
+        </button>
+      </div>
 
-    return (
-        <div className="w-full p-4 bg-white rounded-lg border border-gray-200">
-            <Line data={data} options={options} />
+      <div className="space-y-4">
+        {products.map((product, index) => (
+          <div key={index} className="flex items-center gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
+              {product.image}
+            </div>
+            
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900 mb-1">{product.name}</h4>
+              <p className="text-sm text-gray-500">{product.category}</p>
+            </div>
+            
+            <div className="text-right">
+              <p className="font-semibold text-gray-900 mb-1">{product.sales}</p>
+              <div className="flex items-center gap-1">
+                <span className={`text-sm font-medium ${
+                  product.positive ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {product.trend}
+                </span>
+                <div className={`w-2 h-2 rounded-full ${
+                  product.positive ? 'bg-green-500' : 'bg-red-500'
+                }`}></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Chart visualization placeholder */}
+      <div className="mt-6 pt-6 border-t border-gray-100">
+        <div className="h-32 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg flex items-center justify-center">
+          <p className="text-gray-500 text-sm">Sales performance chart would go here</p>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default RevenueChart;
