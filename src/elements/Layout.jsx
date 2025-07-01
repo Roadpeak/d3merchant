@@ -106,7 +106,7 @@ const Layout = ({
             </div>
 
             <a
-              href="/profile"
+              href="/dashboard/account"
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => setShowUserMenu(false)}
             >
@@ -115,7 +115,7 @@ const Layout = ({
             </a>
 
             <a
-              href="/settings"
+              href="/dashboard/account"
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => setShowUserMenu(false)}
             >

@@ -18,7 +18,7 @@ import {
     ChevronLeft,
     ChevronRight
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 const Sidebar = () => {
     const [darkMode, setDarkMode] = useState(() => {
@@ -31,6 +31,7 @@ const Sidebar = () => {
 
     const [isCollapsed, setIsCollapsed] = useState(false);
     const location = useLocation();
+
 
     // Apply dark mode to document
     // useEffect(() => {
@@ -147,9 +148,9 @@ const Sidebar = () => {
                     const isActive = location.pathname === item.path;
 
                     return (
-                        <a
+                        <Link
                             key={index}
-                            href={item.path}
+                            to={item.path}
                             className={`
                                 group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
                                 transition-all duration-200 ease-in-out relative
@@ -181,7 +182,7 @@ const Sidebar = () => {
                             {isActive && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
                             )}
-                        </a>
+                        </Link>
                     );
                 })}
             </nav>
