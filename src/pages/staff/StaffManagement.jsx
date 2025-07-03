@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Filter, MoreVertical, Edit, Trash2, UserCheck, UserX, Building2, ChevronDown, ChevronUp } from 'lucide-react';
-
+import Layout from '../../elements/Layout';
 
 // Mock data for demonstration
 const mockStores = [
@@ -129,308 +129,310 @@ const StaffManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Staff Management</h1>
-          <p className="text-gray-600">Manage your team members across all store locations</p>
-        </div>
+    <Layout>
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Staff Management</h1>
+            <p className="text-gray-600">Manage your team members across all store locations</p>
+          </div>
 
-        {/* Search and Filter Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search staff..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+          {/* Search and Filter Bar */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+              {/* Search */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search staff..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-              <select
-                value={filters.store}
-                onChange={(e) => setFilters(prev => ({ ...prev, store: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Stores</option>
-                {stores.map(store => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </select>
+              {/* Filters */}
+              <div className="flex flex-wrap gap-3">
+                <select
+                  value={filters.store}
+                  onChange={(e) => setFilters(prev => ({ ...prev, store: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Stores</option>
+                  {stores.map(store => (
+                    <option key={store.id} value={store.id}>{store.name}</option>
+                  ))}
+                </select>
 
-              <select
-                value={filters.role}
-                onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Roles</option>
-                <option value="Manager">Manager</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Sales Associate">Sales Associate</option>
-              </select>
+                <select
+                  value={filters.role}
+                  onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Roles</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Cashier">Cashier</option>
+                  <option value="Sales Associate">Sales Associate</option>
+                </select>
 
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="inactive">Inactive</option>
-              </select>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="inactive">Inactive</option>
+                </select>
 
-              <select
-                value={filters.availability}
-                onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Availability</option>
-                <option value="available">Available</option>
-                <option value="unavailable">Unavailable</option>
-              </select>
+                <select
+                  value={filters.availability}
+                  onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Availability</option>
+                  <option value="available">Available</option>
+                  <option value="unavailable">Unavailable</option>
+                </select>
 
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Staff
-              </button>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Staff
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Staff Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('name')}
-                      className="flex items-center gap-1 hover:text-gray-700"
-                    >
-                      Staff Member
-                      {sortConfig.key === 'name' && (
-                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('storeName')}
-                      className="flex items-center gap-1 hover:text-gray-700"
-                    >
-                      Store Branch
-                      {sortConfig.key === 'storeName' && (
-                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('role')}
-                      className="flex items-center gap-1 hover:text-gray-700"
-                    >
-                      Role
-                      {sortConfig.key === 'role' && (
-                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('status')}
-                      className="flex items-center gap-1 hover:text-gray-700"
-                    >
-                      Status
-                      {sortConfig.key === 'status' && (
-                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('availability')}
-                      className="flex items-center gap-1 hover:text-gray-700"
-                    >
-                      Availability
-                      {sortConfig.key === 'availability' && (
-                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Join Date
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStaff.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                            {member.avatar}
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                          <div className="text-sm text-gray-500">{member.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Building2 className="w-4 h-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">{member.storeName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{member.role}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        member.status === 'active' ? 'bg-green-100 text-green-800' :
-                        member.status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {member.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        member.availability === 'available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {member.availability}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(member.joinDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="relative">
-                        <button
-                          onClick={() => setDropdownOpen(dropdownOpen === member.id ? null : member.id)}
-                          className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        
-                        {dropdownOpen === member.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                            <div className="py-1">
-                              <button
-                                onClick={() => handleEdit(member)}
-                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                              >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </button>
-                              
-                              {member.status === 'active' ? (
-                                <button
-                                  onClick={() => handleStatusChange(member.id, 'suspended')}
-                                  className="flex items-center px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 w-full text-left"
-                                >
-                                  <UserX className="w-4 h-4 mr-2" />
-                                  Suspend
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleStatusChange(member.id, 'active')}
-                                  className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 w-full text-left"
-                                >
-                                  <UserCheck className="w-4 h-4 mr-2" />
-                                  Activate
-                                </button>
-                              )}
-                              
-                              <button
-                                onClick={() => handleAvailabilityChange(member.id, member.availability === 'available' ? 'unavailable' : 'available')}
-                                className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 w-full text-left"
-                              >
-                                {member.availability === 'available' ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
-                                Mark {member.availability === 'available' ? 'Unavailable' : 'Available'}
-                              </button>
-                              
-                              <button
-                                onClick={() => handleDelete(member.id)}
-                                className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 w-full text-left"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </button>
+          {/* Staff Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('name')}
+                        className="flex items-center gap-1 hover:text-gray-700"
+                      >
+                        Staff Member
+                        {sortConfig.key === 'name' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('storeName')}
+                        className="flex items-center gap-1 hover:text-gray-700"
+                      >
+                        Store Branch
+                        {sortConfig.key === 'storeName' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('role')}
+                        className="flex items-center gap-1 hover:text-gray-700"
+                      >
+                        Role
+                        {sortConfig.key === 'role' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('status')}
+                        className="flex items-center gap-1 hover:text-gray-700"
+                      >
+                        Status
+                        {sortConfig.key === 'status' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('availability')}
+                        className="flex items-center gap-1 hover:text-gray-700"
+                      >
+                        Availability
+                        {sortConfig.key === 'availability' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Join Date
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredStaff.map((member) => (
+                    <tr key={member.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+                              {member.avatar}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                            <div className="text-sm text-gray-500">{member.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Building2 className="w-4 h-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-900">{member.storeName}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">{member.role}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          member.status === 'active' ? 'bg-green-100 text-green-800' :
+                          member.status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {member.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          member.availability === 'available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {member.availability}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(member.joinDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="relative">
+                          <button
+                            onClick={() => setDropdownOpen(dropdownOpen === member.id ? null : member.id)}
+                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          
+                          {dropdownOpen === member.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                              <div className="py-1">
+                                <button
+                                  onClick={() => handleEdit(member)}
+                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit
+                                </button>
+                                
+                                {member.status === 'active' ? (
+                                  <button
+                                    onClick={() => handleStatusChange(member.id, 'suspended')}
+                                    className="flex items-center px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 w-full text-left"
+                                  >
+                                    <UserX className="w-4 h-4 mr-2" />
+                                    Suspend
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleStatusChange(member.id, 'active')}
+                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 w-full text-left"
+                                  >
+                                    <UserCheck className="w-4 h-4 mr-2" />
+                                    Activate
+                                  </button>
+                                )}
+                                
+                                <button
+                                  onClick={() => handleAvailabilityChange(member.id, member.availability === 'available' ? 'unavailable' : 'available')}
+                                  className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 w-full text-left"
+                                >
+                                  {member.availability === 'available' ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
+                                  Mark {member.availability === 'available' ? 'Unavailable' : 'Available'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => handleDelete(member.id)}
+                                  className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 w-full text-left"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Add Staff Modal */}
+          {isAddModalOpen && (
+            <AddStaffModal
+              stores={stores}
+              onClose={() => setIsAddModalOpen(false)}
+              onAdd={(newStaff) => {
+                const store = stores.find(s => s.id === newStaff.storeId);
+                const staffWithStore = {
+                  ...newStaff,
+                  id: Date.now().toString(),
+                  storeName: store?.name || '',
+                  joinDate: new Date().toISOString().split('T')[0],
+                  avatar: newStaff.name.split(' ').map(n => n[0]).join('').toUpperCase()
+                };
+                setStaff(prev => [...prev, staffWithStore]);
+                setIsAddModalOpen(false);
+              }}
+            />
+          )}
+
+          {/* Edit Staff Modal */}
+          {isEditModalOpen && editingStaff && (
+            <EditStaffModal
+              staff={editingStaff}
+              stores={stores}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setEditingStaff(null);
+              }}
+              onUpdate={(updatedStaff) => {
+                const store = stores.find(s => s.id === updatedStaff.storeId);
+                const staffWithStore = {
+                  ...updatedStaff,
+                  storeName: store?.name || ''
+                };
+                setStaff(prev => prev.map(member => 
+                  member.id === updatedStaff.id ? staffWithStore : member
+                ));
+                setIsEditModalOpen(false);
+                setEditingStaff(null);
+              }}
+            />
+          )}
         </div>
-
-        {/* Add Staff Modal */}
-        {isAddModalOpen && (
-          <AddStaffModal
-            stores={stores}
-            onClose={() => setIsAddModalOpen(false)}
-            onAdd={(newStaff) => {
-              const store = stores.find(s => s.id === newStaff.storeId);
-              const staffWithStore = {
-                ...newStaff,
-                id: Date.now().toString(),
-                storeName: store?.name || '',
-                joinDate: new Date().toISOString().split('T')[0],
-                avatar: newStaff.name.split(' ').map(n => n[0]).join('').toUpperCase()
-              };
-              setStaff(prev => [...prev, staffWithStore]);
-              setIsAddModalOpen(false);
-            }}
-          />
-        )}
-
-        {/* Edit Staff Modal */}
-        {isEditModalOpen && editingStaff && (
-          <EditStaffModal
-            staff={editingStaff}
-            stores={stores}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setEditingStaff(null);
-            }}
-            onUpdate={(updatedStaff) => {
-              const store = stores.find(s => s.id === updatedStaff.storeId);
-              const staffWithStore = {
-                ...updatedStaff,
-                storeName: store?.name || ''
-              };
-              setStaff(prev => prev.map(member => 
-                member.id === updatedStaff.id ? staffWithStore : member
-              ));
-              setIsEditModalOpen(false);
-              setEditingStaff(null);
-            }}
-          />
-        )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

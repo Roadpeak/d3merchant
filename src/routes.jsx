@@ -17,8 +17,10 @@ import Dashboard from './pages/dashboard/Dashboard'
 import DynamicFormPage from './pages/services/DynamicFormPage'
 import Analytics from './pages/analytics/Analytics'
 import BillingPage from './pages/account/Billings'
-import Invoice from './pages/account/Invoice'
+import Invoice from './pages/clients'
+import clients from './pages/account/Invoice'
 import MerchantChatInterface from './pages/dashboard/MerchantChatInterface';
+import ClientsPage from './pages/clients';
 
 // In your dashboard
 
@@ -45,6 +47,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/billing" element={<BillingPage />} />
       <Route path="/dashboard/invoice" element={<Invoice />} />
       <Route path="/dashboard/account" element={<AccountPage />} />
+      <Route path="/Clients" element={<ClientsPage />} />
 
       <Route path="*" element={<Page404 />} />
     </Routes>

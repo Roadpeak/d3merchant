@@ -84,6 +84,13 @@ const Sidebar = () => {
             icon: <BookOpen size={20} />,
             path: "/dashboard/bookings"
         },
+
+        {
+            name: "Clients",
+            icon: <User size={20} />,
+            path: "/clients"
+        },
+
         {
             name: "Reviews",
             icon: <MessageCircle size={20} />,
@@ -139,7 +146,7 @@ const Sidebar = () => {
                         </h1>
                     </div>
                 )}
-                
+
             </header>
 
             {/* Navigation */}

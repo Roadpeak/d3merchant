@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2 } from 'lucide-react';
+import Layout from '../../elements/Layout';
 
 const MerchantChatInterface = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -14,126 +15,133 @@ const MerchantChatInterface = () => {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // API Configuration
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
-  const WS_URL = process.env.REACT_APP_WS_URL || 'http://localhost:4000';
-
-  // Get auth token (assuming it's stored in localStorage)
-  const getAuthToken = () => localStorage.getItem('authToken');
-
-  // API call helper
-  const apiCall = async (endpoint, options = {}) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
-        ...options.headers,
+  // Mock data for demonstration
+  const mockCustomers = [
+    {
+      id: 1,
+      customer: {
+        id: 1,
+        name: 'Sarah Johnson',
+        avatar: null,
+        priority: 'vip',
+        customerSince: '2023',
+        orderCount: 15
       },
-      ...options,
-    });
-
-    if (!response.ok) {
-      throw new Error(`API call failed: ${response.statusText}`);
+      lastMessage: 'Hi! Is my order ready for pickup?',
+      lastMessageTime: '2 min ago',
+      unreadCount: 2,
+      online: true
+    },
+    {
+      id: 2,
+      customer: {
+        id: 2,
+        name: 'Michael Chen',
+        avatar: null,
+        priority: 'regular',
+        customerSince: '2024',
+        orderCount: 8
+      },
+      lastMessage: 'Thank you for the excellent service!',
+      lastMessageTime: '1 hour ago',
+      unreadCount: 0,
+      online: false
+    },
+    {
+      id: 3,
+      customer: {
+        id: 3,
+        name: 'Emma Davis',
+        avatar: null,
+        priority: 'vip',
+        customerSince: '2022',
+        orderCount: 32
+      },
+      lastMessage: 'Do you have the blue variant in stock?',
+      lastMessageTime: '3 hours ago',
+      unreadCount: 1,
+      online: true
     }
+  ];
 
-    return response.json();
+  const mockMessages = [
+    {
+      id: 1,
+      text: 'Hi! Is my order ready for pickup?',
+      sender: 'customer',
+      timestamp: '2:30 PM',
+      status: 'read'
+    },
+    {
+      id: 2,
+      text: 'Let me check that for you right away!',
+      sender: 'merchant',
+      timestamp: '2:31 PM',
+      status: 'read'
+    },
+    {
+      id: 3,
+      text: 'Yes, your order is ready! You can pick it up anytime today.',
+      sender: 'merchant',
+      timestamp: '2:32 PM',
+      status: 'sent'
+    }
+  ];
+
+  // Mock API call helper
+  const apiCall = async (endpoint, options = {}) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (endpoint === '/chat/conversations') {
+          resolve({
+            success: true,
+            data: mockCustomers
+          });
+        } else if (endpoint.includes('/messages')) {
+          resolve({
+            success: true,
+            data: mockMessages
+          });
+        } else {
+          resolve({
+            success: true,
+            data: {}
+          });
+        }
+      }, 500);
+    });
   };
 
-  // Initialize WebSocket connection
+  // Initialize WebSocket connection - Mock for demonstration
   useEffect(() => {
-    const initSocket = async () => {
-      try {
-        const { io } = await import('socket.io-client');
-        const newSocket = io(WS_URL, {
-          auth: {
-            token: getAuthToken()
-          }
-        });
+    const initSocket = () => {
+      const mockSocket = {
+        on: (event, callback) => {
+          console.log(`Listening for ${event}`);
+        },
+        emit: (event, data) => {
+          console.log(`Emitting ${event}:`, data);
+        },
+        disconnect: () => {
+          console.log('Socket disconnected');
+        }
+      };
 
-        newSocket.on('connect', () => {
-          console.log('Connected to WebSocket');
-          // Join as merchant user
-          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-          newSocket.emit('user_join', {
-            userId: userData.id,
-            role: 'merchant'
-          });
-        });
-
-        newSocket.on('new_message', (messageData) => {
-          // Add new message to current conversation
-          if (selectedCustomer && messageData.conversationId === selectedCustomer.conversationId) {
-            setMessages(prev => [...prev, messageData]);
-            scrollToBottom();
-          }
-
-          // Update customer list with new message
-          setCustomers(prev => prev.map(customer => {
-            if (customer.id === messageData.conversationId) {
-              return {
-                ...customer,
-                lastMessage: messageData.text,
-                lastMessageTime: messageData.timestamp,
-                unreadCount: customer.unreadCount + (selectedCustomer?.id === customer.id ? 0 : 1)
-              };
-            }
-            return customer;
-          }));
-        });
-
-        newSocket.on('messages_read', ({ readBy }) => {
-          // Update message status to read
-          setMessages(prev => prev.map(msg => ({
-            ...msg,
-            status: msg.sender === 'merchant' ? 'read' : msg.status
-          })));
-        });
-
-        newSocket.on('typing_start', ({ userId, conversationId }) => {
-          if (selectedCustomer && conversationId === selectedCustomer.conversationId) {
-            setTypingUsers(prev => new Set(prev).add(userId));
-          }
-        });
-
-        newSocket.on('typing_stop', ({ userId, conversationId }) => {
-          if (selectedCustomer && conversationId === selectedCustomer.conversationId) {
-            setTypingUsers(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(userId);
-              return newSet;
-            });
-          }
-        });
-
-        newSocket.on('user_online', (userId) => {
-          setCustomers(prev => prev.map(customer =>
-            customer.customer.id === userId
-              ? { ...customer, online: true }
-              : customer
-          ));
-        });
-
-        newSocket.on('user_offline', (userId) => {
-          setCustomers(prev => prev.map(customer =>
-            customer.customer.id === userId
-              ? { ...customer, online: false }
-              : customer
-          ));
-        });
-
-        setSocket(newSocket);
-
-        return () => {
-          newSocket.disconnect();
-        };
-      } catch (error) {
-        console.error('Socket connection failed:', error);
-      }
+      setSocket(mockSocket);
     };
 
     initSocket();
-  }, [WS_URL, selectedCustomer]);
+
+    // Cleanup function
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Load conversations on mount
   useEffect(() => {
@@ -251,7 +259,6 @@ const MerchantChatInterface = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      // You might want to show an error message to the user here
     } finally {
       setSendingMessage(false);
     }
@@ -262,7 +269,7 @@ const MerchantChatInterface = () => {
     if (socket && selectedCustomer) {
       socket.emit('typing_start', {
         conversationId: selectedCustomer.conversationId,
-        userId: JSON.parse(localStorage.getItem('userData') || '{}').id
+        userId: 'merchant-user-id'
       });
     }
   };
@@ -271,7 +278,7 @@ const MerchantChatInterface = () => {
     if (socket && selectedCustomer) {
       socket.emit('typing_stop', {
         conversationId: selectedCustomer.conversationId,
-        userId: JSON.parse(localStorage.getItem('userData') || '{}').id
+        userId: 'merchant-user-id'
       });
     }
   };
@@ -303,7 +310,7 @@ const MerchantChatInterface = () => {
   };
 
   const filteredCustomers = customers.filter(customer =>
-    customer.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false
   );
 
   const handleKeyPress = (e) => {
@@ -333,280 +340,282 @@ const MerchantChatInterface = () => {
   };
 
   // Calculate total unread messages
-  const totalUnreadCount = customers.reduce((total, customer) => total + customer.unreadCount, 0);
+  const totalUnreadCount = customers.reduce((total, customer) => total + (customer.unreadCount || 0), 0);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ height: '700px' }}>
-      {/* Header */}
-      <div className="bg-white p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Customer Chat</h2>
-            <p className="text-sm text-gray-500">Manage customer conversations</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            {totalUnreadCount > 0 && (
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 text-orange-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  {totalUnreadCount} unread message{totalUnreadCount > 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex h-full">
-        {/* Customer List Sidebar */}
-        <div className={`${selectedCustomer
-            ? 'hidden lg:flex'
-            : 'flex'
-          } w-full lg:w-80 flex-col bg-gray-50 border-r border-gray-200`}>
-          {/* Search */}
-          <div className="p-4 bg-white border-b border-gray-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
+    <Layout>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ height: '700px' }}>
+        {/* Header */}
+        <div className="bg-white p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Customer Chat</h2>
+              <p className="text-sm text-gray-500">Manage customer conversations</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              {totalUnreadCount > 0 && (
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {totalUnreadCount} unread message{totalUnreadCount > 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Customer List */}
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-              </div>
-            ) : filteredCustomers.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-gray-500">
-                No conversations found
-              </div>
-            ) : (
-              filteredCustomers.map((customer) => (
-                <div
-                  key={customer.id}
-                  onClick={() => handleCustomerSelect(customer)}
-                  className={`flex items-start p-4 hover:bg-white cursor-pointer transition-colors border-b border-gray-100 ${selectedCustomer?.conversationId === customer.id ? 'bg-white border-r-2 border-blue-500' : ''
-                    }`}
-                >
-                  <div className="relative">
-                    <img
-                      src={customer.customer.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.customer.name)}&background=random`}
-                      alt={customer.customer.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    {customer.online && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                    )}
-                    {customer.customer.priority === 'vip' && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <Star className="w-2 h-2 text-yellow-800" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="ml-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-900 truncate">{customer.customer.name}</h3>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-xs text-gray-500">{customer.lastMessageTime}</span>
-                        {customer.unreadCount > 0 && (
-                          <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {customer.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 truncate mb-2">{customer.lastMessage}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-400">
-                      <div className="flex items-center space-x-3">
-                        <span>Customer since {customer.customer.customerSince}</span>
-                        <span>{customer.customer.orderCount} orders</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
         </div>
 
-        {/* Chat Area */}
-        <div className={`${selectedCustomer
-            ? 'flex w-full'
-            : 'hidden lg:flex lg:flex-1'
-          } flex-col`}>
-          {selectedCustomer ? (
-            <>
-              {/* Chat Header */}
-              <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between">
-                <div className="flex items-center">
-                  {/* Back button - Only visible on mobile */}
-                  <button
-                    onClick={handleBackToSidebar}
-                    className="lg:hidden mr-3 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+        <div className="flex" style={{ height: 'calc(100% - 80px)' }}>
+          {/* Customer List Sidebar */}
+          <div className={`${selectedCustomer
+              ? 'hidden lg:flex'
+              : 'flex'
+            } w-full lg:w-80 flex-col bg-gray-50 border-r border-gray-200`}>
+            {/* Search */}
+            <div className="p-4 bg-white border-b border-gray-200">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Customer List */}
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                </div>
+              ) : filteredCustomers.length === 0 ? (
+                <div className="flex items-center justify-center h-32 text-gray-500">
+                  No conversations found
+                </div>
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    onClick={() => handleCustomerSelect(customer)}
+                    className={`flex items-start p-4 hover:bg-white cursor-pointer transition-colors border-b border-gray-100 ${selectedCustomer?.conversationId === customer.id ? 'bg-white border-r-2 border-blue-500' : ''
+                      }`}
                   >
-                    <ArrowLeft className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <div className="relative">
-                    <img
-                      src={selectedCustomer.customer.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.customer.name)}&background=random`}
-                      alt={selectedCustomer.customer.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    {selectedCustomer.customer.priority === 'vip' && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <Star className="w-2 h-2 text-yellow-800" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="ml-3">
-                    <div className="flex items-center space-x-2">
-                      <h2 className="font-semibold text-gray-900">{selectedCustomer.customer.name}</h2>
-                      {selectedCustomer.customer.priority === 'vip' && (
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">VIP</span>
+                    <div className="relative">
+                      <img
+                        src={customer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.customer?.name || 'Unknown')}&background=random`}
+                        alt={customer.customer?.name || 'Unknown'}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                      {customer.online && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                      )}
+                      {customer.customer?.priority === 'vip' && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                          <Star className="w-2 h-2 text-yellow-800" />
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500">
-                      {selectedCustomer.online ? 'Online' : 'Last seen recently'} • {selectedCustomer.customer.orderCount} orders
-                    </p>
+                    <div className="ml-3 flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900 truncate">{customer.customer?.name || 'Unknown'}</h3>
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs text-gray-500">{customer.lastMessageTime}</span>
+                          {customer.unreadCount > 0 && (
+                            <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                              {customer.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate mb-2">{customer.lastMessage}</p>
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <div className="flex items-center space-x-3">
+                          <span>Customer since {customer.customer?.customerSince || 'Unknown'}</span>
+                          <span>{customer.customer?.orderCount || 0} orders</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <Phone className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <Video className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <MoreVertical className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-              </div>
+                ))
+              )}
+            </div>
+          </div>
 
-              {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === 'merchant' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-lg ${msg.sender === 'merchant'
-                          ? 'bg-blue-500 text-white rounded-br-sm'
-                          : 'bg-white text-gray-900 rounded-bl-sm border'
-                        }`}
+          {/* Chat Area */}
+          <div className={`${selectedCustomer
+              ? 'flex w-full'
+              : 'hidden lg:flex lg:flex-1'
+            } flex-col`}>
+            {selectedCustomer ? (
+              <>
+                {/* Chat Header */}
+                <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center">
+                    {/* Back button - Only visible on mobile */}
+                    <button
+                      onClick={handleBackToSidebar}
+                      className="lg:hidden mr-3 p-1 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <p className="text-sm">{msg.text}</p>
-                      <div className={`flex items-center justify-end mt-1 space-x-1 ${msg.sender === 'merchant' ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                        <Clock className="w-3 h-3" />
-                        <span className="text-xs">{msg.timestamp}</span>
-                        {msg.sender === 'merchant' && (
-                          <div className="ml-1">
-                            {msg.status === 'read' ? (
-                              <CheckCheck className="w-3 h-3 text-blue-200" />
-                            ) : (
-                              <Check className="w-3 h-3" />
-                            )}
-                          </div>
+                      <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <div className="relative">
+                      <img
+                        src={selectedCustomer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.customer?.name || 'Unknown')}&background=random`}
+                        alt={selectedCustomer.customer?.name || 'Unknown'}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      {selectedCustomer.customer?.priority === 'vip' && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                          <Star className="w-2 h-2 text-yellow-800" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <div className="flex items-center space-x-2">
+                        <h2 className="font-semibold text-gray-900">{selectedCustomer.customer?.name || 'Unknown'}</h2>
+                        {selectedCustomer.customer?.priority === 'vip' && (
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">VIP</span>
                         )}
                       </div>
+                      <p className="text-sm text-gray-500">
+                        {selectedCustomer.online ? 'Online' : 'Last seen recently'} • {selectedCustomer.customer?.orderCount || 0} orders
+                      </p>
                     </div>
                   </div>
-                ))}
+                  <div className="flex space-x-2">
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <Phone className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <Video className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <MoreVertical className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
 
-                {/* Typing indicator */}
-                {typingUsers.size > 0 && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-200 px-4 py-2 rounded-lg">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.sender === 'merchant' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-lg ${msg.sender === 'merchant'
+                            ? 'bg-blue-500 text-white rounded-br-sm'
+                            : 'bg-white text-gray-900 rounded-bl-sm border'
+                          }`}
+                      >
+                        <p className="text-sm">{msg.text}</p>
+                        <div className={`flex items-center justify-end mt-1 space-x-1 ${msg.sender === 'merchant' ? 'text-blue-100' : 'text-gray-500'
+                          }`}>
+                          <Clock className="w-3 h-3" />
+                          <span className="text-xs">{msg.timestamp}</span>
+                          {msg.sender === 'merchant' && (
+                            <div className="ml-1">
+                              {msg.status === 'read' ? (
+                                <CheckCheck className="w-3 h-3 text-blue-200" />
+                              ) : (
+                                <Check className="w-3 h-3" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Quick Responses */}
-              <div className="bg-white p-3 border-t border-gray-100">
-                <div className="flex space-x-2 overflow-x-auto pb-2">
-                  {quickResponses.map((response, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleQuickResponse(response)}
-                      className="flex-shrink-0 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-full transition-colors whitespace-nowrap"
-                    >
-                      {response}
-                    </button>
                   ))}
-                </div>
-              </div>
 
-              {/* Message Input */}
-              <div className="bg-white p-4 border-t border-gray-200">
-                <div className="flex items-end space-x-2">
-                  <div className="flex-1 relative">
-                    <textarea
-                      value={message}
-                      onChange={handleMessageChange}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Type a message..."
-                      rows={1}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32"
-                    />
+                  {/* Typing indicator */}
+                  {typingUsers.size > 0 && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-200 px-4 py-2 rounded-lg">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Quick Responses */}
+                <div className="bg-white p-3 border-t border-gray-100">
+                  <div className="flex space-x-2 overflow-x-auto pb-2">
+                    {quickResponses.map((response, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleQuickResponse(response)}
+                        className="flex-shrink-0 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-full transition-colors whitespace-nowrap"
+                      >
+                        {response}
+                      </button>
+                    ))}
                   </div>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!message.trim() || sendingMessage}
-                    className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
-                  >
-                    {sendingMessage ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
+                </div>
+
+                {/* Message Input */}
+                <div className="bg-white p-4 border-t border-gray-200">
+                  <div className="flex items-end space-x-2">
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={message}
+                        onChange={handleMessageChange}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Type a message..."
+                        rows={1}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!message.trim() || sendingMessage}
+                      className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
+                    >
+                      {sendingMessage ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Send className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Welcome Screen - Only visible on desktop when no chat selected */
+              <div className="flex-1 flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <User className="w-12 h-12 text-blue-500" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Customer Support Chat</h2>
+                  <p className="text-gray-600 max-w-md">
+                    Select a customer from the sidebar to start chatting. Provide excellent customer service and support to grow your business.
+                  </p>
+                  <div className="mt-6 grid grid-cols-2 gap-4 text-sm text-gray-500">
+                    <div className="flex items-center justify-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-orange-500" />
+                      <span>{totalUnreadCount} unread</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <Star className="w-4 h-4 text-yellow-500" />
+                      <span>{customers.filter(c => c.customer?.priority === 'vip').length} VIP customers</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </>
-          ) : (
-            /* Welcome Screen - Only visible on desktop when no chat selected */
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <User className="w-12 h-12 text-blue-500" />
-                </div>
-                <h2 className="text-2xl font-semibold text-gray-900 mb-2">Customer Support Chat</h2>
-                <p className="text-gray-600 max-w-md">
-                  Select a customer from the sidebar to start chatting. Provide excellent customer service and support to grow your business.
-                </p>
-                <div className="mt-6 grid grid-cols-2 gap-4 text-sm text-gray-500">
-                  <div className="flex items-center justify-center space-x-2">
-                    <AlertCircle className="w-4 h-4 text-orange-500" />
-                    <span>{totalUnreadCount} unread</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-2">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span>{customers.filter(c => c.customer?.priority === 'vip').length} VIP customers</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 
