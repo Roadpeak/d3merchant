@@ -10,9 +10,10 @@ export default defineConfig({
     alias: {
       stream: 'stream-browserify',
       vm: 'vm-browserify',
+      crypto: 'crypto-browserify',
     },
   },
   optimizeDeps: {
-    include: ['stream-browserify', 'vm-browserify'],
+    include: ['stream-browserify', 'vm-browserify', 'crypto-browserify'],
   },
 })

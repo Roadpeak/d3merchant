@@ -139,7 +139,7 @@ const Sidebar = () => {
                 {!isCollapsed && (
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">BP</span>
+                            <span className="text-white font-bold text-sm">D3</span>
                         </div>
                         <h1 className="font-semibold text-gray-900 dark:text-white">
                             Store Admin
