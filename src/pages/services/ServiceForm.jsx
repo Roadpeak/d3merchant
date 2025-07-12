@@ -12,7 +12,7 @@ const ServiceForm = ({ onClose, onServiceAdded }) => {
         category: '',
         description: '',
         type: 'fixed',
-        store_id: 'eff53f50-b48a-11ef-915d-a3ac7236b7f5',
+        store_id: '6de397ef-5320-4088-87cf-bce98b2a39ec',
         dynamicFields: []
     });
     const [loading, setLoading] = useState(false);

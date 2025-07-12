@@ -16,11 +16,14 @@ import {
     Sun,
     Moon,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Store
 } from "lucide-react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
+import merchantAuthService from '../services/merchantAuthService';
+import { toast } from 'react-hot-toast';
 
-const Sidebar = () => {
+const Sidebar = ({ onClose, currentMerchant }) => {
     const [darkMode, setDarkMode] = useState(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('darkMode') === 'true' ||
@@ -30,16 +33,16 @@ const Sidebar = () => {
     });
 
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [unreadMessages, setUnreadMessages] = useState(0);
+    
     const location = useLocation();
+    const navigate = useNavigate();
 
-
-    // Apply dark mode to document
-    // useEffect(() => {
-    //     document.documentElement.classList.toggle('dark', darkMode);
-    //     if (typeof window !== 'undefined') {
-    //         localStorage.setItem('darkMode', darkMode.toString());
-    //     }
-    // }, [darkMode]);
+    // Get unread message count (you can implement this with real API)
+    useEffect(() => {
+        // Mock unread messages - replace with actual API call
+        setUnreadMessages(3);
+    }, []);
 
     const menuItems = [
         {
@@ -51,8 +54,8 @@ const Sidebar = () => {
         {
             name: "Chat",
             icon: <MessageSquare size={20} />,
-            path: "/dashboard/MerchantChatInterface",
-            badge: "3"
+            path: "/dashboard/chat",
+            badge: unreadMessages > 0 ? unreadMessages.toString() : null
         },
         {
             name: "Services",
@@ -84,13 +87,6 @@ const Sidebar = () => {
             icon: <BookOpen size={20} />,
             path: "/dashboard/bookings"
         },
-
-        {
-            name: "Clients",
-            icon: <User size={20} />,
-            path: "/clients"
-        },
-
         {
             name: "Reviews",
             icon: <MessageCircle size={20} />,
@@ -113,13 +109,53 @@ const Sidebar = () => {
         },
     ];
 
-    const toggleDarkMode = () => setDarkMode(!darkMode);
+    const toggleDarkMode = () => {
+        const newDarkMode = !darkMode;
+        setDarkMode(newDarkMode);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('darkMode', newDarkMode.toString());
+            // Apply dark mode to document
+            document.documentElement.classList.toggle('dark', newDarkMode);
+        }
+    };
+
     const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
-    const handleLogout = () => {
-        // Add logout logic here
-        console.log("Logging out...");
+    const handleLogout = async () => {
+        try {
+            merchantAuthService.logout();
+            toast.success('Logged out successfully');
+            navigate('/accounts/sign-in');
+        } catch (error) {
+            console.error('Logout error:', error);
+            toast.error('Error logging out');
+        }
     };
+
+    // Get merchant info for display
+    const getMerchantDisplayInfo = () => {
+        if (!currentMerchant) {
+            return {
+                name: 'Merchant',
+                initials: 'M',
+                storeName: 'Store Admin'
+            };
+        }
+
+        const firstName = currentMerchant.first_name || '';
+        const lastName = currentMerchant.last_name || '';
+        const name = firstName && lastName ? `${firstName} ${lastName}` : firstName || 'Merchant';
+        const initials = firstName && lastName 
+            ? `${firstName.charAt(0)}${lastName.charAt(0)}`
+            : firstName 
+                ? firstName.charAt(0)
+                : 'M';
+        const storeName = currentMerchant.store?.name || 'Store Admin';
+
+        return { name, initials, storeName };
+    };
+
+    const merchantInfo = getMerchantDisplayInfo();
 
     return (
         <aside
@@ -141,13 +177,66 @@ const Sidebar = () => {
                         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                             <span className="text-white font-bold text-sm">D3</span>
                         </div>
-                        <h1 className="font-semibold text-gray-900 dark:text-white">
-                            Store Admin
-                        </h1>
+                        <div>
+                            <h1 className="font-semibold text-gray-900 dark:text-white text-sm">
+                                {merchantInfo.storeName}
+                            </h1>
+                            {currentMerchant?.store?.location && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {currentMerchant.store.location}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 )}
 
+                {/* Collapse button - only show on desktop */}
+                <button
+                    onClick={toggleCollapse}
+                    className="hidden lg:flex p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                    {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                </button>
+
+                {/* Close button - only show on mobile */}
+                <button
+                    onClick={onClose}
+                    className="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    aria-label="Close sidebar"
+                >
+                    <ChevronLeft size={16} />
+                </button>
             </header>
+
+            {/* Merchant Profile Section */}
+            {!isCollapsed && currentMerchant && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                        {currentMerchant.avatar ? (
+                            <img 
+                                src={currentMerchant.avatar} 
+                                alt="Profile" 
+                                className="w-10 h-10 rounded-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                <span className="text-white font-medium text-sm">
+                                    {merchantInfo.initials}
+                                </span>
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {merchantInfo.name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {currentMerchant.email_address || currentMerchant.email}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -158,6 +247,7 @@ const Sidebar = () => {
                         <Link
                             key={index}
                             to={item.path}
+                            onClick={() => onClose && onClose()} // Close mobile sidebar on navigation
                             className={`
                                 group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
                                 transition-all duration-200 ease-in-out relative
@@ -178,7 +268,11 @@ const Sidebar = () => {
                                 <>
                                     <span className="flex-1">{item.name}</span>
                                     {item.badge && (
-                                        <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
+                                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                            isActive 
+                                                ? 'bg-white/20 text-white' 
+                                                : 'bg-red-500 text-white'
+                                        }`}>
                                             {item.badge}
                                         </span>
                                     )}
@@ -189,6 +283,13 @@ const Sidebar = () => {
                             {isActive && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
                             )}
+
+                            {/* Badge for collapsed state */}
+                            {isCollapsed && item.badge && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                                    {item.badge}
+                                </div>
+                            )}
                         </Link>
                     );
                 })}
@@ -196,6 +297,22 @@ const Sidebar = () => {
 
             {/* Footer */}
             <footer className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                {/* Dark mode toggle */}
+                <button
+                    onClick={toggleDarkMode}
+                    className={`
+                        w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+                        text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
+                        transition-all duration-200 ease-in-out
+                        ${isCollapsed ? 'justify-center' : ''}
+                    `}
+                    title={isCollapsed ? (darkMode ? 'Light mode' : 'Dark mode') : ''}
+                >
+                    {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    {!isCollapsed && <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+                </button>
+
+                {/* Logout button */}
                 <button
                     onClick={handleLogout}
                     className={`
@@ -211,9 +328,14 @@ const Sidebar = () => {
                 </button>
 
                 {!isCollapsed && (
-                    <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                        © {new Date().getFullYear()} d3 ltd.
-                    </p>
+                    <div className="text-center pt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            © {new Date().getFullYear()} Discoun3 Ltd.
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            v2.1.0
+                        </p>
+                    </div>
                 )}
             </footer>
         </aside>

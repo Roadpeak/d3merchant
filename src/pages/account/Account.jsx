@@ -1,32 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import Layout from '../../elements/Layout';
-
-// Mock API service
-const getProfile = async () => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return {
-        merchantProfile: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email_address: 'john.doe@example.com',
-            phone_number: '+1-555-0123',
-            store: {
-                name: 'John\'s Electronics Store',
-                location: '123 Main Street, New York, NY'
-            }
-        }
-    };
-};
+import merchantAuthService from '../../services/merchantAuthService';
 
 const AccountPage = () => {
     const [activeTab, setActiveTab] = useState(0);
-    const [info, setInfo] = useState(null);
+    const [merchantInfo, setMerchantInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [branches, setBranches] = useState([]);
     const [showAddBranch, setShowAddBranch] = useState(false);
     const [editingProfile, setEditingProfile] = useState(false);
+    const [profileData, setProfileData] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: '',
+        businessType: '',
+        taxId: '',
+        website: ''
+    });
     const [newBranch, setNewBranch] = useState({
         name: '',
         address: '',
@@ -35,31 +28,94 @@ const AccountPage = () => {
         email: ''
     });
 
-    const getInfo = async () => {
+    const getMerchantInfo = async () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await getProfile();
-            setInfo(response.merchantProfile);
-            // Mock branches data - replace with actual API call
+            
+            const currentMerchant = merchantAuthService.getCurrentMerchant();
+            const token = merchantAuthService.getToken();
+            
+            if (!currentMerchant || !token) {
+                throw new Error('Authentication data not found');
+            }
+
+            const response = await merchantAuthService.getMerchantProfile(currentMerchant.id, token);
+            
+            setMerchantInfo(response.merchantProfile);
+            setProfileData({
+                firstName: response.merchantProfile.first_name || '',
+                lastName: response.merchantProfile.last_name || '',
+                email: response.merchantProfile.email_address || '',
+                phoneNumber: response.merchantProfile.phone_number || '',
+                businessType: 'Retail', // Default value, you can enhance this
+                taxId: '', // Add if available in your backend
+                website: response.merchantProfile.store?.website_url || ''
+            });
+            
+            // Mock branches data - replace with actual API call when available
             setBranches([
                 {
                     id: 1,
-                    name: 'Main Branch',
-                    address: '123 Main St, City Center',
-                    phone: '+1234567890',
-                    manager: 'John Smith',
-                    email: 'main@store.com',
+                    name: response.merchantProfile.store?.name || 'Main Branch',
+                    address: response.merchantProfile.store?.location || 'Address not set',
+                    phone: response.merchantProfile.store?.phone_number || response.merchantProfile.phone_number,
+                    manager: `${response.merchantProfile.first_name} ${response.merchantProfile.last_name}`,
+                    email: response.merchantProfile.store?.primary_email || response.merchantProfile.email_address,
                     status: 'Active'
                 }
             ]);
         } catch (error) {
-            console.error(error);
-            setError('Failed to load profile information');
+            console.error('Error fetching merchant info:', error);
+            setError(error.message || 'Failed to load profile information');
+            toast.error('Failed to load profile information');
         } finally {
             setLoading(false);
         }
-    }
+    };
+
+    const handleProfileUpdate = async () => {
+        try {
+            setLoading(true);
+            // TODO: Implement profile update API call
+            // const token = merchantAuthService.getToken();
+            // const response = await fetch('/api/merchants/update-profile', {
+            //     method: 'PUT',
+            //     headers: {
+            //         'Authorization': `Bearer ${token}`,
+            //         'Content-Type': 'application/json'
+            //     },
+            //     body: JSON.stringify(profileData)
+            // });
+            
+            // For now, just update the local state
+            setMerchantInfo(prev => ({
+                ...prev,
+                first_name: profileData.firstName,
+                last_name: profileData.lastName,
+                email_address: profileData.email,
+                phone_number: profileData.phoneNumber
+            }));
+            
+            // Update auth data in storage
+            const currentMerchant = merchantAuthService.getCurrentMerchant();
+            merchantAuthService.updateMerchantProfile({
+                ...currentMerchant,
+                first_name: profileData.firstName,
+                last_name: profileData.lastName,
+                email_address: profileData.email,
+                phone_number: profileData.phoneNumber
+            });
+            
+            setEditingProfile(false);
+            toast.success('Profile updated successfully!');
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            toast.error('Failed to update profile');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleAddBranch = () => {
         if (newBranch.name && newBranch.address) {
@@ -70,15 +126,21 @@ const AccountPage = () => {
             }]);
             setNewBranch({ name: '', address: '', phone: '', manager: '', email: '' });
             setShowAddBranch(false);
+            toast.success('Branch added successfully!');
         }
     };
 
     const handleDeleteBranch = (id) => {
         setBranches(branches.filter(branch => branch.id !== id));
+        toast.success('Branch deleted successfully!');
+    };
+
+    const handleLogout = () => {
+        merchantAuthService.logout();
     };
 
     useEffect(() => {
-        getInfo();
+        getMerchantInfo();
     }, []);
 
     const tabs = [
@@ -116,7 +178,10 @@ const AccountPage = () => {
     );
 
     return (
-        <Layout title="Account Settings">
+        <Layout 
+            title={`Good Day, ${merchantInfo?.first_name || 'Merchant'} 👋`}
+            subtitle="Manage your merchant account and business information"
+        >
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     {/* Header */}
@@ -144,6 +209,17 @@ const AccountPage = () => {
                                         </button>
                                     ))}
                                 </div>
+                                
+                                {/* Logout Button */}
+                                <div className="mt-6 pt-6 border-t border-gray-200">
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
+                                    >
+                                        <span className="text-lg">🚪</span>
+                                        <span className="font-medium">Logout</span>
+                                    </button>
+                                </div>
                             </nav>
                         </div>
 
@@ -157,18 +233,21 @@ const AccountPage = () => {
                                     {error && (
                                         <ErrorMessage
                                             message={error}
-                                            onRetry={getInfo}
+                                            onRetry={getMerchantInfo}
                                         />
                                     )}
 
-                                    {info && !loading && !error && (
+                                    {merchantInfo && !loading && !error && (
                                         <>
                                             {/* Business Overview Card */}
                                             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
                                                 <div className="flex items-center justify-between">
                                                     <div>
-                                                        <h2 className="text-2xl font-bold">{info.store?.name}</h2>
-                                                        <p className="text-blue-100 mt-1">{info.store?.location}</p>
+                                                        <h2 className="text-2xl font-bold">{merchantInfo.store?.name || 'Your Store'}</h2>
+                                                        <p className="text-blue-100 mt-1">{merchantInfo.store?.location || 'Location not set'}</p>
+                                                        <p className="text-blue-100 text-sm mt-2">
+                                                            Member since {new Date(merchantInfo.joined).toLocaleDateString()}
+                                                        </p>
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-3xl">🏪</div>
@@ -186,6 +265,7 @@ const AccountPage = () => {
                                                     <button
                                                         onClick={() => setEditingProfile(!editingProfile)}
                                                         className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        disabled={loading}
                                                     >
                                                         {editingProfile ? 'Cancel' : 'Edit'}
                                                     </button>
@@ -194,15 +274,31 @@ const AccountPage = () => {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div className="space-y-4">
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                                                             {editingProfile ? (
                                                                 <input
                                                                     type="text"
-                                                                    defaultValue={`${info.first_name} ${info.last_name}`}
+                                                                    value={profileData.firstName}
+                                                                    onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
                                                                 />
                                                             ) : (
-                                                                <p className="text-gray-900 py-2">{info.first_name} {info.last_name}</p>
+                                                                <p className="text-gray-900 py-2">{merchantInfo.first_name}</p>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                                            {editingProfile ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={profileData.lastName}
+                                                                    onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.last_name}</p>
                                                             )}
                                                         </div>
                                                         <div>
@@ -210,11 +306,13 @@ const AccountPage = () => {
                                                             {editingProfile ? (
                                                                 <input
                                                                     type="email"
-                                                                    defaultValue={info.email_address}
+                                                                    value={profileData.email}
+                                                                    onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
                                                                 />
                                                             ) : (
-                                                                <p className="text-gray-900 py-2">{info.email_address}</p>
+                                                                <p className="text-gray-900 py-2">{merchantInfo.email_address}</p>
                                                             )}
                                                         </div>
                                                         <div>
@@ -222,11 +320,13 @@ const AccountPage = () => {
                                                             {editingProfile ? (
                                                                 <input
                                                                     type="tel"
-                                                                    defaultValue={info.phone_number}
+                                                                    value={profileData.phoneNumber}
+                                                                    onChange={(e) => setProfileData({...profileData, phoneNumber: e.target.value})}
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
                                                                 />
                                                             ) : (
-                                                                <p className="text-gray-900 py-2">{info.phone_number}</p>
+                                                                <p className="text-gray-900 py-2">{merchantInfo.phone_number}</p>
                                                             )}
                                                         </div>
                                                     </div>
@@ -235,14 +335,23 @@ const AccountPage = () => {
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-2">Business Type</label>
                                                             {editingProfile ? (
-                                                                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                                                    <option>Retail</option>
-                                                                    <option>Restaurant</option>
-                                                                    <option>Service</option>
-                                                                    <option>E-commerce</option>
+                                                                <select 
+                                                                    value={profileData.businessType}
+                                                                    onChange={(e) => setProfileData({...profileData, businessType: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                >
+                                                                    <option value="Retail">Retail</option>
+                                                                    <option value="Restaurant">Restaurant</option>
+                                                                    <option value="Service">Service</option>
+                                                                    <option value="E-commerce">E-commerce</option>
+                                                                    <option value="Beauty & Salon">Beauty & Salon</option>
+                                                                    <option value="Automotive">Automotive</option>
+                                                                    <option value="Health & Fitness">Health & Fitness</option>
+                                                                    <option value="Other">Other</option>
                                                                 </select>
                                                             ) : (
-                                                                <p className="text-gray-900 py-2">Retail</p>
+                                                                <p className="text-gray-900 py-2">{profileData.businessType}</p>
                                                             )}
                                                         </div>
                                                         <div>
@@ -250,11 +359,14 @@ const AccountPage = () => {
                                                             {editingProfile ? (
                                                                 <input
                                                                     type="text"
+                                                                    value={profileData.taxId}
+                                                                    onChange={(e) => setProfileData({...profileData, taxId: e.target.value})}
                                                                     placeholder="Enter Tax ID"
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
                                                                 />
                                                             ) : (
-                                                                <p className="text-gray-900 py-2">***-***-1234</p>
+                                                                <p className="text-gray-900 py-2">{profileData.taxId || '***-***-1234'}</p>
                                                             )}
                                                         </div>
                                                         <div>
@@ -262,11 +374,14 @@ const AccountPage = () => {
                                                             {editingProfile ? (
                                                                 <input
                                                                     type="url"
+                                                                    value={profileData.website}
+                                                                    onChange={(e) => setProfileData({...profileData, website: e.target.value})}
                                                                     placeholder="https://yourwebsite.com"
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
                                                                 />
                                                             ) : (
-                                                                <p className="text-gray-900 py-2">www.yourstore.com</p>
+                                                                <p className="text-gray-900 py-2">{profileData.website || 'Not set'}</p>
                                                             )}
                                                         </div>
                                                     </div>
@@ -274,12 +389,36 @@ const AccountPage = () => {
 
                                                 {editingProfile && (
                                                     <div className="flex gap-3 mt-6">
-                                                        <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                                            Save Changes
+                                                        <button 
+                                                            onClick={handleProfileUpdate}
+                                                            disabled={loading}
+                                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                                        >
+                                                            {loading ? (
+                                                                <>
+                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                                    Saving...
+                                                                </>
+                                                            ) : (
+                                                                'Save Changes'
+                                                            )}
                                                         </button>
                                                         <button
-                                                            onClick={() => setEditingProfile(false)}
-                                                            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                                                            onClick={() => {
+                                                                setEditingProfile(false);
+                                                                // Reset form data
+                                                                setProfileData({
+                                                                    firstName: merchantInfo.first_name || '',
+                                                                    lastName: merchantInfo.last_name || '',
+                                                                    email: merchantInfo.email_address || '',
+                                                                    phoneNumber: merchantInfo.phone_number || '',
+                                                                    businessType: profileData.businessType,
+                                                                    taxId: profileData.taxId,
+                                                                    website: profileData.website
+                                                                });
+                                                            }}
+                                                            disabled={loading}
+                                                            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
                                                         >
                                                             Cancel
                                                         </button>
@@ -294,6 +433,7 @@ const AccountPage = () => {
                                                     <button
                                                         onClick={() => setShowAddBranch(true)}
                                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                                        disabled={loading}
                                                     >
                                                         <span>+</span> Add Branch
                                                     </button>
@@ -529,6 +669,7 @@ const AccountPage = () => {
                                     </div>
                                 </div>
                             )}
+
                             {/* Activity Tab */}
                             {activeTab === 3 && (
                                 <div className="space-y-6">
@@ -556,9 +697,9 @@ const AccountPage = () => {
                                         <h3 className="text-xl font-semibold text-gray-900 mb-6">Login History</h3>
                                         <div className="space-y-3">
                                             {[
-                                                { device: 'Chrome on Windows', location: 'New York, US', time: 'Current session' },
-                                                { device: 'Safari on iPhone', location: 'New York, US', time: '2 hours ago' },
-                                                { device: 'Chrome on Windows', location: 'New York, US', time: '1 day ago' }
+                                                { device: 'Chrome on Windows', location: 'Nairobi, Kenya', time: 'Current session' },
+                                                { device: 'Safari on iPhone', location: 'Nairobi, Kenya', time: '2 hours ago' },
+                                                { device: 'Chrome on Windows', location: 'Nairobi, Kenya', time: '1 day ago' }
                                             ].map((login, index) => (
                                                 <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                                                     <div>
