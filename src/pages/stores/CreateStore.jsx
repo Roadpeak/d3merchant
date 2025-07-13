@@ -31,7 +31,7 @@ const CreateStore = () => {
         opening_time: '09:00',
         closing_time: '18:00',
         working_days: [],
-        status: 'open', // Changed from 'active' to 'open' to match your model
+        status: 'open', // Use valid ENUM value from your model
         category: '',
         cashback: '5%',
     });

@@ -17,7 +17,8 @@ import {
     Moon,
     ChevronLeft,
     ChevronRight,
-    Store
+    Store,
+    UserCircle
 } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import merchantAuthService from '../services/merchantAuthService';
@@ -87,6 +88,13 @@ const Sidebar = ({ onClose, currentMerchant }) => {
             icon: <BookOpen size={20} />,
             path: "/dashboard/bookings"
         },
+
+        {
+            name: "ServiceRequests",
+            icon: <UserCircle size={20} />,
+            path: "/dashboard/serviceRequests"
+        },
+
         {
             name: "Reviews",
             icon: <MessageCircle size={20} />,
