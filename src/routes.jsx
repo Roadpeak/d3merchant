@@ -33,7 +33,7 @@ const AppRoutes = () => {
       <Route path="/accounts/sign-up" element={<SignupPage />} />
       <Route path="/accounts/sign-in" element={<LoginPage />} />
       <Route path='/dashboard' element={<Dashboard />} />
-      <Route path='/dashboard/MerchantChatInterface' element={<MerchantChatInterface />} />
+      <Route path='/dashboard/chat' element={<MerchantChatInterface />} />
       <Route path="/dashboard/services" element={<ServicesPage />} />
       <Route path='/dashboard/dynamic-form/:id' element={<DynamicFormPage />} />
       <Route path='/dashboard/analytics' element={<Analytics />} />

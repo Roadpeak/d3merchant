@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2 } from 'lucide-react';
 import Layout from '../../elements/Layout';
+import chatService from '../services/chatService';
+import useSocket from '../hooks/useSocket';
 
 const MerchantChatInterface = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -10,138 +12,79 @@ const MerchantChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [socket, setSocket] = useState(null);
-  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
   const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
-  // Mock data for demonstration
-  const mockCustomers = [
-    {
-      id: 1,
-      customer: {
-        id: 1,
-        name: 'Sarah Johnson',
-        avatar: null,
-        priority: 'vip',
-        customerSince: '2023',
-        orderCount: 15
-      },
-      lastMessage: 'Hi! Is my order ready for pickup?',
-      lastMessageTime: '2 min ago',
-      unreadCount: 2,
-      online: true
-    },
-    {
-      id: 2,
-      customer: {
-        id: 2,
-        name: 'Michael Chen',
-        avatar: null,
-        priority: 'regular',
-        customerSince: '2024',
-        orderCount: 8
-      },
-      lastMessage: 'Thank you for the excellent service!',
-      lastMessageTime: '1 hour ago',
-      unreadCount: 0,
-      online: false
-    },
-    {
-      id: 3,
-      customer: {
-        id: 3,
-        name: 'Emma Davis',
-        avatar: null,
-        priority: 'vip',
-        customerSince: '2022',
-        orderCount: 32
-      },
-      lastMessage: 'Do you have the blue variant in stock?',
-      lastMessageTime: '3 hours ago',
-      unreadCount: 1,
-      online: true
-    }
-  ];
-
-  const mockMessages = [
-    {
-      id: 1,
-      text: 'Hi! Is my order ready for pickup?',
-      sender: 'customer',
-      timestamp: '2:30 PM',
-      status: 'read'
-    },
-    {
-      id: 2,
-      text: 'Let me check that for you right away!',
-      sender: 'merchant',
-      timestamp: '2:31 PM',
-      status: 'read'
-    },
-    {
-      id: 3,
-      text: 'Yes, your order is ready! You can pick it up anytime today.',
-      sender: 'merchant',
-      timestamp: '2:32 PM',
-      status: 'sent'
-    }
-  ];
-
-  // Mock API call helper
-  const apiCall = async (endpoint, options = {}) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (endpoint === '/chat/conversations') {
-          resolve({
-            success: true,
-            data: mockCustomers
-          });
-        } else if (endpoint.includes('/messages')) {
-          resolve({
-            success: true,
-            data: mockMessages
-          });
-        } else {
-          resolve({
-            success: true,
-            data: {}
-          });
-        }
-      }, 500);
-    });
-  };
-
-  // Initialize WebSocket connection - Mock for demonstration
+  // Initialize user (replace with actual user data)
   useEffect(() => {
-    const initSocket = () => {
-      const mockSocket = {
-        on: (event, callback) => {
-          console.log(`Listening for ${event}`);
-        },
-        emit: (event, data) => {
-          console.log(`Emitting ${event}:`, data);
-        },
-        disconnect: () => {
-          console.log('Socket disconnected');
-        }
-      };
-
-      setSocket(mockSocket);
+    const userData = {
+      id: 'merchant-123',
+      name: 'Store Owner',
+      role: 'merchant',
+      storeId: 'store-456'
     };
-
-    initSocket();
-
-    // Cleanup function
-    return () => {
-      if (socket) {
-        socket.disconnect();
-      }
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
+    setUser(userData);
   }, []);
+
+  // Initialize socket
+  const {
+    socket,
+    isConnected,
+    joinConversation,
+    leaveConversation,
+    handleTyping,
+    on,
+    off,
+    isUserOnline,
+    getTypingUsers
+  } = useSocket(user);
+
+  // Socket event handlers
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (messageData) => {
+      setMessages(prev => [...prev, messageData]);
+      
+      // Update customer list
+      setCustomers(prev => prev.map(customer => {
+        if (customer.id === messageData.conversationId) {
+          return {
+            ...customer,
+            lastMessage: messageData.text,
+            lastMessageTime: messageData.timestamp,
+            unreadCount: messageData.sender === 'customer' ? customer.unreadCount + 1 : customer.unreadCount
+          };
+        }
+        return customer;
+      }));
+
+      scrollToBottom();
+    };
+
+    const handleMessageStatusUpdate = ({ messageId, status }) => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId ? { ...msg, status } : msg
+      ));
+    };
+
+    const handleMessagesRead = ({ readBy }) => {
+      setMessages(prev => prev.map(msg => 
+        msg.sender === 'merchant' ? { ...msg, status: 'read' } : msg
+      ));
+    };
+
+    on('new_message', handleNewMessage);
+    on('message_status_update', handleMessageStatusUpdate);
+    on('messages_read', handleMessagesRead);
+
+    return () => {
+      off('new_message', handleNewMessage);
+      off('message_status_update', handleMessageStatusUpdate);
+      off('messages_read', handleMessagesRead);
+    };
+  }, [socket, on, off]);
 
   // Load conversations on mount
   useEffect(() => {
@@ -152,13 +95,15 @@ const MerchantChatInterface = () => {
   const loadConversations = async () => {
     try {
       setLoading(true);
-      const response = await apiCall('/chat/conversations');
-
+      setError(null);
+      
+      const response = await chatService.getConversations('merchant');
       if (response.success) {
         setCustomers(response.data);
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
+      setError('Failed to load conversations');
     } finally {
       setLoading(false);
     }
@@ -167,28 +112,33 @@ const MerchantChatInterface = () => {
   // Load messages for selected conversation
   const loadMessages = async (conversationId) => {
     try {
-      const response = await apiCall(`/chat/conversations/${conversationId}/messages`);
-
+      setError(null);
+      const response = await chatService.getMessages(conversationId);
+      
       if (response.success) {
         setMessages(response.data);
         scrollToBottom();
       }
     } catch (error) {
       console.error('Failed to load messages:', error);
+      setError('Failed to load messages');
     }
   };
 
   // Handle customer selection
   const handleCustomerSelect = (customer) => {
+    // Leave previous conversation
+    if (selectedCustomer) {
+      leaveConversation(selectedCustomer.conversationId);
+    }
+
     setSelectedCustomer({
       ...customer,
       conversationId: customer.id
     });
 
-    // Join conversation room
-    if (socket) {
-      socket.emit('join_conversation', customer.id);
-    }
+    // Join new conversation
+    joinConversation(customer.id);
 
     // Load messages
     loadMessages(customer.id);
@@ -200,6 +150,8 @@ const MerchantChatInterface = () => {
   // Mark messages as read
   const markAsRead = async (conversationId) => {
     try {
+      await chatService.markMessagesAsRead(conversationId);
+      
       // Reset unread count in UI
       setCustomers(prev => prev.map(customer =>
         customer.id === conversationId
@@ -217,41 +169,27 @@ const MerchantChatInterface = () => {
 
     try {
       setSendingMessage(true);
+      setError(null);
 
-      const messageData = {
-        conversationId: selectedCustomer.conversationId,
-        content: message.trim(),
-        messageType: 'text'
-      };
+      const messageText = message.trim();
+      setMessage('');
 
-      const response = await apiCall('/chat/messages', {
-        method: 'POST',
-        body: JSON.stringify(messageData)
-      });
+      const response = await chatService.sendMessage(
+        selectedCustomer.conversationId,
+        messageText,
+        'text'
+      );
 
       if (response.success) {
-        // Add message to local state immediately for better UX
-        const newMessage = {
-          id: Date.now(), // Temporary ID
-          text: message.trim(),
-          sender: 'merchant',
-          timestamp: new Date().toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit'
-          }),
-          status: 'sent'
-        };
-
-        setMessages(prev => [...prev, newMessage]);
-        setMessage('');
-        scrollToBottom();
-
+        // Message will be added via socket event
+        console.log('Message sent successfully');
+        
         // Update customer list
         setCustomers(prev => prev.map(customer =>
           customer.id === selectedCustomer.conversationId
             ? {
               ...customer,
-              lastMessage: message.trim(),
+              lastMessage: messageText,
               lastMessageTime: 'now'
             }
             : customer
@@ -259,27 +197,10 @@ const MerchantChatInterface = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      setError('Failed to send message');
+      setMessage(messageText); // Restore message on error
     } finally {
       setSendingMessage(false);
-    }
-  };
-
-  // Handle typing indicators
-  const handleTypingStart = () => {
-    if (socket && selectedCustomer) {
-      socket.emit('typing_start', {
-        conversationId: selectedCustomer.conversationId,
-        userId: 'merchant-user-id'
-      });
-    }
-  };
-
-  const handleTypingStop = () => {
-    if (socket && selectedCustomer) {
-      socket.emit('typing_stop', {
-        conversationId: selectedCustomer.conversationId,
-        userId: 'merchant-user-id'
-      });
     }
   };
 
@@ -288,22 +209,14 @@ const MerchantChatInterface = () => {
     setMessage(e.target.value);
 
     // Handle typing indicators
-    handleTypingStart();
-
-    // Clear previous timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+    if (selectedCustomer) {
+      handleTyping(selectedCustomer.conversationId);
     }
-
-    // Set new timeout to stop typing
-    typingTimeoutRef.current = setTimeout(() => {
-      handleTypingStop();
-    }, 1000);
   };
 
   const handleBackToSidebar = () => {
-    if (socket && selectedCustomer) {
-      socket.emit('leave_conversation', selectedCustomer.conversationId);
+    if (selectedCustomer) {
+      leaveConversation(selectedCustomer.conversationId);
     }
     setSelectedCustomer(null);
     setMessages([]);
@@ -342,6 +255,9 @@ const MerchantChatInterface = () => {
   // Calculate total unread messages
   const totalUnreadCount = customers.reduce((total, customer) => total + (customer.unreadCount || 0), 0);
 
+  // Get typing users for current conversation
+  const typingUsers = selectedCustomer ? getTypingUsers(selectedCustomer.conversationId) : [];
+
   return (
     <Layout>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" style={{ height: '700px' }}>
@@ -350,7 +266,10 @@ const MerchantChatInterface = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Customer Chat</h2>
-              <p className="text-sm text-gray-500">Manage customer conversations</p>
+              <p className="text-sm text-gray-500">
+                Manage customer conversations
+                {isConnected && <span className="ml-2 text-green-600">● Connected</span>}
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               {totalUnreadCount > 0 && (
@@ -361,8 +280,19 @@ const MerchantChatInterface = () => {
                   </span>
                 </div>
               )}
+              <button
+                onClick={loadConversations}
+                className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Refresh
+              </button>
             </div>
           </div>
+          {error && (
+            <div className="mt-2 p-2 bg-red-100 border border-red-300 text-red-700 rounded text-sm">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="flex" style={{ height: 'calc(100% - 80px)' }}>
@@ -409,7 +339,7 @@ const MerchantChatInterface = () => {
                         alt={customer.customer?.name || 'Unknown'}
                         className="w-12 h-12 rounded-full object-cover"
                       />
-                      {customer.online && (
+                      {isUserOnline(customer.customer?.id) && (
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                       )}
                       {customer.customer?.priority === 'vip' && (
@@ -454,7 +384,6 @@ const MerchantChatInterface = () => {
                 {/* Chat Header */}
                 <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center">
-                    {/* Back button - Only visible on mobile */}
                     <button
                       onClick={handleBackToSidebar}
                       className="lg:hidden mr-3 p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -481,7 +410,7 @@ const MerchantChatInterface = () => {
                         )}
                       </div>
                       <p className="text-sm text-gray-500">
-                        {selectedCustomer.online ? 'Online' : 'Last seen recently'} • {selectedCustomer.customer?.orderCount || 0} orders
+                        {isUserOnline(selectedCustomer.customer?.id) ? 'Online' : 'Last seen recently'} • {selectedCustomer.customer?.orderCount || 0} orders
                       </p>
                     </div>
                   </div>
@@ -531,7 +460,7 @@ const MerchantChatInterface = () => {
                   ))}
 
                   {/* Typing indicator */}
-                  {typingUsers.size > 0 && (
+                  {typingUsers.length > 0 && (
                     <div className="flex justify-start">
                       <div className="bg-gray-200 px-4 py-2 rounded-lg">
                         <div className="flex space-x-1">
@@ -571,7 +500,8 @@ const MerchantChatInterface = () => {
                         onKeyPress={handleKeyPress}
                         placeholder="Type a message..."
                         rows={1}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32"
+                        disabled={sendingMessage}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32 disabled:bg-gray-100"
                       />
                     </div>
                     <button

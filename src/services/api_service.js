@@ -6,7 +6,15 @@ import merchantAuthService from "./merchantAuthService";
 // Helper function to get auth headers
 const getAuthHeaders = () => {
     const token = merchantAuthService.getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
 };
 
 // Helper function to handle API errors
@@ -29,7 +37,34 @@ const handleApiError = (error, context = '') => {
         throw new Error('Network error. Please check your connection.');
     }
     
+    // Handle specific 404 errors for services
+    if (error.response?.status === 404 && context.includes('services')) {
+        throw new Error('Services not found for your store. Please check if you have created a store first.');
+    }
+    
     throw error;
+};
+
+// Helper function to get merchant's store ID
+const getMerchantStoreId = async () => {
+    try {
+        const merchant = merchantAuthService.getCurrentMerchant();
+        if (!merchant) {
+            throw new Error('Merchant information not found');
+        }
+
+        // First try to get stores for this merchant
+        const stores = await getMerchantStores();
+        if (stores && stores.length > 0) {
+            return stores[0].id;
+        }
+        
+        // If no stores found, throw a more helpful error
+        throw new Error('No store found. Please create a store first before adding services.');
+    } catch (error) {
+        console.error('Error getting merchant store ID:', error);
+        throw error;
+    }
 };
 
 // ===== MERCHANT AUTH SERVICES =====
@@ -157,24 +192,67 @@ export const updateStore = async (storeId, storeData) => {
 
 // ===== SERVICES =====
 
-// Fetch all services for current merchant
+// Fetch all services for current merchant - FIXED VERSION
 export const fetchServices = async () => {
     try {
+        console.log('🔍 Starting fetchServices...');
+        
         const merchant = merchantAuthService.getCurrentMerchant();
         if (!merchant) {
-            throw new Error('Merchant information not found');
+            throw new Error('Merchant information not found. Please log in again.');
         }
 
-        // Assuming you need to get services by store ID
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/services/store/${stores[0].id}`, {
+        console.log('👤 Merchant found:', merchant.id);
+
+        // Try multiple endpoints to fetch services
+        let services = [];
+        
+        try {
+            // Option 1: Try to get services by store ID
+            const storeId = await getMerchantStoreId();
+            console.log('🏪 Store ID found:', storeId);
+            
+            const response = await axiosInstance.get(`/services/store/${storeId}`, {
                 headers: getAuthHeaders()
             });
-            return response.data;
+            services = response.data?.services || response.data || [];
+            console.log('✅ Services from store endpoint:', services);
+            
+        } catch (storeError) {
+            console.log('⚠️ Store-based service fetch failed, trying direct approach:', storeError.message);
+            
+            try {
+                // Option 2: Try to get all services and filter by merchant
+                const response = await axiosInstance.get('/services', {
+                    headers: getAuthHeaders()
+                });
+                const allServices = response.data?.services || response.data || [];
+                
+                // If we have stores, filter services by store
+                try {
+                    const stores = await getMerchantStores();
+                    const storeIds = stores.map(store => store.id);
+                    services = allServices.filter(service => storeIds.includes(service.store_id));
+                } catch {
+                    // If we can't get stores, return all services (assuming they belong to the merchant)
+                    services = allServices;
+                }
+                
+                console.log('✅ Services from general endpoint:', services);
+                
+            } catch (generalError) {
+                console.log('⚠️ General service fetch failed:', generalError.message);
+                throw new Error('Unable to fetch services. Please ensure you have created a store first.');
+            }
         }
-        return { services: [] };
+
+        return { 
+            services: Array.isArray(services) ? services : [],
+            message: services.length === 0 ? 'No services found' : undefined
+        };
+        
     } catch (error) {
+        console.error('❌ fetchServices error:', error);
         handleApiError(error, 'fetching services');
     }
 };
@@ -194,6 +272,12 @@ export const fetchServiceById = async (serviceId) => {
 // Create a new service
 export const createService = async (serviceData) => {
     try {
+        // Ensure we have a store_id
+        if (!serviceData.store_id) {
+            const storeId = await getMerchantStoreId();
+            serviceData.store_id = storeId;
+        }
+
         const response = await axiosInstance.post('/services', serviceData, {
             headers: getAuthHeaders()
         });
@@ -232,19 +316,11 @@ export const deleteService = async (serviceId) => {
 // Fetch all offers for current merchant
 export const fetchOffers = async () => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/offers/store/${stores[0].id}`, {
-                headers: getAuthHeaders()
-            });
-            return response.data;
-        }
-        return { offers: [] };
+        const storeId = await getMerchantStoreId();
+        const response = await axiosInstance.get(`/offers/store/${storeId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
     } catch (error) {
         handleApiError(error, 'fetching offers');
     }
@@ -291,19 +367,11 @@ export const deleteOffer = async (offerId) => {
 // Fetch bookings for current merchant's store
 export const fetchBookings = async () => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/bookings/store/${stores[0].id}`, {
-                headers: getAuthHeaders()
-            });
-            return response.data;
-        }
-        return { bookings: [] };
+        const storeId = await getMerchantStoreId();
+        const response = await axiosInstance.get(`/bookings/store/${storeId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
     } catch (error) {
         handleApiError(error, 'fetching bookings');
     }
@@ -333,24 +401,51 @@ export const updateBookingStatus = async (bookingId, status) => {
     }
 };
 
+// ===== FILE UPLOAD =====
+
+// Upload an image with better error handling
+export const uploadImage = async (file, folder = 'general') => {
+    try {
+        if (!file) {
+            throw new Error('No file provided');
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            throw new Error('File must be an image');
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('File size must be less than 5MB');
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', folder);
+
+        const response = await axiosInstance.post('/files/upload-image', formData, {
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'uploading image');
+    }
+};
+
 // ===== STAFF =====
 
 // Fetch staff for current merchant's store
 export const fetchStaff = async () => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/staff/store/${stores[0].id}`, {
-                headers: getAuthHeaders()
-            });
-            return response.data;
-        }
-        return { staff: [] };
+        const storeId = await getMerchantStoreId();
+        const response = await axiosInstance.get(`/staff/store/${storeId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
     } catch (error) {
         handleApiError(error, 'fetching staff');
     }
@@ -392,39 +487,40 @@ export const getStaffById = async (staffId) => {
     }
 };
 
-// Assign service to staff
-export const assignService = async (assignmentData) => {
+// ===== UTILITY FUNCTIONS =====
+
+// Test API connection
+export const testConnection = async () => {
     try {
-        const response = await axiosInstance.post('/staff/assign-service', assignmentData, {
-            headers: getAuthHeaders()
-        });
+        const response = await axiosInstance.get('/health');
         return response.data;
     } catch (error) {
-        handleApiError(error, 'assigning service to staff');
+        handleApiError(error, 'testing connection');
     }
 };
 
-// Get staff assigned services
-export const getStaffAssignedServices = async (staffId) => {
+// Get dashboard summary data
+export const getDashboardData = async () => {
     try {
-        const response = await axiosInstance.get(`/staff/${staffId}/services`, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'fetching staff assigned services');
-    }
-};
+        const merchant = merchantAuthService.getCurrentMerchant();
+        if (!merchant) {
+            throw new Error('Merchant information not found');
+        }
 
-// Get bookings by staff ID
-export const getBookingsByStaffId = async (staffId) => {
-    try {
-        const response = await axiosInstance.get(`/staff/${staffId}/bookings`, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
+        // Fetch multiple data sources in parallel with error handling
+        const [bookingsResult, servicesResult, offersResult] = await Promise.allSettled([
+            fetchBookings(),
+            fetchServices(),
+            fetchOffers()
+        ]);
+
+        return {
+            bookings: bookingsResult.status === 'fulfilled' ? bookingsResult.value : { bookings: [] },
+            services: servicesResult.status === 'fulfilled' ? servicesResult.value : { services: [] },
+            offers: offersResult.status === 'fulfilled' ? offersResult.value : { offers: [] }
+        };
     } catch (error) {
-        handleApiError(error, 'fetching staff bookings');
+        handleApiError(error, 'fetching dashboard data');
     }
 };
 
@@ -433,19 +529,11 @@ export const getBookingsByStaffId = async (staffId) => {
 // Fetch all socials for current merchant's store
 export const fetchSocials = async () => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/socials/${stores[0].id}`, {
-                headers: getAuthHeaders()
-            });
-            return response.data;
-        }
-        return { socials: [] };
+        const storeId = await getMerchantStoreId();
+        const response = await axiosInstance.get(`/socials/${storeId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
     } catch (error) {
         handleApiError(error, 'fetching social media links');
     }
@@ -492,19 +580,11 @@ export const deleteSocial = async (socialId) => {
 // Fetch reviews for current merchant's store
 export const fetchReviews = async () => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/stores/${stores[0].id}/reviews`, {
-                headers: getAuthHeaders()
-            });
-            return response.data;
-        }
-        return { reviews: [] };
+        const storeId = await getMerchantStoreId();
+        const response = await axiosInstance.get(`/stores/${storeId}/reviews`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
     } catch (error) {
         handleApiError(error, 'fetching reviews');
     }
@@ -528,55 +608,13 @@ export const respondToReview = async (reviewId, response) => {
 // Get merchant analytics
 export const getAnalytics = async (timeRange = '7d') => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        const stores = await getMerchantStores();
-        if (stores && stores.length > 0) {
-            const response = await axiosInstance.get(`/analytics/store/${stores[0].id}?range=${timeRange}`, {
-                headers: getAuthHeaders()
-            });
-            return response.data;
-        }
-        return { analytics: {} };
-    } catch (error) {
-        handleApiError(error, 'fetching analytics');
-    }
-};
-
-// ===== FILE UPLOAD =====
-
-// Upload an image with better error handling
-export const uploadImage = async (file) => {
-    try {
-        if (!file) {
-            throw new Error('No file provided');
-        }
-
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            throw new Error('File must be an image');
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            throw new Error('File size must be less than 5MB');
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await axiosInstance.post('/files/upload-image', formData, {
-            headers: {
-                ...getAuthHeaders(),
-                'Content-Type': 'multipart/form-data',
-            },
+        const storeId = await getMerchantStoreId();
+        const response = await axiosInstance.get(`/analytics/store/${storeId}?range=${timeRange}`, {
+            headers: getAuthHeaders()
         });
         return response.data;
     } catch (error) {
-        handleApiError(error, 'uploading image');
+        handleApiError(error, 'fetching analytics');
     }
 };
 
@@ -591,47 +629,6 @@ export const createForm = async (formData) => {
         return response.data;
     } catch (error) {
         handleApiError(error, 'creating form');
-    }
-};
-
-// ===== DASHBOARD DATA =====
-
-// Get dashboard summary data
-export const getDashboardData = async () => {
-    try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
-
-        // Fetch multiple data sources in parallel
-        const [bookings, services, offers, reviews] = await Promise.allSettled([
-            fetchBookings(),
-            fetchServices(),
-            fetchOffers(),
-            fetchReviews()
-        ]);
-
-        return {
-            bookings: bookings.status === 'fulfilled' ? bookings.value : { bookings: [] },
-            services: services.status === 'fulfilled' ? services.value : { services: [] },
-            offers: offers.status === 'fulfilled' ? offers.value : { offers: [] },
-            reviews: reviews.status === 'fulfilled' ? reviews.value : { reviews: [] }
-        };
-    } catch (error) {
-        handleApiError(error, 'fetching dashboard data');
-    }
-};
-
-// ===== UTILITY FUNCTIONS =====
-
-// Test API connection
-export const testConnection = async () => {
-    try {
-        const response = await axiosInstance.get('/health');
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'testing connection');
     }
 };
 
@@ -659,6 +656,8 @@ export const refreshAuthToken = async () => {
         handleApiError(error, 'refreshing token');
     }
 };
+
+
 
 export default {
     // Auth
@@ -697,9 +696,6 @@ export default {
     addStaff,
     deleteStaff,
     getStaffById,
-    assignService,
-    getStaffAssignedServices,
-    getBookingsByStaffId,
     
     // Socials
     fetchSocials,
