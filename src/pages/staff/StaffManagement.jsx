@@ -1,60 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, MoreVertical, Edit, Trash2, UserCheck, UserX, Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, MoreVertical, Edit, Trash2, UserCheck, UserX, Building2, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import Layout from '../../elements/Layout';
-
-// Mock data for demonstration
-const mockStores = [
-  { id: '1', name: 'Downtown Branch', address: '123 Main St' },
-  { id: '2', name: 'Mall Branch', address: '456 Shopping Ave' },
-  { id: '3', name: 'Airport Branch', address: '789 Terminal Rd' },
-];
-
-const mockStaff = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1234567890',
-    role: 'Manager',
-    status: 'active',
-    availability: 'available',
-    storeId: '1',
-    storeName: 'Downtown Branch',
-    joinDate: '2024-01-15',
-    avatar: 'JD'
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    phone: '+1234567891',
-    role: 'Cashier',
-    status: 'active',
-    availability: 'unavailable',
-    storeId: '2',
-    storeName: 'Mall Branch',
-    joinDate: '2024-02-20',
-    avatar: 'JS'
-  },
-  {
-    id: '3',
-    name: 'Mike Johnson',
-    email: 'mike@example.com',
-    phone: '+1234567892',
-    role: 'Sales Associate',
-    status: 'suspended',
-    availability: 'available',
-    storeId: '1',
-    storeName: 'Downtown Branch',
-    joinDate: '2024-03-10',
-    avatar: 'MJ'
-  },
-];
+import StaffAPI from '../../services/api_service';
+// Import your stores API service - you'll need to create this or import from existing service
+import { getMerchantStores } from '../../services/api_service'; // Add this import
 
 const StaffManagement = () => {
-  const [staff, setStaff] = useState(mockStaff);
-  const [stores, setStores] = useState(mockStores);
-  const [filteredStaff, setFilteredStaff] = useState(mockStaff);
+  const [staff, setStaff] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [filteredStaff, setFilteredStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
@@ -67,20 +23,73 @@ const StaffManagement = () => {
   });
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  // Toast helper function
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Load staff and stores in parallel
+      const [staffResponse, storesData] = await Promise.all([
+        StaffAPI.getAllStaff(),
+        loadStores()
+      ]);
+      
+      const staffData = staffResponse?.staff || staffResponse || [];
+      
+      setStaff(staffData);
+      setStores(storesData);
+    } catch (err) {
+      setError(err.message);
+      showToast('Failed to load data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load stores function
+  const loadStores = async () => {
+    try {
+      const storesResponse = await getMerchantStores();
+      console.log('Loaded stores:', storesResponse);
+      
+      const stores = storesResponse?.stores || storesResponse || [];
+      
+      if (stores.length === 0) {
+        setError('No stores found. Please create a store first before adding staff.');
+        return [];
+      }
+      
+      return stores;
+    } catch (error) {
+      console.error('Error loading merchant stores:', error);
+      setError('Failed to load store information');
+      return [];
+    }
+  };
 
   // Filter and search logic
   useEffect(() => {
     let filtered = staff.filter(member => {
-      const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           member.role.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           member.email?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStore = !filters.store || member.storeId === filters.store;
-      const matchesRole = !filters.role || member.role === filters.role;
       const matchesStatus = !filters.status || member.status === filters.status;
-      const matchesAvailability = !filters.availability || member.availability === filters.availability;
 
-      return matchesSearch && matchesStore && matchesRole && matchesStatus && matchesAvailability;
+      return matchesSearch && matchesStore && matchesStatus;
     });
 
     // Apply sorting
@@ -105,33 +114,123 @@ const StaffManagement = () => {
     }));
   };
 
-  const handleStatusChange = (staffId, newStatus) => {
-    setStaff(prev => prev.map(member =>
-      member.id === staffId ? { ...member, status: newStatus } : member
-    ));
+  const handleStatusChange = async (staffId, newStatus) => {
+    try {
+      await StaffAPI.updateStaff(staffId, { status: newStatus });
+      setStaff(prev => prev.map(member =>
+        member.id === staffId ? { ...member, status: newStatus } : member
+      ));
+      showToast(`Staff ${newStatus === 'active' ? 'activated' : 'suspended'} successfully`);
+      setDropdownOpen(null);
+    } catch (err) {
+      showToast('Failed to update staff status', 'error');
+    }
   };
 
-  const handleAvailabilityChange = (staffId, newAvailability) => {
-    setStaff(prev => prev.map(member =>
-      member.id === staffId ? { ...member, availability: newAvailability } : member
-    ));
-  };
-
-  const handleDelete = (staffId) => {
+  const handleDelete = async (staffId) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
-      setStaff(prev => prev.filter(member => member.id !== staffId));
+      try {
+        await StaffAPI.deleteStaff(staffId);
+        setStaff(prev => prev.filter(member => member.id !== staffId));
+        showToast('Staff member deleted successfully');
+        setDropdownOpen(null);
+      } catch (err) {
+        showToast('Failed to delete staff member', 'error');
+      }
     }
   };
 
   const handleEdit = (staffMember) => {
     setEditingStaff(staffMember);
     setIsEditModalOpen(true);
+    setDropdownOpen(null);
   };
+
+  const handleAddStaff = async (newStaffData) => {
+    try {
+      const response = await StaffAPI.createStaff(newStaffData);
+      const newStaff = response.staff || response;
+      setStaff(prev => [...prev, newStaff]);
+      showToast('Staff member added successfully');
+      setIsAddModalOpen(false);
+    } catch (err) {
+      showToast(err.message || 'Failed to add staff member', 'error');
+    }
+  };
+
+  const handleUpdateStaff = async (updatedStaffData) => {
+    try {
+      const response = await StaffAPI.updateStaff(updatedStaffData.id, updatedStaffData);
+      const updatedStaff = response.staff || response;
+      setStaff(prev => prev.map(member => 
+        member.id === updatedStaffData.id ? { ...member, ...updatedStaff } : member
+      ));
+      showToast('Staff member updated successfully');
+      setIsEditModalOpen(false);
+      setEditingStaff(null);
+    } catch (err) {
+      showToast(err.message || 'Failed to update staff member', 'error');
+    }
+  };
+
+  const getStoreName = (storeId) => {
+    const store = stores.find(s => s.id === storeId);
+    return store?.name || 'Unknown Store';
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getInitials = (name) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="p-6 flex items-center justify-center min-h-96">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Loading staff data...</span>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-500" />
+            <span className="text-red-700">{error}</span>
+            <button 
+              onClick={loadData}
+              className="ml-auto px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
+          {/* Toast Notification */}
+          {toast && (
+            <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+              toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'
+            } text-white`}>
+              {toast.message}
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Staff Management</h1>
@@ -167,17 +266,6 @@ const StaffManagement = () => {
                 </select>
 
                 <select
-                  value={filters.role}
-                  onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Roles</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Cashier">Cashier</option>
-                  <option value="Sales Associate">Sales Associate</option>
-                </select>
-
-                <select
                   value={filters.status}
                   onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -186,16 +274,6 @@ const StaffManagement = () => {
                   <option value="active">Active</option>
                   <option value="suspended">Suspended</option>
                   <option value="inactive">Inactive</option>
-                </select>
-
-                <select
-                  value={filters.availability}
-                  onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Availability</option>
-                  <option value="available">Available</option>
-                  <option value="unavailable">Unavailable</option>
                 </select>
 
                 <button
@@ -227,26 +305,10 @@ const StaffManagement = () => {
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button
-                        onClick={() => handleSort('storeName')}
-                        className="flex items-center gap-1 hover:text-gray-700"
-                      >
-                        Store Branch
-                        {sortConfig.key === 'storeName' && (
-                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                        )}
-                      </button>
+                      Store Branch
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button
-                        onClick={() => handleSort('role')}
-                        className="flex items-center gap-1 hover:text-gray-700"
-                      >
-                        Role
-                        {sortConfig.key === 'role' && (
-                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                        )}
-                      </button>
+                      Phone
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
@@ -255,17 +317,6 @@ const StaffManagement = () => {
                       >
                         Status
                         {sortConfig.key === 'status' && (
-                          sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button
-                        onClick={() => handleSort('availability')}
-                        className="flex items-center gap-1 hover:text-gray-700"
-                      >
-                        Availability
-                        {sortConfig.key === 'availability' && (
                           sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
                         )}
                       </button>
@@ -285,7 +336,7 @@ const StaffManagement = () => {
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                              {member.avatar}
+                              {getInitials(member.name)}
                             </div>
                           </div>
                           <div className="ml-4">
@@ -297,11 +348,11 @@ const StaffManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <Building2 className="w-4 h-4 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-900">{member.storeName}</span>
+                          <span className="text-sm text-gray-900">{getStoreName(member.storeId)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">{member.role}</span>
+                        <span className="text-sm text-gray-900">{member.phoneNumber || 'N/A'}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -312,15 +363,8 @@ const StaffManagement = () => {
                           {member.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          member.availability === 'available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {member.availability}
-                        </span>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(member.joinDate).toLocaleDateString()}
+                        {formatDate(member.createdAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="relative">
@@ -361,14 +405,6 @@ const StaffManagement = () => {
                                 )}
                                 
                                 <button
-                                  onClick={() => handleAvailabilityChange(member.id, member.availability === 'available' ? 'unavailable' : 'available')}
-                                  className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 w-full text-left"
-                                >
-                                  {member.availability === 'available' ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
-                                  Mark {member.availability === 'available' ? 'Unavailable' : 'Available'}
-                                </button>
-                                
-                                <button
                                   onClick={() => handleDelete(member.id)}
                                   className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 w-full text-left"
                                 >
@@ -384,6 +420,12 @@ const StaffManagement = () => {
                   ))}
                 </tbody>
               </table>
+              
+              {filteredStaff.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No staff members found</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -392,18 +434,7 @@ const StaffManagement = () => {
             <AddStaffModal
               stores={stores}
               onClose={() => setIsAddModalOpen(false)}
-              onAdd={(newStaff) => {
-                const store = stores.find(s => s.id === newStaff.storeId);
-                const staffWithStore = {
-                  ...newStaff,
-                  id: Date.now().toString(),
-                  storeName: store?.name || '',
-                  joinDate: new Date().toISOString().split('T')[0],
-                  avatar: newStaff.name.split(' ').map(n => n[0]).join('').toUpperCase()
-                };
-                setStaff(prev => [...prev, staffWithStore]);
-                setIsAddModalOpen(false);
-              }}
+              onAdd={handleAddStaff}
             />
           )}
 
@@ -416,18 +447,7 @@ const StaffManagement = () => {
                 setIsEditModalOpen(false);
                 setEditingStaff(null);
               }}
-              onUpdate={(updatedStaff) => {
-                const store = stores.find(s => s.id === updatedStaff.storeId);
-                const staffWithStore = {
-                  ...updatedStaff,
-                  storeName: store?.name || ''
-                };
-                setStaff(prev => prev.map(member => 
-                  member.id === updatedStaff.id ? staffWithStore : member
-                ));
-                setIsEditModalOpen(false);
-                setEditingStaff(null);
-              }}
+              onUpdate={handleUpdateStaff}
             />
           )}
         </div>
@@ -441,27 +461,26 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
-    role: '',
+    phoneNumber: '',
     storeId: '',
-    status: 'active',
-    availability: 'available'
   });
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.role || !formData.storeId) {
+    if (!formData.name || !formData.email || !formData.storeId) {
       alert('Please fill in all required fields');
       return;
     }
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onAdd(formData);
+    try {
+      await onAdd(formData);
+    } catch (error) {
+      console.error('Error adding staff:', error);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleChange = (e) => {
@@ -478,7 +497,9 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               name="name"
@@ -490,7 +511,9 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
             <input
               type="email"
               name="email"
@@ -505,32 +528,17 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
               type="tel"
-              name="phone"
-              value={formData.phone}
+              name="phoneNumber"
+              value={formData.phoneNumber}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Select Role</option>
-              <option value="Manager">Manager</option>
-              <option value="Cashier">Cashier</option>
-              <option value="Sales Associate">Sales Associate</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Store Branch</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Store Branch <span className="text-red-500">*</span>
+            </label>
             <select
               name="storeId"
               value={formData.storeId}
@@ -550,6 +558,7 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              disabled={isLoading}
             >
               Cancel
             </button>
@@ -557,8 +566,9 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
               type="button"
               onClick={handleSubmit}
               disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 flex items-center gap-2"
             >
+              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isLoading ? 'Adding...' : 'Add Staff'}
             </button>
           </div>
@@ -574,27 +584,27 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
     id: staff.id,
     name: staff.name,
     email: staff.email,
-    phone: staff.phone,
-    role: staff.role,
+    phoneNumber: staff.phoneNumber || '',
     storeId: staff.storeId,
     status: staff.status,
-    availability: staff.availability
   });
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.role || !formData.storeId) {
+    if (!formData.name || !formData.email || !formData.storeId) {
       alert('Please fill in all required fields');
       return;
     }
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onUpdate(formData);
+    try {
+      await onUpdate(formData);
+    } catch (error) {
+      console.error('Error updating staff:', error);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleChange = (e) => {
@@ -611,7 +621,9 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               name="name"
@@ -623,7 +635,9 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
             <input
               type="email"
               name="email"
@@ -638,31 +652,17 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
               type="tel"
-              name="phone"
-              value={formData.phone}
+              name="phoneNumber"
+              value={formData.phoneNumber}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="Manager">Manager</option>
-              <option value="Cashier">Cashier</option>
-              <option value="Sales Associate">Sales Associate</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Store Branch</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Store Branch <span className="text-red-500">*</span>
+            </label>
             <select
               name="storeId"
               value={formData.storeId}
@@ -676,11 +676,26 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              disabled={isLoading}
             >
               Cancel
             </button>
@@ -688,8 +703,9 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
               type="button"
               onClick={handleSubmit}
               disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 flex items-center gap-2"
             >
+              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isLoading ? 'Updating...' : 'Update Staff'}
             </button>
           </div>

@@ -33,47 +33,122 @@ const AccountPage = () => {
             setLoading(true);
             setError(null);
             
-            const currentMerchant = merchantAuthService.getCurrentMerchant();
-            const token = merchantAuthService.getToken();
+            console.log('🔄 Starting merchant info fetch...');
             
-            if (!currentMerchant || !token) {
-                throw new Error('Authentication data not found');
+            // Debug: Check service status first
+            const serviceStatus = merchantAuthService.getStatus();
+            console.log('📊 Service Status:', serviceStatus);
+            
+            // Debug: Test basic API connection first
+            try {
+                console.log('🧪 Testing API connection...');
+                const testResult = await merchantAuthService.testConnection();
+                console.log('✅ API connection test result:', testResult);
+            } catch (testError) {
+                console.warn('⚠️ API connection test failed:', testError.message);
+                // Continue anyway in case the test endpoint doesn't exist yet
             }
-
-            const response = await merchantAuthService.getMerchantProfile(currentMerchant.id, token);
             
-            setMerchantInfo(response.merchantProfile);
-            setProfileData({
-                firstName: response.merchantProfile.first_name || '',
-                lastName: response.merchantProfile.last_name || '',
-                email: response.merchantProfile.email_address || '',
-                phoneNumber: response.merchantProfile.phone_number || '',
-                businessType: 'Retail', // Default value, you can enhance this
-                taxId: '', // Add if available in your backend
-                website: response.merchantProfile.store?.website_url || ''
+            // Check authentication
+            console.log('🔐 Checking authentication...');
+            if (!merchantAuthService.isAuthenticated()) {
+                console.log('❌ User not authenticated');
+                throw new Error('Authentication required');
+            }
+            console.log('✅ User is authenticated');
+            
+            // Debug: Log the request details
+            const token = merchantAuthService.getToken();
+            const merchant = merchantAuthService.getCurrentMerchant();
+            console.log('📋 Request details:', {
+                hasToken: !!token,
+                tokenStart: token ? token.substring(0, 20) + '...' : 'None',
+                merchantId: merchant?.id,
+                merchantEmail: merchant?.email_address
             });
             
-            // Mock branches data - replace with actual API call when available
+            // Try to fetch profile
+            console.log('🔄 Fetching current merchant profile...');
+            const response = await merchantAuthService.getCurrentMerchantProfile();
+            
+            // Handle logout scenario
+            if (!response) {
+                console.log('🚪 No response received - user may have been logged out');
+                return;
+            }
+    
+            if (!response.success) {
+                console.error('❌ Profile fetch unsuccessful:', response);
+                throw new Error(response.message || 'Failed to load profile information');
+            }
+    
+            const merchantProfile = response.merchantProfile;
+            console.log('✅ Merchant profile loaded successfully:', {
+                id: merchantProfile.id,
+                name: `${merchantProfile.first_name} ${merchantProfile.last_name}`,
+                email: merchantProfile.email_address,
+                hasStore: !!merchantProfile.store
+            });
+            
+            // Set the merchant info
+            setMerchantInfo(merchantProfile);
+            
+            // Set profile data for editing
+            setProfileData({
+                firstName: merchantProfile.first_name || '',
+                lastName: merchantProfile.last_name || '',
+                email: merchantProfile.email_address || '',
+                phoneNumber: merchantProfile.phone_number || '',
+                businessType: 'Retail', // Default value
+                taxId: '', // Add if available in your backend
+                website: merchantProfile.store?.website_url || ''
+            });
+            
+            // Set branches data (mock data as in original)
             setBranches([
                 {
                     id: 1,
-                    name: response.merchantProfile.store?.name || 'Main Branch',
-                    address: response.merchantProfile.store?.location || 'Address not set',
-                    phone: response.merchantProfile.store?.phone_number || response.merchantProfile.phone_number,
-                    manager: `${response.merchantProfile.first_name} ${response.merchantProfile.last_name}`,
-                    email: response.merchantProfile.store?.primary_email || response.merchantProfile.email_address,
+                    name: merchantProfile.store?.name || 'Main Branch',
+                    address: merchantProfile.store?.location || 'Address not set',
+                    phone: merchantProfile.store?.phone_number || merchantProfile.phone_number,
+                    manager: `${merchantProfile.first_name} ${merchantProfile.last_name}`,
+                    email: merchantProfile.store?.primary_email || merchantProfile.email_address,
                     status: 'Active'
                 }
             ]);
+    
+            console.log('✅ All merchant data set successfully');
+            
         } catch (error) {
-            console.error('Error fetching merchant info:', error);
-            setError(error.message || 'Failed to load profile information');
-            toast.error('Failed to load profile information');
+            console.error('💥 Error in getMerchantInfo:', error);
+            
+            // Enhanced error logging
+            console.group('🔍 Error Details');
+            console.log('Error message:', error.message);
+            console.log('Error stack:', error.stack);
+            console.log('Service status:', merchantAuthService.getStatus());
+            console.groupEnd();
+            
+            // Check if it's an authentication error
+            if (error.message?.includes('Authentication') || 
+                error.message?.includes('session has expired') ||
+                error.message?.includes('401') || 
+                error.message?.includes('403')) {
+                console.log('🚪 Authentication error detected');
+                // The service will handle logout automatically
+                return;
+            }
+            
+            // For other errors, show error message
+            const errorMessage = error.message || 'Failed to load profile information';
+            setError(errorMessage);
+            toast.error(errorMessage);
+            
         } finally {
             setLoading(false);
+            console.log('🏁 getMerchantInfo completed');
         }
     };
-
     const handleProfileUpdate = async () => {
         try {
             setLoading(true);

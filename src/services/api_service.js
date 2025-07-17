@@ -436,34 +436,93 @@ export const uploadImage = async (file, folder = 'general') => {
     }
 };
 
-// ===== STAFF =====
+// ===== STAFF MANAGEMENT =====
 
-// Fetch staff for current merchant's store
-export const fetchStaff = async () => {
+// Fetch all staff (updated to handle both store-specific and general queries)
+export const fetchStaff = async (storeId = null) => {
     try {
-        const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/staff/store/${storeId}`, {
+        let endpoint;
+        
+        if (storeId) {
+            // If specific store ID provided, use it
+            endpoint = `/staff/store/${storeId}`;
+        } else {
+            // Get staff for merchant's store
+            const merchantStoreId = await getMerchantStoreId();
+            endpoint = `/staff/store/${merchantStoreId}`;
+        }
+        
+        const response = await axiosInstance.get(endpoint, {
             headers: getAuthHeaders()
         });
-        return response.data;
+        
+        // Handle different response formats from the backend
+        const staffData = response.data?.staff || response.data || [];
+        return Array.isArray(staffData) ? staffData : [];
     } catch (error) {
         handleApiError(error, 'fetching staff');
     }
 };
 
-// Add staff member
-export const addStaff = async (staffData) => {
+// Get all staff (for admin views)
+export const getAllStaff = async () => {
     try {
-        const response = await axiosInstance.post('/staff', staffData, {
+        const response = await axiosInstance.get('/staff', {
+            headers: getAuthHeaders()
+        });
+        
+        const data = response.data;
+        // Handle paginated response
+        if (data.staff) {
+            return data.staff;
+        }
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        handleApiError(error, 'fetching all staff');
+    }
+};
+
+// Add/Create staff member (updated with better error handling)
+export const createStaff = async (staffData) => {
+    try {
+      console.log('Creating staff with data:', staffData); // Debug log
+      
+      // Don't send storeId if it's not properly set
+      const payload = {
+        name: staffData.name,
+        email: staffData.email,
+        phoneNumber: staffData.phoneNumber,
+        // Only include storeId if it's a valid UUID
+        ...(staffData.storeId && staffData.storeId !== 'undefined' ? { storeId: staffData.storeId } : {})
+      };
+      
+      console.log('Sending payload:', payload); // Debug log
+      
+      const response = await axiosInstance.post('/staff', payload, {
+        headers: getAuthHeaders()
+      });
+      
+      console.log('Staff creation response:', response.data); // Debug log
+      
+      return response.data;
+    } catch (error) {
+      console.error('Create staff error:', error.response?.data || error.message);
+      handleApiError(error, 'creating staff');
+    }
+  };
+// Update staff member
+export const updateStaff = async (staffId, staffData) => {
+    try {
+        const response = await axiosInstance.put(`/staff/${staffId}`, staffData, {
             headers: getAuthHeaders()
         });
         return response.data;
     } catch (error) {
-        handleApiError(error, 'adding staff');
+        handleApiError(error, 'updating staff');
     }
 };
 
-// Delete staff member
+// Delete staff member (updated with better error handling)
 export const deleteStaff = async (staffId) => {
     try {
         const response = await axiosInstance.delete(`/staff/${staffId}`, {
@@ -475,7 +534,7 @@ export const deleteStaff = async (staffId) => {
     }
 };
 
-// Get staff by ID
+// Get staff by ID (updated with better error handling)
 export const getStaffById = async (staffId) => {
     try {
         const response = await axiosInstance.get(`/staff/${staffId}`, {
@@ -487,40 +546,126 @@ export const getStaffById = async (staffId) => {
     }
 };
 
-// ===== UTILITY FUNCTIONS =====
-
-// Test API connection
-export const testConnection = async () => {
+// Assign staff to service
+export const assignStaffToService = async (staffId, serviceId) => {
     try {
-        const response = await axiosInstance.get('/health');
+        const response = await axiosInstance.post('/staff/assign-service', 
+            { staffId, serviceId }, 
+            { headers: getAuthHeaders() }
+        );
         return response.data;
     } catch (error) {
-        handleApiError(error, 'testing connection');
+        handleApiError(error, 'assigning staff to service');
     }
 };
 
-// Get dashboard summary data
-export const getDashboardData = async () => {
+// Unassign staff from service
+export const unassignStaffFromService = async (staffId, serviceId) => {
     try {
-        const merchant = merchantAuthService.getCurrentMerchant();
-        if (!merchant) {
-            throw new Error('Merchant information not found');
-        }
+        const response = await axiosInstance.post('/staff/unassign-service', 
+            { staffId, serviceId }, 
+            { headers: getAuthHeaders() }
+        );
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'unassigning staff from service');
+    }
+};
 
-        // Fetch multiple data sources in parallel with error handling
-        const [bookingsResult, servicesResult, offersResult] = await Promise.allSettled([
-            fetchBookings(),
-            fetchServices(),
-            fetchOffers()
-        ]);
+// Get services assigned to a staff member
+export const getStaffServices = async (staffId) => {
+    try {
+        const response = await axiosInstance.get(`/staff/${staffId}/services`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching staff services');
+    }
+};
 
+// Get bookings for a staff member
+export const getStaffBookings = async (staffId, params = {}) => {
+    try {
+        const queryParams = new URLSearchParams();
+        
+        if (params.status) queryParams.append('status', params.status);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.limit) queryParams.append('limit', params.limit);
+        if (params.page) queryParams.append('page', params.page);
+
+        const url = `/staff/${staffId}/bookings${queryParams.toString() ? `?${queryParams}` : ''}`;
+        
+        const response = await axiosInstance.get(url, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching staff bookings');
+    }
+};
+
+// Get staff members assigned to a service
+export const getServiceStaff = async (serviceId) => {
+    try {
+        const response = await axiosInstance.get(`/staff/service/${serviceId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching service staff');
+    }
+};
+
+// Bulk assign staff to multiple services
+export const bulkAssignStaff = async (staffId, serviceIds) => {
+    try {
+        const promises = serviceIds.map(serviceId => 
+            assignStaffToService(staffId, serviceId)
+        );
+        const results = await Promise.allSettled(promises);
+        
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        
         return {
-            bookings: bookingsResult.status === 'fulfilled' ? bookingsResult.value : { bookings: [] },
-            services: servicesResult.status === 'fulfilled' ? servicesResult.value : { services: [] },
-            offers: offersResult.status === 'fulfilled' ? offersResult.value : { offers: [] }
+            success: true,
+            message: `Assigned ${successful} services successfully. ${failed} assignments failed.`,
+            successful,
+            failed,
+            details: results
         };
     } catch (error) {
-        handleApiError(error, 'fetching dashboard data');
+        handleApiError(error, 'bulk assigning staff');
+    }
+};
+
+// Update staff status (convenience function)
+export const updateStaffStatus = async (staffId, status) => {
+    try {
+        return await updateStaff(staffId, { status });
+    } catch (error) {
+        handleApiError(error, 'updating staff status');
+    }
+};
+
+// Get staff statistics
+export const getStaffStats = async () => {
+    try {
+        const storeId = await getMerchantStoreId();
+        const staff = await fetchStaff(storeId);
+        
+        const stats = {
+            total: staff.length,
+            active: staff.filter(s => s.status === 'active').length,
+            suspended: staff.filter(s => s.status === 'suspended').length,
+            inactive: staff.filter(s => s.status === 'inactive').length
+        };
+        
+        return stats;
+    } catch (error) {
+        handleApiError(error, 'calculating staff statistics');
     }
 };
 
@@ -632,6 +777,43 @@ export const createForm = async (formData) => {
     }
 };
 
+// ===== UTILITY FUNCTIONS =====
+
+// Test API connection
+export const testConnection = async () => {
+    try {
+        const response = await axiosInstance.get('/health');
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'testing connection');
+    }
+};
+
+// Get dashboard summary data
+export const getDashboardData = async () => {
+    try {
+        const merchant = merchantAuthService.getCurrentMerchant();
+        if (!merchant) {
+            throw new Error('Merchant information not found');
+        }
+
+        // Fetch multiple data sources in parallel with error handling
+        const [bookingsResult, servicesResult, offersResult] = await Promise.allSettled([
+            fetchBookings(),
+            fetchServices(),
+            fetchOffers()
+        ]);
+
+        return {
+            bookings: bookingsResult.status === 'fulfilled' ? bookingsResult.value : { bookings: [] },
+            services: servicesResult.status === 'fulfilled' ? servicesResult.value : { services: [] },
+            offers: offersResult.status === 'fulfilled' ? offersResult.value : { offers: [] }
+        };
+    } catch (error) {
+        handleApiError(error, 'fetching dashboard data');
+    }
+};
+
 // Refresh auth token if needed
 export const refreshAuthToken = async () => {
     try {
@@ -657,7 +839,7 @@ export const refreshAuthToken = async () => {
     }
 };
 
-
+// ===== DEFAULT EXPORT =====
 
 export default {
     // Auth
@@ -691,11 +873,22 @@ export default {
     fetchSingleBooking,
     updateBookingStatus,
     
-    // Staff
+    // Staff - Updated and Expanded
     fetchStaff,
-    addStaff,
+    getAllStaff,
+    // addStaff,
+    createStaff,
+    updateStaff,
     deleteStaff,
     getStaffById,
+    assignStaffToService,
+    unassignStaffFromService,
+    getStaffServices,
+    getStaffBookings,
+    getServiceStaff,
+    bulkAssignStaff,
+    updateStaffStatus,
+    getStaffStats,
     
     // Socials
     fetchSocials,
