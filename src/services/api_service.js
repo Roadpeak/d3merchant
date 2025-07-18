@@ -161,7 +161,6 @@ export const createStore = async (storeData) => {
     }
 };
 
-// Get merchant's stores
 export const getMerchantStores = async () => {
     try {
         const merchant = merchantAuthService.getCurrentMerchant();
@@ -169,15 +168,21 @@ export const getMerchantStores = async () => {
             throw new Error('Merchant information not found');
         }
 
-        const response = await axiosInstance.get(`/stores/merchant/${merchant.id}`, {
+        console.log('🏪 Fetching stores for merchant:', merchant.id);
+
+        // Use the correct endpoint that matches your store routes
+        const response = await axiosInstance.get('/stores/merchant/my-stores', {
             headers: getAuthHeaders()
         });
+
+        console.log('✅ Stores fetched successfully:', response.data);
         return response.data;
     } catch (error) {
+        console.error('💥 Error fetching merchant stores:', error);
         handleApiError(error, 'fetching merchant stores');
+        throw error;
     }
 };
-
 // Update store
 export const updateStore = async (storeId, storeData) => {
     try {

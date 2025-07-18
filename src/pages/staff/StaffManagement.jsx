@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, Edit, Trash2, UserCheck, UserX, Building2, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Plus, MoreVertical, Edit, Trash2, UserCheck, UserX, Building2, ChevronDown, ChevronUp, Loader2, AlertCircle, MapPin } from 'lucide-react';
 import Layout from '../../elements/Layout';
 import StaffAPI from '../../services/api_service';
-// Import your stores API service - you'll need to create this or import from existing service
-import { getMerchantStores } from '../../services/api_service'; // Add this import
+import { getMerchantStores } from '../../services/api_service';
+import branchService from '../../services/branchService';
 
 const StaffManagement = () => {
   const [staff, setStaff] = useState([]);
   const [stores, setStores] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [filteredStaff, setFilteredStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,6 +18,7 @@ const StaffManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     store: '',
+    branch: '',
     role: '',
     status: '',
     availability: ''
@@ -41,16 +43,17 @@ const StaffManagement = () => {
       setLoading(true);
       setError(null);
       
-      // Load staff and stores in parallel
+      // Load staff, stores, and branches in parallel
       const [staffResponse, storesData] = await Promise.all([
         StaffAPI.getAllStaff(),
-        loadStores()
+        loadStoresAndBranches()
       ]);
       
       const staffData = staffResponse?.staff || staffResponse || [];
       
       setStaff(staffData);
-      setStores(storesData);
+      setStores(storesData.stores);
+      setBranches(storesData.branches);
     } catch (err) {
       setError(err.message);
       showToast('Failed to load data', 'error');
@@ -59,8 +62,8 @@ const StaffManagement = () => {
     }
   };
 
-  // Load stores function
-  const loadStores = async () => {
+  // Load stores and branches function
+  const loadStoresAndBranches = async () => {
     try {
       const storesResponse = await getMerchantStores();
       console.log('Loaded stores:', storesResponse);
@@ -69,14 +72,40 @@ const StaffManagement = () => {
       
       if (stores.length === 0) {
         setError('No stores found. Please create a store first before adding staff.');
-        return [];
+        return { stores: [], branches: [] };
       }
+
+      // Load all branches for all stores
+      const allBranches = [];
       
-      return stores;
+      for (const store of stores) {
+        try {
+          console.log('🏢 Loading branches for store:', store.id);
+          const branchResponse = await branchService.getBranchesByStore(store.id);
+          const storeBranches = branchResponse?.branches || [];
+          
+          // Add store context to branches
+          const branchesWithStore = storeBranches.map(branch => ({
+            ...branch,
+            storeName: store.name,
+            storeId: store.id
+          }));
+          
+          allBranches.push(...branchesWithStore);
+          console.log('✅ Loaded', storeBranches.length, 'branches for', store.name);
+        } catch (branchError) {
+          console.error('Error loading branches for store', store.id, ':', branchError);
+          // Continue loading other stores even if one fails
+        }
+      }
+
+      console.log('📋 Total branches loaded:', allBranches.length);
+      
+      return { stores, branches: allBranches };
     } catch (error) {
       console.error('Error loading merchant stores:', error);
       setError('Failed to load store information');
-      return [];
+      return { stores: [], branches: [] };
     }
   };
 
@@ -87,9 +116,10 @@ const StaffManagement = () => {
                            member.email?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStore = !filters.store || member.storeId === filters.store;
+      const matchesBranch = !filters.branch || member.branchId === filters.branch;
       const matchesStatus = !filters.status || member.status === filters.status;
 
-      return matchesSearch && matchesStore && matchesStatus;
+      return matchesSearch && matchesStore && matchesBranch && matchesStatus;
     });
 
     // Apply sorting
@@ -178,6 +208,22 @@ const StaffManagement = () => {
     return store?.name || 'Unknown Store';
   };
 
+  const getBranchInfo = (branchId) => {
+    const branch = branches.find(b => b.id === branchId);
+    if (!branch) return { name: 'Unknown Branch', isMain: false };
+    
+    return {
+      name: branch.name,
+      isMain: branch.isMainBranch || branch.isStoreMainBranch,
+      address: branch.address
+    };
+  };
+
+  const getFilteredBranches = () => {
+    if (!filters.store) return branches;
+    return branches.filter(branch => branch.storeId === filters.store);
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -234,7 +280,60 @@ const StaffManagement = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Staff Management</h1>
-            <p className="text-gray-600">Manage your team members across all store locations</p>
+            <p className="text-gray-600">Manage your team members across all store locations and branches</p>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Staff</p>
+                  <p className="text-2xl font-bold text-gray-900">{staff.length}</p>
+                </div>
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Active Staff</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {staff.filter(s => s.status === 'active').length}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Stores</p>
+                  <p className="text-2xl font-bold text-purple-600">{stores.length}</p>
+                </div>
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Branches</p>
+                  <p className="text-2xl font-bold text-orange-600">{branches.length}</p>
+                </div>
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-orange-600" />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Search and Filter Bar */}
@@ -256,12 +355,33 @@ const StaffManagement = () => {
               <div className="flex flex-wrap gap-3">
                 <select
                   value={filters.store}
-                  onChange={(e) => setFilters(prev => ({ ...prev, store: e.target.value }))}
+                  onChange={(e) => {
+                    setFilters(prev => ({ 
+                      ...prev, 
+                      store: e.target.value,
+                      branch: '' // Reset branch when store changes
+                    }));
+                  }}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Stores</option>
                   {stores.map(store => (
                     <option key={store.id} value={store.id}>{store.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={filters.branch}
+                  onChange={(e) => setFilters(prev => ({ ...prev, branch: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!filters.store}
+                >
+                  <option value="">All Branches</option>
+                  {getFilteredBranches().map(branch => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                      {(branch.isMainBranch || branch.isStoreMainBranch) && ' (Main)'}
+                    </option>
                   ))}
                 </select>
 
@@ -305,7 +425,7 @@ const StaffManagement = () => {
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Store Branch
+                      Store & Branch
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Phone
@@ -330,100 +450,117 @@ const StaffManagement = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredStaff.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                              {getInitials(member.name)}
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                            <div className="text-sm text-gray-500">{member.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Building2 className="w-4 h-4 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-900">{getStoreName(member.storeId)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">{member.phoneNumber || 'N/A'}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          member.status === 'active' ? 'bg-green-100 text-green-800' :
-                          member.status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {member.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(member.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="relative">
-                          <button
-                            onClick={() => setDropdownOpen(dropdownOpen === member.id ? null : member.id)}
-                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          
-                          {dropdownOpen === member.id && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                              <div className="py-1">
-                                <button
-                                  onClick={() => handleEdit(member)}
-                                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                                >
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit
-                                </button>
-                                
-                                {member.status === 'active' ? (
-                                  <button
-                                    onClick={() => handleStatusChange(member.id, 'suspended')}
-                                    className="flex items-center px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 w-full text-left"
-                                  >
-                                    <UserX className="w-4 h-4 mr-2" />
-                                    Suspend
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleStatusChange(member.id, 'active')}
-                                    className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 w-full text-left"
-                                  >
-                                    <UserCheck className="w-4 h-4 mr-2" />
-                                    Activate
-                                  </button>
-                                )}
-                                
-                                <button
-                                  onClick={() => handleDelete(member.id)}
-                                  className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 w-full text-left"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </button>
+                  {filteredStaff.map((member) => {
+                    const branchInfo = getBranchInfo(member.branchId);
+                    return (
+                      <tr key={member.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+                                {getInitials(member.name)}
                               </div>
                             </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                              <div className="text-sm text-gray-500">{member.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-1">
+                            <div className="flex items-center">
+                              <Building2 className="w-4 h-4 text-gray-400 mr-2" />
+                              <span className="text-sm font-medium text-gray-900">{getStoreName(member.storeId)}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                              <span className="text-sm text-gray-600">{branchInfo.name}</span>
+                              {branchInfo.isMain && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
+                                  Main
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900">{member.phoneNumber || 'N/A'}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            member.status === 'active' ? 'bg-green-100 text-green-800' :
+                            member.status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {member.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(member.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="relative">
+                            <button
+                              onClick={() => setDropdownOpen(dropdownOpen === member.id ? null : member.id)}
+                              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            
+                            {dropdownOpen === member.id && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                <div className="py-1">
+                                  <button
+                                    onClick={() => handleEdit(member)}
+                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                  >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit
+                                  </button>
+                                  
+                                  {member.status === 'active' ? (
+                                    <button
+                                      onClick={() => handleStatusChange(member.id, 'suspended')}
+                                      className="flex items-center px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 w-full text-left"
+                                    >
+                                      <UserX className="w-4 h-4 mr-2" />
+                                      Suspend
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleStatusChange(member.id, 'active')}
+                                      className="flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 w-full text-left"
+                                    >
+                                      <UserCheck className="w-4 h-4 mr-2" />
+                                      Activate
+                                    </button>
+                                  )}
+                                  
+                                  <button
+                                    onClick={() => handleDelete(member.id)}
+                                    className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 w-full text-left"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               
               {filteredStaff.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500">No staff members found</p>
+                  {(searchTerm || filters.store || filters.branch || filters.status) && (
+                    <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filters</p>
+                  )}
                 </div>
               )}
             </div>
@@ -433,6 +570,7 @@ const StaffManagement = () => {
           {isAddModalOpen && (
             <AddStaffModal
               stores={stores}
+              branches={branches}
               onClose={() => setIsAddModalOpen(false)}
               onAdd={handleAddStaff}
             />
@@ -443,6 +581,7 @@ const StaffManagement = () => {
             <EditStaffModal
               staff={editingStaff}
               stores={stores}
+              branches={branches}
               onClose={() => {
                 setIsEditModalOpen(false);
                 setEditingStaff(null);
@@ -457,17 +596,24 @@ const StaffManagement = () => {
 };
 
 // Add Staff Modal Component
-const AddStaffModal = ({ stores, onClose, onAdd }) => {
+const AddStaffModal = ({ stores, branches, onClose, onAdd }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phoneNumber: '',
     storeId: '',
+    branchId: '',
+    role: 'staff'
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const getFilteredBranches = () => {
+    if (!formData.storeId) return [];
+    return branches.filter(branch => branch.storeId === formData.storeId);
+  };
+
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.storeId) {
+    if (!formData.name || !formData.email || !formData.storeId || !formData.branchId) {
       alert('Please fill in all required fields');
       return;
     }
@@ -484,15 +630,18 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value,
+      // Reset branch when store changes
+      ...(name === 'storeId' && { branchId: '' })
     }));
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Add New Staff Member</h2>
         
         <div className="space-y-4">
@@ -537,7 +686,7 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store Branch <span className="text-red-500">*</span>
+              Store <span className="text-red-500">*</span>
             </label>
             <select
               name="storeId"
@@ -550,6 +699,47 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
               {stores.map(store => (
                 <option key={store.id} value={store.id}>{store.name}</option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Branch <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              disabled={!formData.storeId}
+            >
+              <option value="">Select Branch</option>
+              {getFilteredBranches().map(branch => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                  {(branch.isMainBranch || branch.isStoreMainBranch) && ' (Main Branch)'}
+                </option>
+              ))}
+            </select>
+            {!formData.storeId && (
+              <p className="text-xs text-gray-500 mt-1">Select a store first</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="staff">Staff</option>
+              <option value="manager">Manager</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="cashier">Cashier</option>
+              <option value="sales">Sales Representative</option>
             </select>
           </div>
 
@@ -579,19 +769,26 @@ const AddStaffModal = ({ stores, onClose, onAdd }) => {
 };
 
 // Edit Staff Modal Component
-const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
+const EditStaffModal = ({ staff, stores, branches, onClose, onUpdate }) => {
   const [formData, setFormData] = useState({
     id: staff.id,
     name: staff.name,
     email: staff.email,
     phoneNumber: staff.phoneNumber || '',
     storeId: staff.storeId,
+    branchId: staff.branchId || '',
+    role: staff.role || 'staff',
     status: staff.status,
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const getFilteredBranches = () => {
+    if (!formData.storeId) return [];
+    return branches.filter(branch => branch.storeId === formData.storeId);
+  };
+
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.storeId) {
+    if (!formData.name || !formData.email || !formData.storeId || !formData.branchId) {
       alert('Please fill in all required fields');
       return;
     }
@@ -608,15 +805,18 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value,
+      // Reset branch when store changes
+      ...(name === 'storeId' && { branchId: '' })
     }));
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Edit Staff Member</h2>
         
         <div className="space-y-4">
@@ -661,7 +861,7 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store Branch <span className="text-red-500">*</span>
+              Store <span className="text-red-500">*</span>
             </label>
             <select
               name="storeId"
@@ -673,6 +873,43 @@ const EditStaffModal = ({ staff, stores, onClose, onUpdate }) => {
               {stores.map(store => (
                 <option key={store.id} value={store.id}>{store.name}</option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Branch <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Select Branch</option>
+              {getFilteredBranches().map(branch => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                  {(branch.isMainBranch || branch.isStoreMainBranch) && ' (Main Branch)'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="staff">Staff</option>
+              <option value="manager">Manager</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="cashier">Cashier</option>
+              <option value="sales">Sales Representative</option>
             </select>
           </div>
 

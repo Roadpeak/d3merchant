@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
+import BranchManagement from '../../components/BranchManagement';
 
 const AccountPage = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -9,8 +10,8 @@ const AccountPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [branches, setBranches] = useState([]);
-    const [showAddBranch, setShowAddBranch] = useState(false);
     const [editingProfile, setEditingProfile] = useState(false);
+    const [editingStore, setEditingStore] = useState(false);
     const [profileData, setProfileData] = useState({
         firstName: '',
         lastName: '',
@@ -20,194 +21,163 @@ const AccountPage = () => {
         taxId: '',
         website: ''
     });
-    const [newBranch, setNewBranch] = useState({
+    const [storeData, setStoreData] = useState({
         name: '',
-        address: '',
-        phone: '',
-        manager: '',
-        email: ''
+        location: '',
+        phoneNumber: '',
+        email: '',
+        description: '',
+        openingTime: '',
+        closingTime: '',
+        workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        websiteUrl: ''
     });
 
+    // Get merchant info and store details
     const getMerchantInfo = async () => {
         try {
             setLoading(true);
             setError(null);
             
-            console.log('🔄 Starting merchant info fetch...');
-            
-            // Debug: Check service status first
-            const serviceStatus = merchantAuthService.getStatus();
-            console.log('📊 Service Status:', serviceStatus);
-            
-            // Debug: Test basic API connection first
-            try {
-                console.log('🧪 Testing API connection...');
-                const testResult = await merchantAuthService.testConnection();
-                console.log('✅ API connection test result:', testResult);
-            } catch (testError) {
-                console.warn('⚠️ API connection test failed:', testError.message);
-                // Continue anyway in case the test endpoint doesn't exist yet
-            }
-            
-            // Check authentication
-            console.log('🔐 Checking authentication...');
             if (!merchantAuthService.isAuthenticated()) {
-                console.log('❌ User not authenticated');
                 throw new Error('Authentication required');
             }
-            console.log('✅ User is authenticated');
-            
-            // Debug: Log the request details
-            const token = merchantAuthService.getToken();
-            const merchant = merchantAuthService.getCurrentMerchant();
-            console.log('📋 Request details:', {
-                hasToken: !!token,
-                tokenStart: token ? token.substring(0, 20) + '...' : 'None',
-                merchantId: merchant?.id,
-                merchantEmail: merchant?.email_address
-            });
-            
-            // Try to fetch profile
-            console.log('🔄 Fetching current merchant profile...');
+
             const response = await merchantAuthService.getCurrentMerchantProfile();
             
-            // Handle logout scenario
             if (!response) {
-                console.log('🚪 No response received - user may have been logged out');
                 return;
             }
-    
+
             if (!response.success) {
-                console.error('❌ Profile fetch unsuccessful:', response);
                 throw new Error(response.message || 'Failed to load profile information');
             }
-    
+
             const merchantProfile = response.merchantProfile;
-            console.log('✅ Merchant profile loaded successfully:', {
-                id: merchantProfile.id,
-                name: `${merchantProfile.first_name} ${merchantProfile.last_name}`,
-                email: merchantProfile.email_address,
-                hasStore: !!merchantProfile.store
-            });
             
-            // Set the merchant info
             setMerchantInfo(merchantProfile);
             
-            // Set profile data for editing
+            // Set profile data
             setProfileData({
                 firstName: merchantProfile.first_name || '',
                 lastName: merchantProfile.last_name || '',
                 email: merchantProfile.email_address || '',
                 phoneNumber: merchantProfile.phone_number || '',
-                businessType: 'Retail', // Default value
-                taxId: '', // Add if available in your backend
+                businessType: 'Retail',
+                taxId: '',
                 website: merchantProfile.store?.website_url || ''
             });
-            
-            // Set branches data (mock data as in original)
-            setBranches([
-                {
-                    id: 1,
-                    name: merchantProfile.store?.name || 'Main Branch',
-                    address: merchantProfile.store?.location || 'Address not set',
-                    phone: merchantProfile.store?.phone_number || merchantProfile.phone_number,
-                    manager: `${merchantProfile.first_name} ${merchantProfile.last_name}`,
-                    email: merchantProfile.store?.primary_email || merchantProfile.email_address,
-                    status: 'Active'
-                }
-            ]);
-    
-            console.log('✅ All merchant data set successfully');
+
+            // Set store data (this serves as main branch info)
+            if (merchantProfile.store) {
+                setStoreData({
+                    name: merchantProfile.store.name || '',
+                    location: merchantProfile.store.location || '',
+                    phoneNumber: merchantProfile.store.phone_number || '',
+                    email: merchantProfile.store.primary_email || '',
+                    description: merchantProfile.store.description || '',
+                    openingTime: merchantProfile.store.opening_time || '',
+                    closingTime: merchantProfile.store.closing_time || '',
+                    workingDays: merchantProfile.store.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                    websiteUrl: merchantProfile.store.website_url || ''
+                });
+            }
             
         } catch (error) {
-            console.error('💥 Error in getMerchantInfo:', error);
+            console.error('Error fetching merchant info:', error);
             
-            // Enhanced error logging
-            console.group('🔍 Error Details');
-            console.log('Error message:', error.message);
-            console.log('Error stack:', error.stack);
-            console.log('Service status:', merchantAuthService.getStatus());
-            console.groupEnd();
-            
-            // Check if it's an authentication error
             if (error.message?.includes('Authentication') || 
-                error.message?.includes('session has expired') ||
                 error.message?.includes('401') || 
                 error.message?.includes('403')) {
-                console.log('🚪 Authentication error detected');
-                // The service will handle logout automatically
                 return;
             }
             
-            // For other errors, show error message
-            const errorMessage = error.message || 'Failed to load profile information';
-            setError(errorMessage);
-            toast.error(errorMessage);
-            
+            setError(error.message || 'Failed to load profile information');
+            toast.error('Failed to load profile information');
         } finally {
             setLoading(false);
-            console.log('🏁 getMerchantInfo completed');
         }
     };
+
+    // Handle profile update
     const handleProfileUpdate = async () => {
         try {
             setLoading(true);
-            // TODO: Implement profile update API call
-            // const token = merchantAuthService.getToken();
-            // const response = await fetch('/api/merchants/update-profile', {
-            //     method: 'PUT',
-            //     headers: {
-            //         'Authorization': `Bearer ${token}`,
-            //         'Content-Type': 'application/json'
-            //     },
-            //     body: JSON.stringify(profileData)
-            // });
             
-            // For now, just update the local state
-            setMerchantInfo(prev => ({
-                ...prev,
-                first_name: profileData.firstName,
-                last_name: profileData.lastName,
-                email_address: profileData.email,
-                phone_number: profileData.phoneNumber
-            }));
-            
-            // Update auth data in storage
-            const currentMerchant = merchantAuthService.getCurrentMerchant();
-            merchantAuthService.updateMerchantProfile({
-                ...currentMerchant,
+            // Update merchant profile using the current merchant ID
+            const updateResponse = await merchantAuthService.updateMerchantProfile(null, {
                 first_name: profileData.firstName,
                 last_name: profileData.lastName,
                 email_address: profileData.email,
                 phone_number: profileData.phoneNumber
             });
+
+            if (updateResponse && (updateResponse.success !== false)) {
+                // Refresh merchant info
+                await getMerchantInfo();
+                setEditingProfile(false);
+                toast.success('Profile updated successfully!');
+            } else {
+                throw new Error(updateResponse?.message || 'Failed to update profile');
+            }
             
-            setEditingProfile(false);
-            toast.success('Profile updated successfully!');
         } catch (error) {
             console.error('Error updating profile:', error);
-            toast.error('Failed to update profile');
+            toast.error(error.message || 'Failed to update profile');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddBranch = () => {
-        if (newBranch.name && newBranch.address) {
-            setBranches([...branches, {
-                id: branches.length + 1,
-                ...newBranch,
-                status: 'Active'
-            }]);
-            setNewBranch({ name: '', address: '', phone: '', manager: '', email: '' });
-            setShowAddBranch(false);
-            toast.success('Branch added successfully!');
+    // Handle store update (main branch info)
+    const handleStoreUpdate = async () => {
+        try {
+            setLoading(true);
+            
+            // Update store information (which serves as main branch)
+            const updateResponse = await merchantAuthService.updateStoreProfile(merchantInfo.store.id, {
+                name: storeData.name,
+                location: storeData.location,
+                phone_number: storeData.phoneNumber,
+                primary_email: storeData.email,
+                description: storeData.description,
+                opening_time: storeData.openingTime,
+                closing_time: storeData.closingTime,
+                working_days: storeData.workingDays,
+                website_url: storeData.websiteUrl
+            });
+
+            if (updateResponse && (updateResponse.success !== false)) {
+                // Refresh merchant info
+                await getMerchantInfo();
+                setEditingStore(false);
+                toast.success('Store information updated successfully! This updates your main branch.');
+            } else {
+                throw new Error(updateResponse?.message || 'Failed to update store');
+            }
+            
+        } catch (error) {
+            console.error('Error updating store:', error);
+            toast.error(error.message || 'Failed to update store information');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleDeleteBranch = (id) => {
-        setBranches(branches.filter(branch => branch.id !== id));
-        toast.success('Branch deleted successfully!');
+    // Handle working days change for store
+    const handleStoreWorkingDaysChange = (day) => {
+        setStoreData(prev => ({
+            ...prev,
+            workingDays: prev.workingDays.includes(day)
+                ? prev.workingDays.filter(d => d !== day)
+                : [...prev.workingDays, day]
+        }));
+    };
+
+    // Handle branches update callback
+    const handleBranchesUpdate = (updatedBranches) => {
+        setBranches(updatedBranches);
+        console.log('Branches updated:', updatedBranches.length, 'branches');
     };
 
     const handleLogout = () => {
@@ -220,10 +190,13 @@ const AccountPage = () => {
 
     const tabs = [
         { name: 'Profile', icon: '👤' },
+        { name: 'Store & Branches', icon: '🏪' },
         { name: 'Security', icon: '🔒' },
         { name: 'Subscription', icon: '💳' },
         { name: 'Activity', icon: '📊' }
     ];
+
+    const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     // Loading component
     const LoadingSpinner = () => (
@@ -376,6 +349,9 @@ const AccountPage = () => {
                                                                 <p className="text-gray-900 py-2">{merchantInfo.last_name}</p>
                                                             )}
                                                         </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                                                             {editingProfile ? (
@@ -405,61 +381,6 @@ const AccountPage = () => {
                                                             )}
                                                         </div>
                                                     </div>
-
-                                                    <div className="space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Business Type</label>
-                                                            {editingProfile ? (
-                                                                <select 
-                                                                    value={profileData.businessType}
-                                                                    onChange={(e) => setProfileData({...profileData, businessType: e.target.value})}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                >
-                                                                    <option value="Retail">Retail</option>
-                                                                    <option value="Restaurant">Restaurant</option>
-                                                                    <option value="Service">Service</option>
-                                                                    <option value="E-commerce">E-commerce</option>
-                                                                    <option value="Beauty & Salon">Beauty & Salon</option>
-                                                                    <option value="Automotive">Automotive</option>
-                                                                    <option value="Health & Fitness">Health & Fitness</option>
-                                                                    <option value="Other">Other</option>
-                                                                </select>
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{profileData.businessType}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Tax ID</label>
-                                                            {editingProfile ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={profileData.taxId}
-                                                                    onChange={(e) => setProfileData({...profileData, taxId: e.target.value})}
-                                                                    placeholder="Enter Tax ID"
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{profileData.taxId || '***-***-1234'}</p>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                                                            {editingProfile ? (
-                                                                <input
-                                                                    type="url"
-                                                                    value={profileData.website}
-                                                                    onChange={(e) => setProfileData({...profileData, website: e.target.value})}
-                                                                    placeholder="https://yourwebsite.com"
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                    disabled={loading}
-                                                                />
-                                                            ) : (
-                                                                <p className="text-gray-900 py-2">{profileData.website || 'Not set'}</p>
-                                                            )}
-                                                        </div>
-                                                    </div>
                                                 </div>
 
                                                 {editingProfile && (
@@ -481,7 +402,6 @@ const AccountPage = () => {
                                                         <button
                                                             onClick={() => {
                                                                 setEditingProfile(false);
-                                                                // Reset form data
                                                                 setProfileData({
                                                                     firstName: merchantInfo.first_name || '',
                                                                     lastName: merchantInfo.last_name || '',
@@ -500,136 +420,255 @@ const AccountPage = () => {
                                                     </div>
                                                 )}
                                             </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
-                                            {/* Store Branches */}
+                            {/* Store & Branches Tab */}
+                            {activeTab === 1 && (
+                                <div className="space-y-6">
+                                    {loading && <LoadingSpinner />}
+
+                                    {merchantInfo && !loading && !error && (
+                                        <>
+                                            {/* Store Information (Main Branch) */}
                                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                                 <div className="flex items-center justify-between mb-6">
-                                                    <h3 className="text-xl font-semibold text-gray-900">Store Branches</h3>
+                                                    <div>
+                                                        <h3 className="text-xl font-semibold text-gray-900">Store Information</h3>
+                                                        <p className="text-sm text-gray-600 mt-1">This information serves as your main branch details</p>
+                                                    </div>
                                                     <button
-                                                        onClick={() => setShowAddBranch(true)}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                                        onClick={() => setEditingStore(!editingStore)}
+                                                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                         disabled={loading}
                                                     >
-                                                        <span>+</span> Add Branch
+                                                        {editingStore ? 'Cancel' : 'Edit Store'}
                                                     </button>
                                                 </div>
 
-                                                {/* Add Branch Form */}
-                                                {showAddBranch && (
-                                                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-                                                        <h4 className="font-medium text-gray-900 mb-4">Add New Branch</h4>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Branch Name"
-                                                                value={newBranch.name}
-                                                                onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
-                                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Full Address"
-                                                                value={newBranch.address}
-                                                                onChange={(e) => setNewBranch({ ...newBranch, address: e.target.value })}
-                                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            />
-                                                            <input
-                                                                type="tel"
-                                                                placeholder="Phone Number"
-                                                                value={newBranch.phone}
-                                                                onChange={(e) => setNewBranch({ ...newBranch, phone: e.target.value })}
-                                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Branch Manager"
-                                                                value={newBranch.manager}
-                                                                onChange={(e) => setNewBranch({ ...newBranch, manager: e.target.value })}
-                                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            />
-                                                            <input
-                                                                type="email"
-                                                                placeholder="Branch Email"
-                                                                value={newBranch.email}
-                                                                onChange={(e) => setNewBranch({ ...newBranch, email: e.target.value })}
-                                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            />
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
+                                                            {editingStore ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={storeData.name}
+                                                                    onChange={(e) => setStoreData({...storeData, name: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.name}</p>
+                                                            )}
                                                         </div>
-                                                        <div className="flex gap-3 mt-4">
-                                                            <button
-                                                                onClick={handleAddBranch}
-                                                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                                            >
-                                                                Add Branch
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setShowAddBranch(false)}
-                                                                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                                                            >
-                                                                Cancel
-                                                            </button>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Store Phone</label>
+                                                            {editingStore ? (
+                                                                <input
+                                                                    type="tel"
+                                                                    value={storeData.phoneNumber}
+                                                                    onChange={(e) => setStoreData({...storeData, phoneNumber: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.phone_number || 'Not set'}</p>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Store Email</label>
+                                                            {editingStore ? (
+                                                                <input
+                                                                    type="email"
+                                                                    value={storeData.email}
+                                                                    onChange={(e) => setStoreData({...storeData, email: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.primary_email || 'Not set'}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Opening Time</label>
+                                                            {editingStore ? (
+                                                                <input
+                                                                    type="time"
+                                                                    value={storeData.openingTime}
+                                                                    onChange={(e) => setStoreData({...storeData, openingTime: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.opening_time || 'Not set'}</p>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Closing Time</label>
+                                                            {editingStore ? (
+                                                                <input
+                                                                    type="time"
+                                                                    value={storeData.closingTime}
+                                                                    onChange={(e) => setStoreData({...storeData, closingTime: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.closing_time || 'Not set'}</p>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+                                                            {editingStore ? (
+                                                                <input
+                                                                    type="url"
+                                                                    value={storeData.websiteUrl}
+                                                                    onChange={(e) => setStoreData({...storeData, websiteUrl: e.target.value})}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    disabled={loading}
+                                                                    placeholder="https://your-website.com"
+                                                                />
+                                                            ) : (
+                                                                <p className="text-gray-900 py-2">{merchantInfo.store?.website_url || 'Not set'}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Store Address */}
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Address</label>
+                                                    {editingStore ? (
+                                                        <textarea
+                                                            value={storeData.location}
+                                                            onChange={(e) => setStoreData({...storeData, location: e.target.value})}
+                                                            rows={3}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                            disabled={loading}
+                                                        />
+                                                    ) : (
+                                                        <p className="text-gray-900 py-2">{merchantInfo.store?.location}</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Working Days */}
+                                                {editingStore && (
+                                                    <div className="mt-4">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Working Days</label>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {weekDays.map((day) => (
+                                                                <label key={day} className="flex items-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={storeData.workingDays.includes(day)}
+                                                                        onChange={() => handleStoreWorkingDaysChange(day)}
+                                                                        className="mr-2"
+                                                                    />
+                                                                    <span className="text-sm">{day}</span>
+                                                                </label>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Branches List */}
-                                                <div className="space-y-4">
-                                                    {branches.map((branch) => (
-                                                        <div key={branch.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                                            <div className="flex items-start justify-between">
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center gap-3 mb-2">
-                                                                        <h4 className="font-semibold text-gray-900">{branch.name}</h4>
-                                                                        <span className={`px-2 py-1 text-xs rounded-full ${branch.status === 'Active'
-                                                                            ? 'bg-green-100 text-green-800'
-                                                                            : 'bg-red-100 text-red-800'
-                                                                            }`}>
-                                                                            {branch.status}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                                                                        <div>
-                                                                            <span className="font-medium">📍 Address:</span>
-                                                                            <p>{branch.address}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="font-medium">📞 Phone:</span>
-                                                                            <p>{branch.phone}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="font-medium">👨‍💼 Manager:</span>
-                                                                            <p>{branch.manager}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    {branch.email && (
-                                                                        <div className="mt-2 text-sm text-gray-600">
-                                                                            <span className="font-medium">✉️ Email:</span> {branch.email}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex gap-2 ml-4">
-                                                                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                                        ✏️
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteBranch(branch.id)}
-                                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                    >
-                                                                        🗑️
-                                                                    </button>
-                                                                </div>
-                                                            </div>
+                                                {/* Store Description */}
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Store Description</label>
+                                                    {editingStore ? (
+                                                        <textarea
+                                                            value={storeData.description}
+                                                            onChange={(e) => setStoreData({...storeData, description: e.target.value})}
+                                                            rows={3}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                            disabled={loading}
+                                                            placeholder="Brief description of your store"
+                                                        />
+                                                    ) : (
+                                                        <p className="text-gray-900 py-2">{merchantInfo.store?.description || 'No description set'}</p>
+                                                    )}
+                                                </div>
+
+                                                {editingStore && (
+                                                    <div className="flex gap-3 mt-6">
+                                                        <button 
+                                                            onClick={handleStoreUpdate}
+                                                            disabled={loading}
+                                                            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                                        >
+                                                            {loading ? (
+                                                                <>
+                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                                    Updating...
+                                                                </>
+                                                            ) : (
+                                                                'Update Store Info'
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingStore(false);
+                                                                // Reset store data
+                                                                if (merchantInfo.store) {
+                                                                    setStoreData({
+                                                                        name: merchantInfo.store.name || '',
+                                                                        location: merchantInfo.store.location || '',
+                                                                        phoneNumber: merchantInfo.store.phone_number || '',
+                                                                        email: merchantInfo.store.primary_email || '',
+                                                                        description: merchantInfo.store.description || '',
+                                                                        openingTime: merchantInfo.store.opening_time || '',
+                                                                        closingTime: merchantInfo.store.closing_time || '',
+                                                                        workingDays: merchantInfo.store.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                                                                        websiteUrl: merchantInfo.store.website_url || ''
+                                                                    });
+                                                                }
+                                                            }}
+                                                            disabled={loading}
+                                                            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Info Banner */}
+                                                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                    <div className="flex items-start">
+                                                        <div className="text-blue-500 mr-3 mt-0.5">
+                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                            </svg>
                                                         </div>
-                                                    ))}
+                                                        <div>
+                                                            <h4 className="text-sm font-medium text-blue-900">Main Branch Information</h4>
+                                                            <p className="text-sm text-blue-700 mt-1">
+                                                                Your store information automatically serves as your main branch. 
+                                                                Any changes here will update your main branch details across the system.
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+
+                                            {/* Branch Management Component */}
+                                            {merchantInfo.store && (
+                                                <BranchManagement 
+                                                    storeId={merchantInfo.store.id}
+                                                    onBranchesUpdate={handleBranchesUpdate}
+                                                />
+                                            )}
                                         </>
                                     )}
                                 </div>
                             )}
 
                             {/* Security Tab */}
-                            {activeTab === 1 && (
+                            {activeTab === 2 && (
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Security Settings</h3>
                                     <div className="space-y-6">
@@ -669,121 +708,78 @@ const AccountPage = () => {
                             )}
 
                             {/* Subscription Tab */}
-                            {activeTab === 2 && (
-                                <div className="space-y-6">
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-6">Current Plan</h3>
-                                        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 border border-green-200">
+                            {activeTab === 3 && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Subscription & Billing</h3>
+                                    <div className="space-y-6">
+                                        <div className="p-6 border border-gray-200 rounded-lg">
                                             <div className="flex items-center justify-between mb-4">
                                                 <div>
-                                                    <h4 className="text-2xl font-bold text-gray-900">Pro Plan</h4>
-                                                    <p className="text-gray-600">Perfect for growing businesses</p>
+                                                    <h4 className="text-lg font-medium text-gray-900">Current Plan</h4>
+                                                    <p className="text-sm text-gray-600">Professional Plan</p>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-3xl font-bold text-green-600">$49</div>
-                                                    <div className="text-sm text-gray-600">/month</div>
+                                                <span className="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">
+                                                    Active
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                <div>
+                                                    <span className="font-medium text-gray-700">Monthly Fee:</span>
+                                                    <p className="text-gray-900">$49.99</p>
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-gray-700">Next Billing:</span>
+                                                    <p className="text-gray-900">Aug 18, 2025</p>
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-gray-700">Payment Method:</span>
+                                                    <p className="text-gray-900">•••• •••• •••• 1234</p>
                                                 </div>
                                             </div>
-
-                                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-green-500">✓</span>
-                                                    <span className="text-sm">Advanced Analytics</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-green-500">✓</span>
-                                                    <span className="text-sm">50GB Storage</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-green-500">✓</span>
-                                                    <span className="text-sm">Priority Support</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-green-500">✓</span>
-                                                    <span className="text-sm">Multiple Branches</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-white rounded-lg p-4 mb-4">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-sm font-medium text-gray-600">Storage Usage</span>
-                                                    <span className="text-sm text-gray-600">10 GB of 50 GB</span>
-                                                </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '20%' }}></div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex gap-4">
-                                                <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                            <div className="flex gap-3 mt-4">
+                                                <button className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                                     Upgrade Plan
                                                 </button>
-                                                <button className="px-6 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                                    Cancel Subscription
+                                                <button className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                                                    Update Payment
                                                 </button>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-6">Billing History</h3>
-                                        <div className="space-y-3">
-                                            {[1, 2, 3].map((item) => (
-                                                <div key={item} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                                                    <div>
-                                                        <div className="font-medium text-gray-900">Pro Plan - Monthly</div>
-                                                        <div className="text-sm text-gray-600">Dec {item}, 2024</div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="font-medium text-gray-900">$49.00</div>
-                                                        <div className="text-sm text-green-600">Paid</div>
-                                                    </div>
-                                                </div>
-                                            ))}
                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* Activity Tab */}
-                            {activeTab === 3 && (
-                                <div className="space-y-6">
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h3>
-                                        <div className="space-y-4">
-                                            {[
-                                                { action: 'Profile updated', time: '2 hours ago', icon: '👤' },
-                                                { action: 'New branch added', time: '1 day ago', icon: '🏪' },
-                                                { action: 'Password changed', time: '3 days ago', icon: '🔒' },
-                                                { action: 'Plan upgraded', time: '1 week ago', icon: '⬆️' }
-                                            ].map((activity, index) => (
-                                                <div key={index} className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg">
-                                                    <div className="text-2xl">{activity.icon}</div>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-gray-900">{activity.action}</div>
-                                                        <div className="text-sm text-gray-600">{activity.time}</div>
-                                                    </div>
+                            {activeTab === 4 && (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Account Activity</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">Login from Chrome</p>
+                                                    <p className="text-sm text-gray-600">Today at 2:30 PM • IP: 192.168.1.1</p>
                                                 </div>
-                                            ))}
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-6">Login History</h3>
-                                        <div className="space-y-3">
-                                            {[
-                                                { device: 'Chrome on Windows', location: 'Nairobi, Kenya', time: 'Current session' },
-                                                { device: 'Safari on iPhone', location: 'Nairobi, Kenya', time: '2 hours ago' },
-                                                { device: 'Chrome on Windows', location: 'Nairobi, Kenya', time: '1 day ago' }
-                                            ].map((login, index) => (
-                                                <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                                                    <div>
-                                                        <div className="font-medium text-gray-900">{login.device}</div>
-                                                        <div className="text-sm text-gray-600">{login.location}</div>
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">{login.time}</div>
+                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">Store information updated</p>
+                                                    <p className="text-sm text-gray-600">Yesterday at 4:15 PM</p>
                                                 </div>
-                                            ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">New branch added</p>
+                                                    <p className="text-sm text-gray-600">2 days ago at 10:22 AM</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

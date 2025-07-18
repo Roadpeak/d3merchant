@@ -3,7 +3,8 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom'; 
 import { createService, uploadImage, getMerchantStores, fetchStaff } from '../../services/api_service';
 import merchantAuthService from '../../services/merchantAuthService';
-import { Upload, Image as ImageIcon, AlertCircle, CheckCircle, Loader, Users, UserCheck } from 'lucide-react';
+import branchService from '../../services/branchService';
+import { Upload, Image as ImageIcon, AlertCircle, CheckCircle, Loader, Users, UserCheck, MapPin, Building } from 'lucide-react';
 
 const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     const [serviceData, setServiceData] = useState({
@@ -15,8 +16,9 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         description: '',
         type: 'fixed',
         store_id: '',
+        branch_id: '', // Added for branch selection
         dynamicFields: [],
-        staffIds: [] // Added for staff selection
+        staffIds: []
     });
     
     const [loading, setLoading] = useState(false);
@@ -25,8 +27,10 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     const [imagePreview, setImagePreview] = useState(null);
     const [errors, setErrors] = useState({});
     const [storeLoading, setStoreLoading] = useState(true);
+    const [branchesLoading, setBranchesLoading] = useState(false);
     const [staffLoading, setStaffLoading] = useState(false);
     const [availableStaff, setAvailableStaff] = useState([]);
+    const [availableBranches, setAvailableBranches] = useState([]);
     const [selectedStaff, setSelectedStaff] = useState([]);
     const navigate = useNavigate();
 
@@ -73,14 +77,15 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     store_id: storeId
                 }));
 
-                // Load staff for the store
-                await loadStoreStaff(storeId);
+                // Load branches for the store
+                await loadStoreBranches(storeId);
 
                 // If editing, populate form
                 if (editingService) {
                     setServiceData({
                         ...editingService,
                         store_id: editingService.store_id || storeId,
+                        branch_id: editingService.branch_id || '',
                         price: editingService.price?.toString() || '',
                         duration: editingService.duration?.toString() || '',
                         staffIds: editingService.staff?.map(staff => staff.id) || []
@@ -94,6 +99,14 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     if (editingService.staff) {
                         setSelectedStaff(editingService.staff);
                     }
+
+                    // Load staff for the selected branch
+                    if (editingService.branch_id) {
+                        await loadBranchStaff(editingService.branch_id);
+                    }
+                } else {
+                    // For new services, load staff for store (main branch) initially
+                    await loadStoreStaff(storeId);
                 }
 
             } catch (error) {
@@ -107,14 +120,45 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         loadStoreData();
     }, [editingService, onClose]);
 
-    // Load staff for the selected store
+    // Load branches for the selected store
+    const loadStoreBranches = async (storeId) => {
+        try {
+            setBranchesLoading(true);
+            console.log('🏢 Loading branches for store:', storeId);
+            
+            const response = await branchService.getBranchesByStore(storeId);
+            const branches = response?.branches || [];
+            
+            console.log('✅ Branches loaded:', branches.length);
+            setAvailableBranches(branches);
+
+            // If there's only one branch (main branch), auto-select it
+            if (branches.length === 1 && !editingService) {
+                const mainBranch = branches[0];
+                setServiceData(prev => ({
+                    ...prev,
+                    branch_id: mainBranch.id
+                }));
+                // Load staff for the main branch
+                await loadBranchStaff(mainBranch.id);
+            }
+
+        } catch (error) {
+            console.error('Error loading branches:', error);
+            toast.error('Failed to load store branches');
+        } finally {
+            setBranchesLoading(false);
+        }
+    };
+
+    // Load staff for the selected store (main branch)
     const loadStoreStaff = async (storeId) => {
         try {
             setStaffLoading(true);
-            const staffResponse = await fetchStaff(); // Remove storeId parameter
+            const staffResponse = await fetchStaff();
             const staff = staffResponse?.staff || staffResponse || [];
             
-            // Filter only active staff
+            // Filter only active staff for the main store/branch
             const activeStaff = staff.filter(member => member.status === 'active');
             setAvailableStaff(activeStaff);
         } catch (error) {
@@ -122,6 +166,61 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             toast.error('Failed to load staff members');
         } finally {
             setStaffLoading(false);
+        }
+    };
+
+    // Load staff for a specific branch
+    const loadBranchStaff = async (branchId) => {
+        try {
+            setStaffLoading(true);
+            console.log('👥 Loading staff for branch:', branchId);
+
+            // Check if this is a store-based main branch
+            if (branchId.startsWith('store-')) {
+                // Load all store staff for main branch
+                await loadStoreStaff(serviceData.store_id);
+                return;
+            }
+
+            // For additional branches, you might want to implement branch-specific staff
+            // For now, we'll load all store staff
+            const staffResponse = await fetchStaff();
+            const staff = staffResponse?.staff || staffResponse || [];
+            
+            // Filter only active staff - in the future you can filter by branch
+            const activeStaff = staff.filter(member => member.status === 'active');
+            setAvailableStaff(activeStaff);
+
+        } catch (error) {
+            console.error('Error loading branch staff:', error);
+            toast.error('Failed to load staff for selected branch');
+        } finally {
+            setStaffLoading(false);
+        }
+    };
+
+    // Handle branch selection change
+    const handleBranchChange = async (e) => {
+        const branchId = e.target.value;
+        
+        setServiceData(prev => ({
+            ...prev,
+            branch_id: branchId,
+            staffIds: [] // Reset staff selection when branch changes
+        }));
+        
+        setSelectedStaff([]); // Clear selected staff
+        
+        // Clear branch error
+        if (errors.branch_id) {
+            setErrors(prev => ({ ...prev, branch_id: '' }));
+        }
+
+        // Load staff for the selected branch
+        if (branchId) {
+            await loadBranchStaff(branchId);
+        } else {
+            setAvailableStaff([]);
         }
     };
 
@@ -134,6 +233,10 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
         if (!serviceData.category) {
             newErrors.category = 'Please select a category';
+        }
+
+        if (!serviceData.branch_id) {
+            newErrors.branch_id = 'Please select a branch where this service will be offered';
         }
 
         if (!serviceData.description.trim()) {
@@ -322,6 +425,9 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
+    // Get selected branch details for display
+    const selectedBranch = availableBranches.find(branch => branch.id === serviceData.branch_id);
+
     if (storeLoading) {
         return (
             <div className="flex items-center justify-center py-8">
@@ -350,6 +456,70 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     }`}
                 />
                 {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
+            </div>
+
+            {/* Branch Selection */}
+            <div>
+                <label htmlFor="branch_id" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Service Location (Branch) *
+                </label>
+                
+                {branchesLoading ? (
+                    <div className="flex items-center justify-center py-4 border border-gray-300 rounded-md">
+                        <Loader className="w-4 h-4 animate-spin text-primary mr-2" />
+                        <span className="text-sm text-gray-600">Loading branches...</span>
+                    </div>
+                ) : (
+                    <select
+                        id="branch_id"
+                        name="branch_id"
+                        value={serviceData.branch_id}
+                        onChange={handleBranchChange}
+                        className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                            errors.branch_id ? 'border-red-400' : 'border-gray-300'
+                        }`}
+                    >
+                        <option value="">Select a branch</option>
+                        {availableBranches.map(branch => (
+                            <option key={branch.id} value={branch.id}>
+                                {branch.name}
+                                {branch.isMainBranch && ' (Main Branch)'}
+                                {branch.address && ` - ${branch.address.substring(0, 50)}${branch.address.length > 50 ? '...' : ''}`}
+                            </option>
+                        ))}
+                    </select>
+                )}
+                
+                {/* Selected Branch Details */}
+                {selectedBranch && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-start">
+                            <MapPin className="w-4 h-4 text-blue-500 mr-2 mt-0.5" />
+                            <div className="flex-1">
+                                <div className="flex items-center">
+                                    <h4 className="text-sm font-medium text-blue-900">{selectedBranch.name}</h4>
+                                    {selectedBranch.isMainBranch && (
+                                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                            Main Branch
+                                        </span>
+                                    )}
+                                </div>
+                                {selectedBranch.address && (
+                                    <p className="text-sm text-blue-700 mt-1">{selectedBranch.address}</p>
+                                )}
+                                {selectedBranch.phone && (
+                                    <p className="text-xs text-blue-600 mt-1">📞 {selectedBranch.phone}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {errors.branch_id && <p className="mt-1 text-xs text-red-600">{errors.branch_id}</p>}
+                
+                <p className="mt-1 text-xs text-gray-500">
+                    Choose which branch will offer this service. Staff will be filtered based on your selection.
+                </p>
             </div>
 
             {/* Service Type */}
@@ -467,7 +637,13 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     Assign Staff Members *
                 </label>
                 
-                {staffLoading ? (
+                {!serviceData.branch_id ? (
+                    <div className="border border-gray-300 rounded-md p-4 text-center">
+                        <Building className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">Please select a branch first</p>
+                        <p className="text-xs text-gray-400">Staff will be loaded based on your branch selection</p>
+                    </div>
+                ) : staffLoading ? (
                     <div className="flex items-center justify-center py-4">
                         <Loader className="w-4 h-4 animate-spin text-primary mr-2" />
                         <span className="text-sm text-gray-600">Loading staff...</span>
@@ -482,7 +658,9 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     <div className={`border rounded-md p-4 ${errors.staff ? 'border-red-400' : 'border-gray-300'}`}>
                         <div className="mb-3">
                             <p className="text-sm text-gray-600">
-                                Select staff members who will provide this service ({selectedStaff.length} selected)
+                                Select staff members who will provide this service at{' '}
+                                <span className="font-medium">{selectedBranch?.name}</span>
+                                {' '}({selectedStaff.length} selected)
                             </p>
                         </div>
                         

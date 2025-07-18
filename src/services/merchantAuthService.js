@@ -1,4 +1,4 @@
-// services/merchantAuthService.js - Complete Updated Version
+// services/merchantAuthService.js - Complete Updated Version with Store-as-Main-Branch Support
 import CryptoJS from 'crypto-js';
 import Cookies from 'js-cookie';
 
@@ -9,6 +9,7 @@ const API_KEY = import.meta.env.VITE_API_KEY;
 class MerchantAuthService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/merchants`;
+    this.storeURL = `${API_BASE_URL}/stores`;
     this.isInitialized = false;
     this.init();
   }
@@ -18,6 +19,7 @@ class MerchantAuthService {
     try {
       console.log('🔧 Initializing MerchantAuthService...');
       console.log('📍 API Base URL:', this.baseURL);
+      console.log('🏪 Store API URL:', this.storeURL);
       console.log('🔑 API Key configured:', API_KEY ? 'Yes' : 'No');
       console.log('🔐 Secret Key configured:', SECRET_KEY ? 'Yes' : 'No');
       
@@ -300,16 +302,34 @@ class MerchantAuthService {
     }
   }
 
-  // Update merchant profile
-  async updateMerchantProfile(merchantId, profileData) {
+  // Update merchant profile (personal info only)
+  async updateMerchantProfile(merchantId = null, profileData = null) {
     try {
-      console.log('🔄 Updating merchant profile...', merchantId);
-      console.log('📝 Update data:', profileData);
+      // Handle both old and new calling patterns
+      let updateData, targetMerchantId;
       
-      const response = await fetch(`${this.baseURL}/${merchantId}`, {
+      if (merchantId && typeof merchantId === 'object' && profileData === null) {
+        // Called as updateMerchantProfile(profileData)
+        updateData = merchantId;
+        targetMerchantId = this.getMerchantId();
+      } else {
+        // Called as updateMerchantProfile(merchantId, profileData) or updateMerchantProfile(null, profileData)
+        updateData = profileData || merchantId;
+        targetMerchantId = (typeof merchantId === 'string' || typeof merchantId === 'number') ? merchantId : this.getMerchantId();
+      }
+
+      if (!targetMerchantId) {
+        throw new Error('No merchant ID available. Please log in again.');
+      }
+
+      console.log('🔄 Updating merchant profile...', targetMerchantId);
+      console.log('📝 Update data:', updateData);
+      
+      // Use store routes for merchant profile updates
+      const response = await fetch(`${this.storeURL}/merchant/profile`, {
         method: 'PUT',
         headers: this.getHeaders(true),
-        body: JSON.stringify(profileData),
+        body: JSON.stringify(updateData),
       });
 
       const data = await response.json();
@@ -321,12 +341,12 @@ class MerchantAuthService {
         });
 
         this.handleApiError(response, data);
-        return null;
+        throw new Error(data.message || `Failed to update profile: ${response.status}`);
       }
 
       // Update stored merchant data if successful
-      if (data.merchant || data.data) {
-        this.updateStoredMerchantProfile(data.merchant || data.data);
+      if (data.merchantProfile) {
+        this.updateStoredMerchantProfile(data.merchantProfile);
         console.log('✅ Local profile data updated');
       }
 
@@ -335,6 +355,57 @@ class MerchantAuthService {
     } catch (error) {
       console.error('💥 Profile update error:', error);
       this.handleAuthError(error);
+      throw error;
+    }
+  }
+
+  // Update store profile (which serves as main branch info)
+  async updateStoreProfile(storeId, storeData) {
+    try {
+      console.log('🏪 Updating store profile (main branch info):', storeId, storeData);
+
+      const response = await fetch(`${this.storeURL}/profile/${storeId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(storeData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `Failed to update store: ${response.status}`);
+      }
+
+      console.log('✅ Store profile updated successfully (main branch updated)');
+      return data;
+
+    } catch (error) {
+      console.error('💥 Error updating store profile:', error);
+      throw error;
+    }
+  }
+
+  // Get store details (main branch info)
+  async getStoreDetails(storeId) {
+    try {
+      console.log('📋 Fetching store details (main branch info):', storeId);
+
+      const response = await fetch(`${this.storeURL}/profile/${storeId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `Failed to fetch store details: ${response.status}`);
+      }
+
+      console.log('✅ Store details fetched successfully');
+      return data;
+
+    } catch (error) {
+      console.error('💥 Error fetching store details:', error);
       throw error;
     }
   }
@@ -652,6 +723,7 @@ class MerchantAuthService {
       hasApiKey: !!API_KEY,
       hasSecretKey: !!SECRET_KEY,
       baseURL: this.baseURL,
+      storeURL: this.storeURL,
       currentMerchant: this.getCurrentMerchant()
     };
   }
