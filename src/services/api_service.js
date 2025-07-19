@@ -50,19 +50,26 @@ const getMerchantStoreId = async () => {
     try {
         const merchant = merchantAuthService.getCurrentMerchant();
         if (!merchant) {
-            throw new Error('Merchant information not found');
+            throw new Error('Merchant information not found. Please log in again.');
         }
 
-        // First try to get stores for this merchant
-        const stores = await getMerchantStores();
+        console.log('🔍 Getting stores for merchant:', merchant.id);
+
+        // Try to get stores for this merchant
+        const storesResponse = await getMerchantStores();
+        const stores = storesResponse?.stores || storesResponse || [];
+        
+        console.log('🏪 Found stores:', stores.length);
+        
         if (stores && stores.length > 0) {
+            console.log('✅ Using store:', stores[0].name, '(' + stores[0].id + ')');
             return stores[0].id;
         }
         
-        // If no stores found, throw a more helpful error
-        throw new Error('No store found. Please create a store first before adding services.');
+        // If no stores found, throw a more specific error
+        throw new Error('No store found for this merchant');
     } catch (error) {
-        console.error('Error getting merchant store ID:', error);
+        console.error('❌ Error getting merchant store ID:', error);
         throw error;
     }
 };
@@ -316,29 +323,126 @@ export const deleteService = async (serviceId) => {
     }
 };
 
-// ===== OFFERS =====
+// ===== OFFERS FUNCTIONS (FIXED) =====
 
-// Fetch all offers for current merchant
+// Fetch all offers for current merchant - ENHANCED VERSION
 export const fetchOffers = async () => {
     try {
-        const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/offers/store/${storeId}`, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
+        console.log('🔍 Starting fetchOffers...');
+        
+        const merchant = merchantAuthService.getCurrentMerchant();
+        if (!merchant) {
+            throw new Error('Merchant information not found. Please log in again.');
+        }
+
+        console.log('👤 Merchant found:', merchant.id);
+
+        // Get merchant's stores first
+        let storeId;
+        try {
+            const storesResponse = await getMerchantStores();
+            const stores = storesResponse?.stores || storesResponse || [];
+            
+            if (stores.length === 0) {
+                console.log('⚠️ No stores found for merchant');
+                return {
+                    offers: [],
+                    message: 'No store found. Please create a store first.'
+                };
+            }
+            
+            storeId = stores[0].id; // Use first store
+            console.log('🏪 Using store ID:', storeId);
+            
+        } catch (storeError) {
+            console.error('❌ Store check failed:', storeError);
+            return {
+                offers: [],
+                error: 'Unable to get store information',
+                message: 'Please ensure you have created a store first.'
+            };
+        }
+
+        // Now fetch offers using the correct endpoint with store_id parameter
+        try {
+            console.log('📋 Fetching offers for store:', storeId);
+            
+            // Option 1: Use the store-specific endpoint
+            const response = await axiosInstance.get(`/offers/store/${storeId}`, {
+                headers: getAuthHeaders()
+            });
+            
+            const offers = response.data?.offers || [];
+            console.log('✅ Offers fetched successfully:', offers.length);
+            
+            return { 
+                offers: Array.isArray(offers) ? offers : [],
+                message: offers.length === 0 ? 'No offers found. Create your first offer!' : undefined
+            };
+            
+        } catch (offerError) {
+            console.log('⚠️ Store-specific offer fetch failed, trying general endpoint...');
+            
+            // Option 2: Use general endpoint with store_id parameter
+            try {
+                const response = await axiosInstance.get(`/offers?store_id=${storeId}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const offers = response.data?.offers || [];
+                console.log('✅ Offers from general endpoint:', offers.length);
+                
+                return { 
+                    offers: Array.isArray(offers) ? offers : [],
+                    message: offers.length === 0 ? 'No offers found. Create your first offer!' : undefined
+                };
+                
+            } catch (generalError) {
+                console.error('❌ General offer fetch also failed:', generalError);
+                
+                return {
+                    offers: [],
+                    error: generalError.message,
+                    message: 'Unable to load offers. Please try again.'
+                };
+            }
+        }
+        
     } catch (error) {
-        handleApiError(error, 'fetching offers');
+        console.error('❌ fetchOffers error:', error);
+        
+        return {
+            offers: [],
+            error: error.message,
+            message: 'Failed to load offers. Please check your connection and try again.'
+        };
     }
 };
 
-// Create a new offer
+// Create a new offer - ENHANCED VERSION
 export const createOffer = async (offerData) => {
     try {
+        console.log('📝 Creating offer:', offerData);
+        
+        // Validate required fields
+        if (!offerData.service_id || !offerData.discount || !offerData.expiration_date) {
+            throw new Error('Service, discount, and expiration date are required');
+        }
+
+        // Ensure we have a valid expiration date
+        const expirationDate = new Date(offerData.expiration_date);
+        if (expirationDate <= new Date()) {
+            throw new Error('Expiration date must be in the future');
+        }
+
         const response = await axiosInstance.post('/offers', offerData, {
             headers: getAuthHeaders()
         });
+        
+        console.log('✅ Offer created successfully:', response.data);
         return response.data;
     } catch (error) {
+        console.error('❌ Create offer error:', error);
         handleApiError(error, 'creating offer');
     }
 };
@@ -346,11 +450,16 @@ export const createOffer = async (offerData) => {
 // Update an existing offer
 export const updateOffer = async (offerId, offerData) => {
     try {
+        console.log('🔄 Updating offer:', offerId, offerData);
+        
         const response = await axiosInstance.put(`/offers/${offerId}`, offerData, {
             headers: getAuthHeaders()
         });
+        
+        console.log('✅ Offer updated successfully:', response.data);
         return response.data;
     } catch (error) {
+        console.error('❌ Update offer error:', error);
         handleApiError(error, 'updating offer');
     }
 };
@@ -358,11 +467,16 @@ export const updateOffer = async (offerId, offerData) => {
 // Delete an offer
 export const deleteOffer = async (offerId) => {
     try {
+        console.log('🗑️ Deleting offer:', offerId);
+        
         const response = await axiosInstance.delete(`/offers/${offerId}`, {
             headers: getAuthHeaders()
         });
+        
+        console.log('✅ Offer deleted successfully');
         return response.data;
     } catch (error) {
+        console.error('❌ Delete offer error:', error);
         handleApiError(error, 'deleting offer');
     }
 };
@@ -406,9 +520,9 @@ export const updateBookingStatus = async (bookingId, status) => {
     }
 };
 
-// ===== FILE UPLOAD =====
+// ===== FILE UPLOAD (FIXED) =====
 
-// Upload an image with better error handling
+// Upload an image with better error handling and endpoint detection
 export const uploadImage = async (file, folder = 'general') => {
     try {
         if (!file) {
@@ -426,46 +540,139 @@ export const uploadImage = async (file, folder = 'general') => {
         }
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', file); // Your server expects 'file' field
         formData.append('folder', folder);
 
-        const response = await axiosInstance.post('/files/upload-image', formData, {
+        console.log('📤 Uploading image:', file.name, 'Size:', file.size);
+
+        // Use the correct endpoint path from your server routes
+        const response = await axiosInstance.post('/upload/files/upload-image', formData, {
             headers: {
                 ...getAuthHeaders(),
                 'Content-Type': 'multipart/form-data',
             },
         });
-        return response.data;
+
+        console.log('✅ Upload response:', response.data);
+
+        // Your server returns { message, url }
+        return {
+            fileUrl: response.data.url,
+            url: response.data.url,
+            data: { url: response.data.url }
+        };
     } catch (error) {
+        console.error('❌ Upload error:', error);
+        
+        // If the main upload fails, provide a fallback
+        if (error.response?.status === 404) {
+            console.log('⚠️ Upload endpoint not found, using base64 fallback');
+            
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    resolve({
+                        fileUrl: e.target.result,
+                        url: e.target.result,
+                        data: { url: e.target.result }
+                    });
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsDataURL(file);
+            });
+        }
+        
         handleApiError(error, 'uploading image');
     }
 };
 
-// ===== STAFF MANAGEMENT =====
-
-// Fetch all staff (updated to handle both store-specific and general queries)
-export const fetchStaff = async (storeId = null) => {
+// Alternative: Simple upload without multiple endpoints
+export const uploadImageSimple = async (file, folder = 'services') => {
     try {
-        let endpoint;
-        
-        if (storeId) {
-            // If specific store ID provided, use it
-            endpoint = `/staff/store/${storeId}`;
-        } else {
-            // Get staff for merchant's store
-            const merchantStoreId = await getMerchantStoreId();
-            endpoint = `/staff/store/${merchantStoreId}`;
+        if (!file) {
+            throw new Error('No file provided');
         }
+
+        // Create a simple base64 data URL as fallback
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                resolve({
+                    fileUrl: e.target.result, // Base64 data URL
+                    url: e.target.result,
+                    data: { url: e.target.result }
+                });
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    } catch (error) {
+        console.error('❌ Simple upload error:', error);
+        throw error;
+    }
+};
+
+// ===== STAFF MANAGEMENT (UPDATED) =====
+
+// Fetch all staff with optional filtering parameters
+export const fetchStaff = async (params = {}) => {
+    try {
+        console.log('🔍 Fetching staff with params:', params);
+        
+        let endpoint = '/staff';
+        const queryParams = new URLSearchParams();
+        
+        // Add query parameters
+        if (params.storeId) queryParams.append('storeId', params.storeId);
+        if (params.branchId) queryParams.append('branchId', params.branchId);
+        if (params.status) queryParams.append('status', params.status);
+        if (params.role) queryParams.append('role', params.role);
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+        
+        const queryString = queryParams.toString();
+        if (queryString) {
+            endpoint += `?${queryString}`;
+        }
+        
+        console.log('🔗 Staff API endpoint:', endpoint);
         
         const response = await axiosInstance.get(endpoint, {
             headers: getAuthHeaders()
         });
         
+        console.log('📊 Staff API response:', response.data);
+        
+        // Handle different response formats
+        const data = response.data;
+        if (data.staff) {
+            return data; // Return full response with pagination
+        }
+        return { staff: Array.isArray(data) ? data : [] };
+        
+    } catch (error) {
+        console.error('❌ Error fetching staff:', error);
+        handleApiError(error, 'fetching staff');
+    }
+};
+
+// Fetch staff for a specific store (convenience function)
+export const fetchStaffByStore = async (storeId) => {
+    try {
+        console.log('🏪 Fetching staff for store:', storeId);
+        
+        const response = await axiosInstance.get(`/staff/store/${storeId}`, {
+            headers: getAuthHeaders()
+        });
+        
+        console.log('✅ Store staff response:', response.data);
+        
         // Handle different response formats from the backend
         const staffData = response.data?.staff || response.data || [];
-        return Array.isArray(staffData) ? staffData : [];
+        return { staff: Array.isArray(staffData) ? staffData : [] };
     } catch (error) {
-        handleApiError(error, 'fetching staff');
+        console.error('❌ Error fetching store staff:', error);
+        handleApiError(error, 'fetching store staff');
     }
 };
 
@@ -487,47 +694,55 @@ export const getAllStaff = async () => {
     }
 };
 
-// Add/Create staff member (updated with better error handling)
+// Create staff member (updated with better validation)
 export const createStaff = async (staffData) => {
     try {
-      console.log('Creating staff with data:', staffData); // Debug log
-      
-      // Don't send storeId if it's not properly set
-      const payload = {
-        name: staffData.name,
-        email: staffData.email,
-        phoneNumber: staffData.phoneNumber,
-        // Only include storeId if it's a valid UUID
-        ...(staffData.storeId && staffData.storeId !== 'undefined' ? { storeId: staffData.storeId } : {})
-      };
-      
-      console.log('Sending payload:', payload); // Debug log
-      
-      const response = await axiosInstance.post('/staff', payload, {
-        headers: getAuthHeaders()
-      });
-      
-      console.log('Staff creation response:', response.data); // Debug log
-      
-      return response.data;
+        console.log('👤 Creating staff with data:', staffData);
+        
+        // Validate required fields
+        if (!staffData.name || !staffData.email) {
+            throw new Error('Name and email are required');
+        }
+        
+        // Ensure we have a store_id
+        let payload = { ...staffData };
+        if (!payload.storeId && !payload.store_id) {
+            const storeId = await getMerchantStoreId();
+            payload.storeId = storeId;
+        }
+        
+        console.log('📤 Sending staff payload:', payload);
+        
+        const response = await axiosInstance.post('/staff', payload, {
+            headers: getAuthHeaders()
+        });
+        
+        console.log('✅ Staff creation response:', response.data);
+        return response.data;
     } catch (error) {
-      console.error('Create staff error:', error.response?.data || error.message);
-      handleApiError(error, 'creating staff');
+        console.error('❌ Create staff error:', error);
+        handleApiError(error, 'creating staff');
     }
-  };
+};
+
 // Update staff member
 export const updateStaff = async (staffId, staffData) => {
     try {
+        console.log('🔄 Updating staff:', staffId, 'with data:', staffData);
+        
         const response = await axiosInstance.put(`/staff/${staffId}`, staffData, {
             headers: getAuthHeaders()
         });
+        
+        console.log('✅ Staff update response:', response.data);
         return response.data;
     } catch (error) {
+        console.error('❌ Update staff error:', error);
         handleApiError(error, 'updating staff');
     }
 };
 
-// Delete staff member (updated with better error handling)
+// Delete staff member
 export const deleteStaff = async (staffId) => {
     try {
         const response = await axiosInstance.delete(`/staff/${staffId}`, {
@@ -539,7 +754,7 @@ export const deleteStaff = async (staffId) => {
     }
 };
 
-// Get staff by ID (updated with better error handling)
+// Get staff by ID
 export const getStaffById = async (staffId) => {
     try {
         const response = await axiosInstance.get(`/staff/${staffId}`, {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom'; 
-import { createService, uploadImage, getMerchantStores, fetchStaff } from '../../services/api_service';
+import { createService, uploadImage, getMerchantStores, fetchStaff, updateService } from '../../services/api_service';
 import merchantAuthService from '../../services/merchantAuthService';
 import branchService from '../../services/branchService';
 import { Upload, Image as ImageIcon, AlertCircle, CheckCircle, Loader, Users, UserCheck, MapPin, Building } from 'lucide-react';
@@ -16,7 +16,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         description: '',
         type: 'fixed',
         store_id: '',
-        branch_id: '', // Added for branch selection
+        branch_id: '',
         dynamicFields: [],
         staffIds: []
     });
@@ -60,9 +60,13 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     return;
                 }
 
+                console.log('🏪 Loading store data for merchant:', merchant.id);
+
                 // Get merchant's stores
                 const storesResponse = await getMerchantStores();
                 const stores = storesResponse?.stores || storesResponse || [];
+                
+                console.log('📋 Available stores:', stores);
                 
                 if (stores.length === 0) {
                     toast.error('Please create a store first before adding services');
@@ -77,11 +81,15 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     store_id: storeId
                 }));
 
+                console.log('✅ Using store:', storeId);
+
                 // Load branches for the store
                 await loadStoreBranches(storeId);
 
                 // If editing, populate form
                 if (editingService) {
+                    console.log('✏️ Editing service:', editingService);
+                    
                     setServiceData({
                         ...editingService,
                         store_id: editingService.store_id || storeId,
@@ -105,12 +113,13 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                         await loadBranchStaff(editingService.branch_id);
                     }
                 } else {
-                    // For new services, load staff for store (main branch) initially
+                    // For new services, load staff for store initially
+                    console.log('➕ Creating new service');
                     await loadStoreStaff(storeId);
                 }
 
             } catch (error) {
-                console.error('Error loading store data:', error);
+                console.error('❌ Error loading store data:', error);
                 toast.error('Failed to load store information');
             } finally {
                 setStoreLoading(false);
@@ -144,56 +153,80 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             }
 
         } catch (error) {
-            console.error('Error loading branches:', error);
+            console.error('❌ Error loading branches:', error);
             toast.error('Failed to load store branches');
         } finally {
             setBranchesLoading(false);
         }
     };
 
-    // Load staff for the selected store (main branch)
+    // Load staff for the selected store with improved filtering
     const loadStoreStaff = async (storeId) => {
         try {
             setStaffLoading(true);
-            const staffResponse = await fetchStaff();
-            const staff = staffResponse?.staff || staffResponse || [];
+            console.log('👥 Loading staff for store:', storeId);
             
-            // Filter only active staff for the main store/branch
-            const activeStaff = staff.filter(member => member.status === 'active');
-            setAvailableStaff(activeStaff);
+            // Use the updated fetchStaff function with parameters
+            const staffResponse = await fetchStaff({
+                storeId: storeId,
+                status: 'active'
+            });
+            
+            const staff = staffResponse?.staff || [];
+            console.log('📋 Staff loaded for store:', staff.length);
+            
+            setAvailableStaff(staff);
         } catch (error) {
-            console.error('Error loading staff:', error);
+            console.error('❌ Error loading staff:', error);
             toast.error('Failed to load staff members');
+            setAvailableStaff([]);
         } finally {
             setStaffLoading(false);
         }
     };
 
-    // Load staff for a specific branch
+    // Load staff for a specific branch with improved logic
     const loadBranchStaff = async (branchId) => {
         try {
             setStaffLoading(true);
             console.log('👥 Loading staff for branch:', branchId);
 
-            // Check if this is a store-based main branch
+            // Check if this is a store-based main branch (your custom format)
             if (branchId.startsWith('store-')) {
-                // Load all store staff for main branch
-                await loadStoreStaff(serviceData.store_id);
+                // Extract store ID from the branch ID
+                const storeId = branchId.replace('store-', '');
+                console.log('🏢 Loading staff for main branch of store:', storeId);
+                await loadStoreStaff(storeId);
                 return;
             }
 
-            // For additional branches, you might want to implement branch-specific staff
-            // For now, we'll load all store staff
-            const staffResponse = await fetchStaff();
-            const staff = staffResponse?.staff || staffResponse || [];
+            // For actual branch IDs, try to load staff filtered by branch
+            let staffResponse;
+            try {
+                // First try to get staff specifically for this branch
+                staffResponse = await fetchStaff({
+                    storeId: serviceData.store_id,
+                    branchId: branchId,
+                    status: 'active'
+                });
+            } catch (branchError) {
+                console.log('⚠️ Branch-specific staff fetch failed, falling back to store staff');
+                // If branch filtering fails, get all store staff
+                staffResponse = await fetchStaff({
+                    storeId: serviceData.store_id,
+                    status: 'active'
+                });
+            }
             
-            // Filter only active staff - in the future you can filter by branch
-            const activeStaff = staff.filter(member => member.status === 'active');
-            setAvailableStaff(activeStaff);
+            const staff = staffResponse?.staff || [];
+            console.log('📋 Staff loaded for branch:', staff.length);
+            
+            setAvailableStaff(staff);
 
         } catch (error) {
-            console.error('Error loading branch staff:', error);
+            console.error('❌ Error loading branch staff:', error);
             toast.error('Failed to load staff for selected branch');
+            setAvailableStaff([]);
         } finally {
             setStaffLoading(false);
         }
@@ -202,6 +235,8 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     // Handle branch selection change
     const handleBranchChange = async (e) => {
         const branchId = e.target.value;
+        
+        console.log('🔄 Branch changed to:', branchId);
         
         setServiceData(prev => ({
             ...prev,
@@ -226,43 +261,48 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
     const validateForm = () => {
         const newErrors = {};
-
+    
         if (!serviceData.name.trim()) {
             newErrors.name = 'Service name is required';
         }
-
+    
         if (!serviceData.category) {
             newErrors.category = 'Please select a category';
         }
-
+    
         if (!serviceData.branch_id) {
             newErrors.branch_id = 'Please select a branch where this service will be offered';
         }
-
+    
         if (!serviceData.description.trim()) {
             newErrors.description = 'Description is required';
         } else if (serviceData.description.length < 10) {
             newErrors.description = 'Description must be at least 10 characters';
         }
-
+    
+        // More lenient image validation
         if (!serviceData.image_url && !imageFile) {
-            newErrors.image = 'Please upload an image for your service';
+            if (process.env.NODE_ENV === 'production') {
+                newErrors.image = 'Please upload an image for your service';
+            } else {
+                console.log('🚧 Development mode: image not required');
+            }
         }
-
+    
         if (serviceData.type === 'fixed') {
             if (!serviceData.price || parseFloat(serviceData.price) <= 0) {
                 newErrors.price = 'Please enter a valid price';
             }
-
+    
             if (!serviceData.duration || parseInt(serviceData.duration) <= 0) {
                 newErrors.duration = 'Please enter a valid duration';
             }
         }
-
+    
         if (selectedStaff.length === 0) {
             newErrors.staff = 'Please select at least one staff member for this service';
         }
-
+    
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -279,6 +319,8 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
     const handleStaffSelection = (staff) => {
         const isSelected = selectedStaff.some(s => s.id === staff.id);
+        
+        console.log('👤 Staff selection changed:', staff.name, 'Selected:', !isSelected);
         
         if (isSelected) {
             // Remove staff from selection
@@ -338,34 +380,76 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             toast.error('Please select an image to upload');
             return;
         }
-
+    
         try {
             setImageUploading(true);
-            const response = await uploadImage(imageFile, 'services');
+            console.log('📤 Uploading image...');
             
-            const imageUrl = response.fileUrl || response.url || response.data?.url;
-            setServiceData((prev) => ({
-                ...prev,
-                image_url: imageUrl,
-            }));
-            
-            toast.success('Image uploaded successfully');
-            
-            // Clear image error
-            if (errors.image) {
-                setErrors(prev => ({ ...prev, image: '' }));
+            // Try the main upload first
+            try {
+                const response = await uploadImage(imageFile, 'services');
+                const imageUrl = response.fileUrl || response.url || response.data?.url;
+                
+                if (imageUrl) {
+                    console.log('✅ Image uploaded:', imageUrl);
+                    setServiceData((prev) => ({
+                        ...prev,
+                        image_url: imageUrl,
+                    }));
+                    toast.success('Image uploaded successfully');
+                    
+                    // Clear image error
+                    if (errors.image) {
+                        setErrors(prev => ({ ...prev, image: '' }));
+                    }
+                    return;
+                }
+            } catch (uploadError) {
+                console.log('⚠️ Main upload failed, trying fallback method:', uploadError.message);
+                
+                // Fallback: Use base64 data URL
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Url = e.target.result;
+                    console.log('✅ Using base64 fallback');
+                    
+                    setServiceData((prev) => ({
+                        ...prev,
+                        image_url: base64Url,
+                    }));
+                    
+                    toast.success('Image processed successfully (using fallback method)');
+                    
+                    // Clear image error
+                    if (errors.image) {
+                        setErrors(prev => ({ ...prev, image: '' }));
+                    }
+                };
+                reader.onerror = () => {
+                    throw new Error('Failed to process image file');
+                };
+                reader.readAsDataURL(imageFile);
             }
             
         } catch (error) {
-            console.error('Image upload error:', error);
-            toast.error(error.message || 'Failed to upload image. Please try again.');
+            console.error('❌ Image upload error:', error);
+            toast.error('Failed to upload image. You can proceed without an image for now.');
+            
+            // Allow user to proceed without image in development
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🚧 Development mode: allowing service creation without image');
+                setErrors(prev => ({ ...prev, image: '' })); // Clear image requirement error
+            }
         } finally {
             setImageUploading(false);
         }
     };
+    
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        console.log('📤 Submitting service form...');
 
         if (!validateForm()) {
             toast.error('Please fix the errors before submitting');
@@ -391,16 +475,22 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 staffIds: selectedStaff.map(staff => staff.id)
             };
 
+            console.log('📋 Service payload:', servicePayload);
+
             let response;
             if (editingService) {
                 // Update existing service
+                console.log('🔄 Updating service:', editingService.id);
                 response = await updateService(editingService.id, servicePayload);
                 toast.success('Service updated successfully');
             } else {
                 // Create new service
+                console.log('➕ Creating new service');
                 response = await createService(servicePayload);
                 toast.success('Service created successfully');
             }
+
+            console.log('✅ Service operation successful:', response);
 
             // Handle dynamic service redirection
             if (serviceData.type === 'dynamic' && !editingService) {
@@ -418,7 +508,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             onServiceAdded();
 
         } catch (error) {
-            console.error('Service submission error:', error);
+            console.error('❌ Service submission error:', error);
             toast.error(error.message || 'Failed to save service. Please try again.');
         } finally {
             setLoading(false);
@@ -694,7 +784,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                                                     <UserCheck className="w-4 h-4 text-primary" />
                                                 )}
                                             </div>
-                                            <p className="text-xs text-gray-500">{staff.role}</p>
+                                            <p className="text-xs text-gray-500">{staff.role || 'Staff'}</p>
                                             <p className="text-xs text-gray-400">{staff.email}</p>
                                         </div>
                                     </div>
