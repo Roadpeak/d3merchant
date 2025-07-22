@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createService, uploadImage, getMerchantStores, fetchStaff, updateService } from '../../services/api_service';
 import merchantAuthService from '../../services/merchantAuthService';
 import branchService from '../../services/branchService';
-import { Upload, Image as ImageIcon, AlertCircle, CheckCircle, Loader, Users, UserCheck, MapPin, Building } from 'lucide-react';
+import { Upload, Image, AlertCircle, CheckCircle, Loader, Users, UserCheck, MapPin, Building, Clock, Info } from 'lucide-react';
 
 const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     const [serviceData, setServiceData] = useState({
@@ -18,7 +18,14 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         store_id: '',
         branch_id: '',
         dynamicFields: [],
-        staffIds: []
+        staffIds: [],
+        // CONCURRENT BOOKING FIELDS
+        max_concurrent_bookings: 1,
+        allow_overbooking: false,
+        slot_interval: '',
+        buffer_time: 0,
+        min_advance_booking: 30,
+        max_advance_booking: 10080, // 7 days in minutes
     });
     
     const [loading, setLoading] = useState(false);
@@ -96,7 +103,14 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                         branch_id: editingService.branch_id || '',
                         price: editingService.price?.toString() || '',
                         duration: editingService.duration?.toString() || '',
-                        staffIds: editingService.staff?.map(staff => staff.id) || []
+                        staffIds: editingService.staff?.map(staff => staff.id) || [],
+                        // CONCURRENT BOOKING FIELDS with defaults
+                        max_concurrent_bookings: editingService.max_concurrent_bookings || 1,
+                        allow_overbooking: editingService.allow_overbooking || false,
+                        slot_interval: editingService.slot_interval?.toString() || '',
+                        buffer_time: editingService.buffer_time || 0,
+                        min_advance_booking: editingService.min_advance_booking || 30,
+                        max_advance_booking: editingService.max_advance_booking || 10080,
                     });
                     
                     if (editingService.image_url) {
@@ -160,13 +174,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Load staff for the selected store with improved filtering
+    // Load staff methods
     const loadStoreStaff = async (storeId) => {
         try {
             setStaffLoading(true);
             console.log('👥 Loading staff for store:', storeId);
             
-            // Use the updated fetchStaff function with parameters
             const staffResponse = await fetchStaff({
                 storeId: storeId,
                 status: 'active'
@@ -185,25 +198,20 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Load staff for a specific branch with improved logic
     const loadBranchStaff = async (branchId) => {
         try {
             setStaffLoading(true);
             console.log('👥 Loading staff for branch:', branchId);
 
-            // Check if this is a store-based main branch (your custom format)
             if (branchId.startsWith('store-')) {
-                // Extract store ID from the branch ID
                 const storeId = branchId.replace('store-', '');
                 console.log('🏢 Loading staff for main branch of store:', storeId);
                 await loadStoreStaff(storeId);
                 return;
             }
 
-            // For actual branch IDs, try to load staff filtered by branch
             let staffResponse;
             try {
-                // First try to get staff specifically for this branch
                 staffResponse = await fetchStaff({
                     storeId: serviceData.store_id,
                     branchId: branchId,
@@ -211,7 +219,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 });
             } catch (branchError) {
                 console.log('⚠️ Branch-specific staff fetch failed, falling back to store staff');
-                // If branch filtering fails, get all store staff
                 staffResponse = await fetchStaff({
                     storeId: serviceData.store_id,
                     status: 'active'
@@ -241,17 +248,15 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         setServiceData(prev => ({
             ...prev,
             branch_id: branchId,
-            staffIds: [] // Reset staff selection when branch changes
+            staffIds: []
         }));
         
-        setSelectedStaff([]); // Clear selected staff
+        setSelectedStaff([]);
         
-        // Clear branch error
         if (errors.branch_id) {
             setErrors(prev => ({ ...prev, branch_id: '' }));
         }
 
-        // Load staff for the selected branch
         if (branchId) {
             await loadBranchStaff(branchId);
         } else {
@@ -259,6 +264,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
+    // Enhanced validation with concurrent booking fields
     const validateForm = () => {
         const newErrors = {};
     
@@ -280,7 +286,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             newErrors.description = 'Description must be at least 10 characters';
         }
     
-        // More lenient image validation
         if (!serviceData.image_url && !imageFile) {
             if (process.env.NODE_ENV === 'production') {
                 newErrors.image = 'Please upload an image for your service';
@@ -297,6 +302,29 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             if (!serviceData.duration || parseInt(serviceData.duration) <= 0) {
                 newErrors.duration = 'Please enter a valid duration';
             }
+
+            // Validate concurrent booking fields
+            if (!serviceData.max_concurrent_bookings || parseInt(serviceData.max_concurrent_bookings) < 1) {
+                newErrors.max_concurrent_bookings = 'Maximum concurrent bookings must be at least 1';
+            } else if (parseInt(serviceData.max_concurrent_bookings) > 50) {
+                newErrors.max_concurrent_bookings = 'Maximum concurrent bookings cannot exceed 50';
+            }
+
+            if (serviceData.slot_interval && parseInt(serviceData.slot_interval) < 1) {
+                newErrors.slot_interval = 'Slot interval must be at least 1 minute';
+            }
+
+            if (serviceData.buffer_time && parseInt(serviceData.buffer_time) < 0) {
+                newErrors.buffer_time = 'Buffer time cannot be negative';
+            }
+
+            if (!serviceData.min_advance_booking || parseInt(serviceData.min_advance_booking) < 0) {
+                newErrors.min_advance_booking = 'Minimum advance booking time is required';
+            }
+
+            if (!serviceData.max_advance_booking || parseInt(serviceData.max_advance_booking) <= parseInt(serviceData.min_advance_booking)) {
+                newErrors.max_advance_booking = 'Maximum advance booking must be greater than minimum';
+            }
         }
     
         if (selectedStaff.length === 0) {
@@ -308,12 +336,19 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     };
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setServiceData((prev) => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        const inputValue = type === 'checkbox' ? checked : value;
+        
+        setServiceData((prev) => ({ ...prev, [name]: inputValue }));
         
         // Clear error when user starts typing
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+
+        // Auto-set slot_interval to duration if not set
+        if (name === 'duration' && value && !serviceData.slot_interval) {
+            setServiceData(prev => ({ ...prev, slot_interval: value }));
         }
     };
 
@@ -323,14 +358,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         console.log('👤 Staff selection changed:', staff.name, 'Selected:', !isSelected);
         
         if (isSelected) {
-            // Remove staff from selection
             setSelectedStaff(prev => prev.filter(s => s.id !== staff.id));
             setServiceData(prev => ({
                 ...prev,
                 staffIds: prev.staffIds.filter(id => id !== staff.id)
             }));
         } else {
-            // Add staff to selection
             setSelectedStaff(prev => [...prev, staff]);
             setServiceData(prev => ({
                 ...prev,
@@ -338,7 +371,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             }));
         }
 
-        // Clear staff error when user selects staff
         if (errors.staff) {
             setErrors(prev => ({ ...prev, staff: '' }));
         }
@@ -348,13 +380,11 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Validate file type
         if (!file.type.startsWith('image/')) {
             toast.error('Please select a valid image file');
             return;
         }
 
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
             toast.error('Image size should be less than 5MB');
             return;
@@ -362,14 +392,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
         setImageFile(file);
         
-        // Create preview
         const reader = new FileReader();
         reader.onload = (e) => {
             setImagePreview(e.target.result);
         };
         reader.readAsDataURL(file);
 
-        // Clear image error
         if (errors.image) {
             setErrors(prev => ({ ...prev, image: '' }));
         }
@@ -385,7 +413,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             setImageUploading(true);
             console.log('📤 Uploading image...');
             
-            // Try the main upload first
             try {
                 const response = await uploadImage(imageFile, 'services');
                 const imageUrl = response.fileUrl || response.url || response.data?.url;
@@ -398,7 +425,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     }));
                     toast.success('Image uploaded successfully');
                     
-                    // Clear image error
                     if (errors.image) {
                         setErrors(prev => ({ ...prev, image: '' }));
                     }
@@ -407,7 +433,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             } catch (uploadError) {
                 console.log('⚠️ Main upload failed, trying fallback method:', uploadError.message);
                 
-                // Fallback: Use base64 data URL
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const base64Url = e.target.result;
@@ -420,7 +445,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     
                     toast.success('Image processed successfully (using fallback method)');
                     
-                    // Clear image error
                     if (errors.image) {
                         setErrors(prev => ({ ...prev, image: '' }));
                     }
@@ -435,20 +459,16 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             console.error('❌ Image upload error:', error);
             toast.error('Failed to upload image. You can proceed without an image for now.');
             
-            // Allow user to proceed without image in development
             if (process.env.NODE_ENV === 'development') {
                 console.log('🚧 Development mode: allowing service creation without image');
-                setErrors(prev => ({ ...prev, image: '' })); // Clear image requirement error
+                setErrors(prev => ({ ...prev, image: '' }));
             }
         } finally {
             setImageUploading(false);
         }
     };
-    
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
+    const handleSubmit = async () => {
         console.log('📤 Submitting service form...');
 
         if (!validateForm()) {
@@ -472,6 +492,11 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 ...serviceData,
                 price: serviceData.type === 'fixed' ? parseFloat(serviceData.price) : null,
                 duration: serviceData.type === 'fixed' ? parseInt(serviceData.duration) : null,
+                max_concurrent_bookings: parseInt(serviceData.max_concurrent_bookings),
+                slot_interval: serviceData.slot_interval ? parseInt(serviceData.slot_interval) : null,
+                buffer_time: parseInt(serviceData.buffer_time) || 0,
+                min_advance_booking: parseInt(serviceData.min_advance_booking) || 30,
+                max_advance_booking: parseInt(serviceData.max_advance_booking) || 10080,
                 staffIds: selectedStaff.map(staff => staff.id)
             };
 
@@ -479,12 +504,10 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
             let response;
             if (editingService) {
-                // Update existing service
                 console.log('🔄 Updating service:', editingService.id);
                 response = await updateService(editingService.id, servicePayload);
                 toast.success('Service updated successfully');
             } else {
-                // Create new service
                 console.log('➕ Creating new service');
                 response = await createService(servicePayload);
                 toast.success('Service created successfully');
@@ -492,7 +515,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
             console.log('✅ Service operation successful:', response);
 
-            // Handle dynamic service redirection
             if (serviceData.type === 'dynamic' && !editingService) {
                 const serviceId = response.newService?.id || response.service?.id;
                 if (serviceId) {
@@ -515,7 +537,20 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Get selected branch details for display
+    // Calculate estimated daily slots
+    const calculateDailySlots = () => {
+        if (!serviceData.duration) return 0;
+        const duration = parseInt(serviceData.duration);
+        const slotInterval = parseInt(serviceData.slot_interval) || duration;
+        const bufferTime = parseInt(serviceData.buffer_time) || 0;
+        
+        // Assuming 10-hour workday (600 minutes)
+        const workingMinutes = 600;
+        const totalSlotTime = slotInterval + bufferTime;
+        
+        return Math.floor(workingMinutes / totalSlotTime);
+    };
+
     const selectedBranch = availableBranches.find(branch => branch.id === serviceData.branch_id);
 
     if (storeLoading) {
@@ -528,7 +563,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
             {/* Service Name */}
             <div>
                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -580,7 +615,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     </select>
                 )}
                 
-                {/* Selected Branch Details */}
                 {selectedBranch && (
                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                         <div className="flex items-start">
@@ -606,10 +640,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 )}
                 
                 {errors.branch_id && <p className="mt-1 text-xs text-red-600">{errors.branch_id}</p>}
-                
-                <p className="mt-1 text-xs text-gray-500">
-                    Choose which branch will offer this service. Staff will be filtered based on your selection.
-                </p>
             </div>
 
             {/* Service Type */}
@@ -637,46 +667,198 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
             {/* Fixed Price Fields */}
             {serviceData.type === 'fixed' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-2">
-                            Price (KES) *
-                        </label>
-                        <input
-                            id="price"
-                            type="number"
-                            name="price"
-                            value={serviceData.price}
-                            onChange={handleInputChange}
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                            className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                errors.price ? 'border-red-400' : 'border-gray-300'
-                            }`}
-                        />
-                        {errors.price && <p className="mt-1 text-xs text-red-600">{errors.price}</p>}
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-2">
+                                Price (KES) *
+                            </label>
+                            <input
+                                id="price"
+                                type="number"
+                                name="price"
+                                value={serviceData.price}
+                                onChange={handleInputChange}
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                                className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                    errors.price ? 'border-red-400' : 'border-gray-300'
+                                }`}
+                            />
+                            {errors.price && <p className="mt-1 text-xs text-red-600">{errors.price}</p>}
+                        </div>
+
+                        <div>
+                            <label htmlFor="duration" className="block text-sm font-semibold text-gray-700 mb-2">
+                                Duration (minutes) *
+                            </label>
+                            <input
+                                id="duration"
+                                type="number"
+                                name="duration"
+                                value={serviceData.duration}
+                                onChange={handleInputChange}
+                                placeholder="30"
+                                min="1"
+                                className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                    errors.duration ? 'border-red-400' : 'border-gray-300'
+                                }`}
+                            />
+                            {errors.duration && <p className="mt-1 text-xs text-red-600">{errors.duration}</p>}
+                        </div>
                     </div>
 
-                    <div>
-                        <label htmlFor="duration" className="block text-sm font-semibold text-gray-700 mb-2">
-                            Duration (minutes) *
-                        </label>
-                        <input
-                            id="duration"
-                            type="number"
-                            name="duration"
-                            value={serviceData.duration}
-                            onChange={handleInputChange}
-                            placeholder="30"
-                            min="1"
-                            className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                errors.duration ? 'border-red-400' : 'border-gray-300'
-                            }`}
-                        />
-                        {errors.duration && <p className="mt-1 text-xs text-red-600">{errors.duration}</p>}
+                    {/* CONCURRENT BOOKING SETTINGS */}
+                    <div className="p-4 border border-gray-200 rounded-lg bg-blue-50">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <Users className="w-5 h-5 mr-2 text-blue-600" />
+                            Booking Capacity Settings
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label htmlFor="max_concurrent_bookings" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Max Concurrent Bookings *
+                                </label>
+                                <input
+                                    id="max_concurrent_bookings"
+                                    type="number"
+                                    name="max_concurrent_bookings"
+                                    value={serviceData.max_concurrent_bookings}
+                                    onChange={handleInputChange}
+                                    min="1"
+                                    max="50"
+                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        errors.max_concurrent_bookings ? 'border-red-400' : 'border-gray-300'
+                                    }`}
+                                />
+                                {errors.max_concurrent_bookings && <p className="mt-1 text-xs text-red-600">{errors.max_concurrent_bookings}</p>}
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Number of customers that can book the same time slot
+                                </p>
+                            </div>
+
+                            <div>
+                                <label htmlFor="slot_interval" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Slot Interval (minutes)
+                                </label>
+                                <input
+                                    id="slot_interval"
+                                    type="number"
+                                    name="slot_interval"
+                                    value={serviceData.slot_interval}
+                                    onChange={handleInputChange}
+                                    placeholder={serviceData.duration || "60"}
+                                    min="1"
+                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        errors.slot_interval ? 'border-red-400' : 'border-gray-300'
+                                    }`}
+                                />
+                                {errors.slot_interval && <p className="mt-1 text-xs text-red-600">{errors.slot_interval}</p>}
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Time between slots (defaults to service duration)
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label htmlFor="buffer_time" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Buffer Time (minutes)
+                                </label>
+                                <input
+                                    id="buffer_time"
+                                    type="number"
+                                    name="buffer_time"
+                                    value={serviceData.buffer_time}
+                                    onChange={handleInputChange}
+                                    min="0"
+                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        errors.buffer_time ? 'border-red-400' : 'border-gray-300'
+                                    }`}
+                                />
+                                {errors.buffer_time && <p className="mt-1 text-xs text-red-600">{errors.buffer_time}</p>}
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Cleanup time between bookings
+                                </p>
+                            </div>
+
+                            <div>
+                                <label htmlFor="min_advance_booking" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Min Advance (minutes) *
+                                </label>
+                                <input
+                                    id="min_advance_booking"
+                                    type="number"
+                                    name="min_advance_booking"
+                                    value={serviceData.min_advance_booking}
+                                    onChange={handleInputChange}
+                                    min="0"
+                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        errors.min_advance_booking ? 'border-red-400' : 'border-gray-300'
+                                    }`}
+                                />
+                                {errors.min_advance_booking && <p className="mt-1 text-xs text-red-600">{errors.min_advance_booking}</p>}
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {Math.ceil(serviceData.min_advance_booking / 60)} hours minimum
+                                </p>
+                            </div>
+
+                            <div>
+                                <label htmlFor="max_advance_booking" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Max Advance (minutes) *
+                                </label>
+                                <input
+                                    id="max_advance_booking"
+                                    type="number"
+                                    name="max_advance_booking"
+                                    value={serviceData.max_advance_booking}
+                                    onChange={handleInputChange}
+                                    min={parseInt(serviceData.min_advance_booking) + 1}
+                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        errors.max_advance_booking ? 'border-red-400' : 'border-gray-300'
+                                    }`}
+                                />
+                                {errors.max_advance_booking && <p className="mt-1 text-xs text-red-600">{errors.max_advance_booking}</p>}
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {Math.ceil(serviceData.max_advance_booking / (60 * 24))} days maximum
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center">
+                            <input
+                                type="checkbox"
+                                id="allow_overbooking"
+                                name="allow_overbooking"
+                                checked={serviceData.allow_overbooking}
+                                onChange={handleInputChange}
+                                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                            />
+                            <label htmlFor="allow_overbooking" className="ml-2 block text-sm text-gray-700">
+                                Allow overbooking (accept bookings beyond max concurrent)
+                            </label>
+                        </div>
+
+                        {/* Booking Capacity Preview */}
+                        {serviceData.duration && serviceData.max_concurrent_bookings && (
+                            <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-md">
+                                <div className="flex items-start">
+                                    <Info className="w-4 h-4 text-blue-600 mr-2 mt-0.5" />
+                                    <div className="text-sm text-blue-800">
+                                        <strong>Capacity Preview:</strong>
+                                        <ul className="mt-1 space-y-1">
+                                            <li>• {serviceData.max_concurrent_bookings} customers per {serviceData.duration}-minute slot</li>
+                                            <li>• Estimated {calculateDailySlots()} slots per day</li>
+                                            <li>• Daily capacity: up to {calculateDailySlots() * serviceData.max_concurrent_bookings} bookings</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
+                </>
             )}
 
             {/* Category */}
@@ -713,6 +895,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     onChange={handleInputChange}
                     placeholder="Describe your service in detail..."
                     rows="4"
+                    maxLength="500"
                     className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none ${
                         errors.description ? 'border-red-400' : 'border-gray-300'
                     }`}
@@ -731,7 +914,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     <div className="border border-gray-300 rounded-md p-4 text-center">
                         <Building className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                         <p className="text-sm text-gray-500">Please select a branch first</p>
-                        <p className="text-xs text-gray-400">Staff will be loaded based on your branch selection</p>
                     </div>
                 ) : staffLoading ? (
                     <div className="flex items-center justify-center py-4">
@@ -742,15 +924,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     <div className="text-center py-4">
                         <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                         <p className="text-sm text-gray-500">No active staff members found</p>
-                        <p className="text-xs text-gray-400">Add staff members to your store first</p>
                     </div>
                 ) : (
                     <div className={`border rounded-md p-4 ${errors.staff ? 'border-red-400' : 'border-gray-300'}`}>
                         <div className="mb-3">
                             <p className="text-sm text-gray-600">
-                                Select staff members who will provide this service at{' '}
-                                <span className="font-medium">{selectedBranch?.name}</span>
-                                {' '}({selectedStaff.length} selected)
+                                Select staff members ({selectedStaff.length} selected)
                             </p>
                         </div>
                         
@@ -819,7 +998,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     Service Image *
                 </label>
                 
-                {/* Image Preview */}
                 {imagePreview && (
                     <div className="mb-4">
                         <img
@@ -836,7 +1014,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     </div>
                 )}
 
-                {/* Upload Area */}
                 <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     errors.image ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-primary bg-gray-50'
                 }`}>
@@ -850,7 +1027,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     
                     <label htmlFor="image-upload" className="cursor-pointer">
                         <div className="flex flex-col items-center">
-                            <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
+                            <Image className="w-8 h-8 text-gray-400 mb-2" />
                             <span className="text-sm font-medium text-gray-700">
                                 Click to upload image
                             </span>
@@ -911,7 +1088,8 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 </button>
                 
                 <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit}
                     disabled={loading || imageUploading}
                     className="flex-1 py-2 px-4 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
@@ -925,7 +1103,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     )}
                 </button>
             </div>
-        </form>
+        </div>
     );
 };
 
