@@ -2,9 +2,8 @@
 class ChatService {
   constructor() {
     // Use window.location for dynamic API URLs in browser
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const port = process.env.NODE_ENV === 'production' ? '' : ':4000';
+    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
     
     // For development, you can also hardcode these or use different logic
     this.API_BASE = process.env.NODE_ENV === 'production' 
@@ -20,6 +19,8 @@ class ChatService {
   getAuthToken() {
     // Function to get token from cookies - matching your authService
     const getTokenFromCookie = () => {
+      if (typeof document === 'undefined') return '';
+      
       const name = 'authToken=';
       const decodedCookie = decodeURIComponent(document.cookie);
       const ca = decodedCookie.split(';');
@@ -36,9 +37,39 @@ class ChatService {
       return '';
     };
 
-    return getTokenFromCookie() || 
-           localStorage.getItem('authToken') || 
-           localStorage.getItem('access_token');
+    // Enhanced token retrieval - check all possible locations
+    const tokenSources = {
+      localStorage_access_token: typeof window !== 'undefined' ? localStorage.getItem('access_token') : '',
+      localStorage_authToken: typeof window !== 'undefined' ? localStorage.getItem('authToken') : '',
+      localStorage_token: typeof window !== 'undefined' ? localStorage.getItem('token') : '',
+      cookie_authToken: getTokenFromCookie(),
+      cookie_access_token: this.getCookieValue('access_token'),
+      cookie_token: this.getCookieValue('token')
+    };
+
+    const token = tokenSources.localStorage_access_token || 
+                  tokenSources.localStorage_authToken || 
+                  tokenSources.localStorage_token ||
+                  tokenSources.cookie_authToken ||
+                  tokenSources.cookie_access_token ||
+                  tokenSources.cookie_token;
+
+    console.log('🔍 ChatService token check:', token ? `Found (${token.substring(0, 20)}...)` : 'Not found');
+    console.log('📍 Token sources:', Object.keys(tokenSources).filter(key => tokenSources[key]));
+
+    return token;
+  }
+
+  // Helper method to get cookie value
+  getCookieValue(name) {
+    if (typeof document === 'undefined') return '';
+    
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [key, value] = cookie.trim().split('=');
+      if (key === name) return decodeURIComponent(value);
+    }
+    return '';
   }
 
   // API headers with authentication
@@ -86,7 +117,7 @@ class ChatService {
     throw new Error('Unable to fetch user profile from any endpoint');
   }
 
-  // Get conversations for current user
+  // Get chats for current user
   async getConversations(userRole = 'customer') {
     const endpoint = userRole === 'merchant' 
       ? `${this.API_BASE}/chat/merchant/conversations`
@@ -100,10 +131,10 @@ class ChatService {
     return this.handleResponse(response);
   }
 
-  // Get messages for a conversation
-  async getMessages(conversationId, page = 1, limit = 50) {
+  // Get messages for a chat
+  async getMessages(chatId, page = 1, limit = 50) {
     const response = await fetch(
-      `${this.API_BASE}/chat/conversations/${conversationId}/messages?page=${page}&limit=${limit}`,
+      `${this.API_BASE}/chat/conversations/${chatId}/messages?page=${page}&limit=${limit}`,
       {
         headers: this.getHeaders(),
         credentials: 'include'
@@ -114,13 +145,13 @@ class ChatService {
   }
 
   // Send a message
-  async sendMessage(conversationId, content, messageType = 'text') {
+  async sendMessage(chatId, content, messageType = 'text') {
     const response = await fetch(`${this.API_BASE}/chat/messages`, {
       method: 'POST',
       headers: this.getHeaders(),
       credentials: 'include',
       body: JSON.stringify({
-        conversationId,
+        conversationId: chatId, // Keep this name for backward compatibility
         content,
         messageType
       })
@@ -129,7 +160,7 @@ class ChatService {
     return this.handleResponse(response);
   }
 
-  // Start a new conversation (customer to store)
+  // Start a new chat (customer to store)
   async startConversation(storeId, initialMessage = '') {
     const response = await fetch(`${this.API_BASE}/chat/conversations`, {
       method: 'POST',
@@ -145,9 +176,9 @@ class ChatService {
   }
 
   // Mark messages as read
-  async markMessagesAsRead(conversationId) {
+  async markMessagesAsRead(chatId) {
     const response = await fetch(
-      `${this.API_BASE}/chat/conversations/${conversationId}/read`,
+      `${this.API_BASE}/chat/conversations/${chatId}/read`,
       {
         method: 'POST',
         headers: this.getHeaders(),
@@ -173,7 +204,7 @@ class ChatService {
     return this.handleResponse(response);
   }
 
-  // Search conversations
+  // Search chats
   async searchConversations(query, type = 'all') {
     const response = await fetch(
       `${this.API_BASE}/chat/search?query=${encodeURIComponent(query)}&type=${type}`,
@@ -186,13 +217,112 @@ class ChatService {
     return this.handleResponse(response);
   }
 
-  // Get conversation analytics (for merchants)
+  // Get chat analytics (for merchants)
   async getConversationAnalytics(period = '7d') {
     const response = await fetch(
       `${this.API_BASE}/chat/analytics?period=${period}`,
       {
         headers: this.getHeaders(),
         credentials: 'include'
+      }
+    );
+
+    return this.handleResponse(response);
+  }
+
+  // Get chat participants
+  async getChatParticipants(chatId) {
+    const response = await fetch(
+      `${this.API_BASE}/chat/conversations/${chatId}/participants`,
+      {
+        headers: this.getHeaders(),
+        credentials: 'include'
+      }
+    );
+
+    return this.handleResponse(response);
+  }
+
+  // Update chat settings (merchants only)
+  async updateChatSettings(chatId, settings) {
+    const response = await fetch(
+      `${this.API_BASE}/chat/conversations/${chatId}/settings`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(settings)
+      }
+    );
+
+    return this.handleResponse(response);
+  }
+
+  // Archive chat
+  async archiveChat(chatId) {
+    const response = await fetch(
+      `${this.API_BASE}/chat/conversations/${chatId}/archive`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include'
+      }
+    );
+
+    return this.handleResponse(response);
+  }
+
+  // Block chat
+  async blockChat(chatId) {
+    const response = await fetch(
+      `${this.API_BASE}/chat/conversations/${chatId}/block`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include'
+      }
+    );
+
+    return this.handleResponse(response);
+  }
+
+  // Get message history with pagination
+  async getMessageHistory(chatId, page = 1, limit = 50, before = null) {
+    let url = `${this.API_BASE}/chat/conversations/${chatId}/messages/history?page=${page}&limit=${limit}`;
+    if (before) {
+      url += `&before=${encodeURIComponent(before)}`;
+    }
+
+    const response = await fetch(url, {
+      headers: this.getHeaders(),
+      credentials: 'include'
+    });
+
+    return this.handleResponse(response);
+  }
+
+  // Get online status of users
+  async getOnlineStatus(userIds) {
+    const response = await fetch(
+      `${this.API_BASE}/chat/users/online?userIds=${userIds.join(',')}`,
+      {
+        headers: this.getHeaders(),
+        credentials: 'include'
+      }
+    );
+
+    return this.handleResponse(response);
+  }
+
+  // Send typing indicator
+  async sendTyping(chatId, action = 'start') {
+    const response = await fetch(
+      `${this.API_BASE}/chat/conversations/${chatId}/typing`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ action })
       }
     );
 
@@ -217,6 +347,102 @@ class ChatService {
       return { isAuthenticated: false, user: null };
     }
   }
+
+  // Health check
+  async healthCheck() {
+    try {
+      const response = await fetch(`${this.API_BASE}/chat/health`, {
+        headers: this.getHeaders(),
+        credentials: 'include'
+      });
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Utility methods
+  formatTime(timestamp) {
+    try {
+      const now = new Date();
+      const messageTime = new Date(timestamp);
+      const diffInHours = (now - messageTime) / (1000 * 60 * 60);
+
+      if (diffInHours < 1) {
+        const diffInMinutes = Math.floor((now - messageTime) / (1000 * 60));
+        return diffInMinutes <= 0 ? 'now' : `${diffInMinutes} min ago`;
+      } else if (diffInHours < 24) {
+        return messageTime.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+      } else {
+        return messageTime.toLocaleDateString('en-US');
+      }
+    } catch (error) {
+      return 'unknown time';
+    }
+  }
+
+  // Validate chat content
+  validateMessage(content) {
+    if (!content || typeof content !== 'string') {
+      return { valid: false, error: 'Message content is required' };
+    }
+
+    if (content.trim().length === 0) {
+      return { valid: false, error: 'Message cannot be empty' };
+    }
+
+    if (content.length > 2000) {
+      return { valid: false, error: 'Message too long (max 2000 characters)' };
+    }
+
+    return { valid: true };
+  }
+
+  // Get chat status display
+  getChatStatusDisplay(status) {
+    const statusMap = {
+      'active': 'Active',
+      'archived': 'Archived',
+      'blocked': 'Blocked'
+    };
+    return statusMap[status] || 'Unknown';
+  }
+
+  // Get message status display
+  getMessageStatusDisplay(status) {
+    const statusMap = {
+      'sent': 'Sent',
+      'delivered': 'Delivered',
+      'read': 'Read'
+    };
+    return statusMap[status] || 'Unknown';
+  }
+
+  // Clean up old data (for maintenance)
+  async cleanupOldMessages(daysOld = 90) {
+    try {
+      const response = await fetch(
+        `${this.API_BASE}/chat/cleanup?daysOld=${daysOld}`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          credentials: 'include'
+        }
+      );
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Cleanup failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
-export default new ChatService();
+// Create and export instance
+const chatService = new ChatService();
+export default chatService;

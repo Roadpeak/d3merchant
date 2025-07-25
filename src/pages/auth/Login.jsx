@@ -259,7 +259,7 @@ const MerchantLoginPage = () => {
               <p className="text-blue-200">
                 Don't have an account?{' '}
                 <Link
-                  to="/merchant/signup"
+                  to="/accounts/sign-up"
                   className="text-blue-300 hover:text-white font-medium transition-colors"
                 >
                   Sign up for free
