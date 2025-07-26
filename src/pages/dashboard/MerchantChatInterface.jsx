@@ -1,8 +1,8 @@
-// pages/MerchantChatInterface.jsx - Updated with enhanced socket event handling
+// pages/MerchantChatInterface.jsx - Complete Fixed Version
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
 import Layout from '../../elements/Layout';
-import chatService from '../services/chatService';
+import merchantChatService from '../services/merchantChatService';
 import useSocket from '../hooks/useSocket';
 
 const MerchantChatInterface = () => {
@@ -18,10 +18,17 @@ const MerchantChatInterface = () => {
   const [refreshing, setRefreshing] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Debug logs for user state
+  console.log('🏪 MerchantChatInterface DEBUG: User state:', user);
+  console.log('🏪 MerchantChatInterface DEBUG: User ID:', user?.id);
+  console.log('🏪 MerchantChatInterface DEBUG: Loading state:', loading);
+
   // Initialize merchant user
   useEffect(() => {
     const initializeMerchant = async () => {
       try {
+        console.log('🏪 DEBUG: Starting merchant initialization...');
+        
         // Get user info from multiple sources
         const tokenSources = {
           localStorage_access_token: localStorage.getItem('access_token'),
@@ -33,8 +40,12 @@ const MerchantChatInterface = () => {
                       tokenSources.localStorage_authToken ||
                       tokenSources.localStorage_token;
 
+        console.log('🏪 DEBUG: Token found:', !!token);
+
         if (!token) {
+          console.log('🏪 DEBUG: No token, setting error');
           setError('Please log in to access merchant chat');
+          setLoading(false);
           return;
         }
 
@@ -49,6 +60,7 @@ const MerchantChatInterface = () => {
               const parsed = JSON.parse(stored);
               if (parsed && (parsed.id || parsed.userId)) {
                 userInfo = parsed;
+                console.log(`🏪 DEBUG: Found user info in ${key}:`, userInfo);
                 break;
               }
             }
@@ -67,12 +79,15 @@ const MerchantChatInterface = () => {
             avatar: userInfo.avatar
           };
           
-          console.log('✅ Merchant user initialized:', userData);
+          console.log('✅ Merchant user initialized from localStorage:', userData);
           setUser(userData);
         } else {
           // Try to fetch from API
+          console.log('🏪 DEBUG: No localStorage user, trying API...');
           try {
-            const response = await chatService.getCurrentUser();
+            const response = await merchantChatService.getMerchantProfile();
+            console.log('🏪 DEBUG: API response:', response);
+            
             if (response.success || response.user) {
               const apiUser = response.user || response.data || response;
               const userData = {
@@ -83,23 +98,29 @@ const MerchantChatInterface = () => {
                 userType: 'merchant',
                 avatar: apiUser.avatar
               };
+              console.log('✅ Merchant user initialized from API:', userData);
               setUser(userData);
+            } else {
+              console.log('🏪 DEBUG: API response invalid:', response);
+              setError('Failed to load user information');
             }
           } catch (apiError) {
-            console.error('Failed to fetch user from API:', apiError);
-            setError('Failed to load user information');
+            console.error('🏪 DEBUG: API error:', apiError);
+            setError('Failed to load user information: ' + apiError.message);
           }
         }
       } catch (error) {
-        console.error('Error initializing merchant:', error);
-        setError('Failed to initialize merchant chat');
+        console.error('🏪 DEBUG: Error initializing merchant:', error);
+        setError('Failed to initialize merchant chat: ' + error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     initializeMerchant();
   }, []);
 
-  // Initialize socket with enhanced event handling
+  // Initialize socket with conditional user
   const {
     socket,
     isConnected,
@@ -110,11 +131,16 @@ const MerchantChatInterface = () => {
     off,
     isUserOnline,
     getTypingUsers
-  } = useSocket(user);
+  } = useSocket(user && user.id ? user : null);
+
+  console.log('🏪 MerchantChatInterface DEBUG: Socket initialized with user:', user);
 
   // Enhanced socket event handlers for merchant interface
   useEffect(() => {
-    if (!socket || !user) return;
+    if (!socket || !user) {
+      console.log('🏪 DEBUG: Skipping socket handlers - socket or user not ready');
+      return;
+    }
 
     console.log('🔌 Setting up merchant socket event handlers');
 
@@ -268,13 +294,15 @@ const MerchantChatInterface = () => {
     };
 
     // Subscribe to events
-    on('new_customer_message', handleNewCustomerMessage);
-    on('new_message', handleNewMessage);
-    on('new_conversation', handleNewConversation);
-    on('merchant_chat_update', handleMerchantChatUpdate);
-    on('message_status_update', handleMessageStatusUpdate);
-    on('messages_read', handleMessagesRead);
-    on('customer_status_update', handleCustomerStatusUpdate);
+    const unsubscribers = [
+      on('new_customer_message', handleNewCustomerMessage),
+      on('new_message', handleNewMessage),
+      on('new_conversation', handleNewConversation),
+      on('merchant_chat_update', handleMerchantChatUpdate),
+      on('message_status_update', handleMessageStatusUpdate),
+      on('messages_read', handleMessagesRead),
+      on('customer_status_update', handleCustomerStatusUpdate)
+    ];
 
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
@@ -283,47 +311,57 @@ const MerchantChatInterface = () => {
 
     return () => {
       console.log('🧹 Cleaning up merchant socket event handlers');
-      off('new_customer_message', handleNewCustomerMessage);
-      off('new_message', handleNewMessage);
-      off('new_conversation', handleNewConversation);
-      off('merchant_chat_update', handleMerchantChatUpdate);
-      off('message_status_update', handleMessageStatusUpdate);
-      off('messages_read', handleMessagesRead);
-      off('customer_status_update', handleCustomerStatusUpdate);
+      unsubscribers.forEach(unsub => unsub && unsub());
     };
-  }, [socket, user, on, off, selectedCustomer]);
+  }, [socket, user, on, selectedCustomer]);
 
-  // Load conversations on mount and when user is available
-  useEffect(() => {
-    if (user) {
-      loadConversations();
-    }
-  }, [user]);
-
-  // Enhanced load conversations function
+  // Load conversations function
   const loadConversations = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('📋 Loading merchant conversations...');
+      console.log('🏪 DEBUG: Starting to load merchant conversations...');
+      console.log('🏪 DEBUG: User data:', user);
+      console.log('🏪 DEBUG: User ID:', user?.id);
+      console.log('🏪 DEBUG: User type:', user?.role || user?.userType);
       
-      const response = await chatService.getConversations('merchant');
-      console.log('📋 Merchant conversations response:', response);
+      // Check token
+      const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
+      console.log('🏪 DEBUG: Auth token exists:', !!token);
+      
+      console.log('🏪 DEBUG: Calling merchantChatService.getCustomerConversations()...');
+      
+      const response = await merchantChatService.getCustomerConversations();
+      console.log('🏪 DEBUG: API Response:', response);
       
       if (response.success) {
+        console.log('🏪 DEBUG: Setting conversations:', response.data);
         setCustomers(response.data);
         console.log(`✅ Loaded ${response.data.length} customer conversations`);
       } else {
+        console.error('🏪 DEBUG: API returned success=false:', response.message);
         setError(response.message || 'Failed to load conversations');
       }
     } catch (error) {
-      console.error('❌ Failed to load conversations:', error);
-      setError('Failed to load conversations');
+      console.error('🏪 DEBUG: Error in loadConversations:', error);
+      console.error('🏪 DEBUG: Error message:', error.message);
+      console.error('🏪 DEBUG: Error stack:', error.stack);
+      setError('Failed to load conversations: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Load conversations on mount and when user is available
+  useEffect(() => {
+    if (user && user.id) {
+      console.log('🏪 DEBUG: User ready, loading conversations...');
+      loadConversations();
+    } else {
+      console.log('🏪 DEBUG: User not ready yet, waiting...');
+    }
+  }, [user]);
 
   // Enhanced refresh function
   const handleRefresh = async () => {
@@ -348,7 +386,7 @@ const MerchantChatInterface = () => {
       setError(null);
       console.log('📨 Loading messages for conversation:', conversationId);
       
-      const response = await chatService.getMessages(conversationId);
+      const response = await merchantChatService.getCustomerMessages(conversationId);
       console.log('📨 Messages response:', response);
       
       if (response.success) {
@@ -393,7 +431,7 @@ const MerchantChatInterface = () => {
   // Mark messages as read
   const markAsRead = async (conversationId) => {
     try {
-      await chatService.markMessagesAsRead(conversationId);
+      await merchantChatService.markCustomerMessagesAsRead(conversationId);
       
       // Reset unread count in UI
       setCustomers(prev => prev.map(customer =>
@@ -422,7 +460,7 @@ const MerchantChatInterface = () => {
         content: messageText
       });
 
-      const response = await chatService.sendMessage(
+      const response = await merchantChatService.replyToCustomer(
         selectedCustomer.conversationId,
         messageText,
         'text'
@@ -525,6 +563,7 @@ const MerchantChatInterface = () => {
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
             <p className="text-gray-600">Loading merchant chat...</p>
+            {user && <p className="text-sm text-gray-500 mt-2">User: {user.name} ({user.id})</p>}
           </div>
         </div>
       </Layout>
@@ -542,6 +581,7 @@ const MerchantChatInterface = () => {
               <div className="flex items-center gap-4 mt-1">
                 <p className="text-sm text-gray-500">Manage customer conversations</p>
                 <ConnectionStatus />
+                {user && <span className="text-xs text-gray-400">User: {user.name}</span>}
               </div>
             </div>
             <div className="flex items-center space-x-4">
