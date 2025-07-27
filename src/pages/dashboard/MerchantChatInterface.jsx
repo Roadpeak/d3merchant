@@ -1,8 +1,9 @@
-// pages/MerchantChatInterface.jsx - Complete Fixed Version
+// pages/MerchantChatInterface.jsx - Fixed User Initialization
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
 import Layout from '../../elements/Layout';
 import merchantChatService from '../services/merchantChatService';
+import merchantAuthService from '../../services/merchantAuthService'; // Add this import
 import useSocket from '../hooks/useSocket';
 
 const MerchantChatInterface = () => {
@@ -23,95 +24,109 @@ const MerchantChatInterface = () => {
   console.log('🏪 MerchantChatInterface DEBUG: User ID:', user?.id);
   console.log('🏪 MerchantChatInterface DEBUG: Loading state:', loading);
 
-  // Initialize merchant user
+  // Enhanced merchant initialization
   useEffect(() => {
     const initializeMerchant = async () => {
       try {
-        console.log('🏪 DEBUG: Starting merchant initialization...');
+        console.log('🏪 DEBUG: Starting enhanced merchant initialization...');
         
-        // Get user info from multiple sources
-        const tokenSources = {
-          localStorage_access_token: localStorage.getItem('access_token'),
-          localStorage_authToken: localStorage.getItem('authToken'),
-          localStorage_token: localStorage.getItem('token')
-        };
-
-        const token = tokenSources.localStorage_access_token ||
-                      tokenSources.localStorage_authToken ||
-                      tokenSources.localStorage_token;
-
-        console.log('🏪 DEBUG: Token found:', !!token);
-
-        if (!token) {
-          console.log('🏪 DEBUG: No token, setting error');
+        // First check if user is authenticated
+        if (!merchantAuthService.isAuthenticated()) {
+          console.log('🏪 DEBUG: User not authenticated, redirecting...');
           setError('Please log in to access merchant chat');
           setLoading(false);
+          // Optionally redirect to login
+          // window.location.href = '/accounts/sign-in';
           return;
         }
 
-        // Try to get user info from localStorage first
-        let userInfo = null;
-        const possibleKeys = ['userInfo', 'user', 'userData', 'currentUser'];
+        // Get current merchant profile using the auth service
+        console.log('🏪 DEBUG: Getting current merchant profile...');
+        const profileResponse = await merchantAuthService.getCurrentMerchantProfile();
         
-        for (const key of possibleKeys) {
-          try {
-            const stored = localStorage.getItem(key);
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed && (parsed.id || parsed.userId)) {
-                userInfo = parsed;
-                console.log(`🏪 DEBUG: Found user info in ${key}:`, userInfo);
-                break;
-              }
-            }
-          } catch (e) {
-            console.log(`⚠️ Failed to parse ${key}:`, e.message);
-          }
-        }
+        console.log('🏪 DEBUG: Profile response:', profileResponse);
 
-        if (userInfo) {
+        if (profileResponse && profileResponse.success && profileResponse.merchantProfile) {
+          const merchantProfile = profileResponse.merchantProfile;
+          
+          // Create user object for socket connection
           const userData = {
-            id: userInfo.id || userInfo.userId,
-            name: `${userInfo.firstName || userInfo.first_name || 'Merchant'} ${userInfo.lastName || userInfo.last_name || ''}`.trim(),
-            email: userInfo.email,
+            id: merchantProfile.id || merchantProfile.merchant_id,
+            name: `${merchantProfile.first_name || 'Merchant'} ${merchantProfile.last_name || ''}`.trim(),
+            email: merchantProfile.email_address,
             role: 'merchant',
             userType: 'merchant',
-            avatar: userInfo.avatar
+            avatar: merchantProfile.avatar,
+            storeId: merchantProfile.store?.id,
+            storeName: merchantProfile.store?.name
           };
-          
-          console.log('✅ Merchant user initialized from localStorage:', userData);
+
+          console.log('✅ Enhanced merchant user initialized:', userData);
           setUser(userData);
+
+          // Store user data in localStorage for persistence
+          localStorage.setItem('currentUser', JSON.stringify(userData));
+          
         } else {
-          // Try to fetch from API
-          console.log('🏪 DEBUG: No localStorage user, trying API...');
-          try {
-            const response = await merchantChatService.getMerchantProfile();
-            console.log('🏪 DEBUG: API response:', response);
-            
-            if (response.success || response.user) {
-              const apiUser = response.user || response.data || response;
-              const userData = {
-                id: apiUser.id || apiUser.userId,
-                name: `${apiUser.firstName || apiUser.first_name || 'Merchant'} ${apiUser.lastName || apiUser.last_name || ''}`.trim(),
-                email: apiUser.email,
-                role: 'merchant',
-                userType: 'merchant',
-                avatar: apiUser.avatar
-              };
-              console.log('✅ Merchant user initialized from API:', userData);
-              setUser(userData);
-            } else {
-              console.log('🏪 DEBUG: API response invalid:', response);
-              setError('Failed to load user information');
+          // Fallback: try to get from localStorage
+          console.log('🏪 DEBUG: Profile API failed, trying localStorage fallback...');
+          
+          const storedUser = localStorage.getItem('currentUser');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              if (parsedUser && parsedUser.id) {
+                console.log('✅ User restored from localStorage:', parsedUser);
+                setUser(parsedUser);
+                return;
+              }
+            } catch (e) {
+              console.error('Error parsing stored user:', e);
             }
-          } catch (apiError) {
-            console.error('🏪 DEBUG: API error:', apiError);
-            setError('Failed to load user information: ' + apiError.message);
           }
+
+          // Last resort: construct from available data
+          console.log('🏪 DEBUG: Constructing user from available auth data...');
+          
+          // Try to get basic info from token or other sources
+          const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              const basicUser = {
+                id: payload.userId || payload.id || payload.merchant_id,
+                name: payload.name || 'Merchant User',
+                email: payload.email,
+                role: 'merchant',
+                userType: 'merchant'
+              };
+              
+              if (basicUser.id) {
+                console.log('✅ Basic user constructed from token:', basicUser);
+                setUser(basicUser);
+                localStorage.setItem('currentUser', JSON.stringify(basicUser));
+                return;
+              }
+            } catch (tokenError) {
+              console.error('Error parsing token:', tokenError);
+            }
+          }
+
+          throw new Error('Failed to initialize user data');
         }
+
       } catch (error) {
-        console.error('🏪 DEBUG: Error initializing merchant:', error);
+        console.error('🏪 DEBUG: Error in enhanced merchant initialization:', error);
         setError('Failed to initialize merchant chat: ' + error.message);
+        
+        // If it's an auth error, redirect to login
+        if (error.message?.includes('Authentication') || 
+            error.message?.includes('401') || 
+            error.message?.includes('403')) {
+          setTimeout(() => {
+            window.location.href = '/accounts/sign-in';
+          }, 2000);
+        }
       } finally {
         setLoading(false);
       }
@@ -120,7 +135,7 @@ const MerchantChatInterface = () => {
     initializeMerchant();
   }, []);
 
-  // Initialize socket with conditional user
+  // Initialize socket with conditional user - only when user is ready
   const {
     socket,
     isConnected,
@@ -130,15 +145,17 @@ const MerchantChatInterface = () => {
     on,
     off,
     isUserOnline,
-    getTypingUsers
+    getTypingUsers,
+    connectionError
   } = useSocket(user && user.id ? user : null);
 
-  console.log('🏪 MerchantChatInterface DEBUG: Socket initialized with user:', user);
+  console.log('🔌 Socket connection status:', { isConnected, connectionError, userReady: !!user?.id });
 
   // Enhanced socket event handlers for merchant interface
   useEffect(() => {
-    if (!socket || !user) {
-      console.log('🏪 DEBUG: Skipping socket handlers - socket or user not ready');
+    if (!socket || !user || !isConnected) {
+      console.log('🏪 DEBUG: Skipping socket handlers - socket, user, or connection not ready');
+      console.log('🏪 DEBUG: Socket:', !!socket, 'User:', !!user, 'Connected:', isConnected);
       return;
     }
 
@@ -313,55 +330,71 @@ const MerchantChatInterface = () => {
       console.log('🧹 Cleaning up merchant socket event handlers');
       unsubscribers.forEach(unsub => unsub && unsub());
     };
-  }, [socket, user, on, selectedCustomer]);
+  }, [socket, user, isConnected, on, selectedCustomer]);
 
-  // Load conversations function
+  // Enhanced load conversations function
   const loadConversations = async () => {
+    if (!user || !user.id) {
+      console.log('🏪 DEBUG: Cannot load conversations - user not ready');
+      setError('User not initialized');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🏪 DEBUG: Starting to load merchant conversations...');
-      console.log('🏪 DEBUG: User data:', user);
-      console.log('🏪 DEBUG: User ID:', user?.id);
-      console.log('🏪 DEBUG: User type:', user?.role || user?.userType);
+      console.log('🏪 DEBUG: Loading merchant conversations for user:', user.id);
+      console.log('🏪 DEBUG: Auth status:', merchantAuthService.isAuthenticated());
       
-      // Check token
-      const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
-      console.log('🏪 DEBUG: Auth token exists:', !!token);
-      
-      console.log('🏪 DEBUG: Calling merchantChatService.getCustomerConversations()...');
-      
+      // Double-check authentication before API call
+      if (!merchantAuthService.isAuthenticated()) {
+        throw new Error('Authentication expired. Please log in again.');
+      }
+
       const response = await merchantChatService.getCustomerConversations();
-      console.log('🏪 DEBUG: API Response:', response);
+      console.log('🏪 DEBUG: Conversations API Response:', response);
       
-      if (response.success) {
+      if (response && response.success) {
         console.log('🏪 DEBUG: Setting conversations:', response.data);
-        setCustomers(response.data);
-        console.log(`✅ Loaded ${response.data.length} customer conversations`);
+        setCustomers(response.data || []);
+        console.log(`✅ Loaded ${(response.data || []).length} customer conversations`);
       } else {
-        console.error('🏪 DEBUG: API returned success=false:', response.message);
-        setError(response.message || 'Failed to load conversations');
+        console.error('🏪 DEBUG: API returned success=false:', response?.message);
+        setError(response?.message || 'Failed to load conversations');
       }
     } catch (error) {
       console.error('🏪 DEBUG: Error in loadConversations:', error);
       console.error('🏪 DEBUG: Error message:', error.message);
-      console.error('🏪 DEBUG: Error stack:', error.stack);
-      setError('Failed to load conversations: ' + error.message);
+      
+      // Handle authentication errors
+      if (error.message?.includes('Authentication') || 
+          error.message?.includes('401') || 
+          error.message?.includes('403')) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => {
+          window.location.href = '/accounts/sign-in';
+        }, 2000);
+      } else {
+        setError('Failed to load conversations: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Load conversations on mount and when user is available
+  // Load conversations when user is ready AND connected
   useEffect(() => {
-    if (user && user.id) {
-      console.log('🏪 DEBUG: User ready, loading conversations...');
+    if (user && user.id && isConnected) {
+      console.log('🏪 DEBUG: User and socket ready, loading conversations...');
       loadConversations();
     } else {
-      console.log('🏪 DEBUG: User not ready yet, waiting...');
+      console.log('🏪 DEBUG: Waiting for user and socket...', { 
+        userReady: !!user?.id, 
+        socketConnected: isConnected 
+      });
     }
-  }, [user]);
+  }, [user, isConnected]);
 
   // Enhanced refresh function
   const handleRefresh = async () => {
@@ -548,13 +581,27 @@ const MerchantChatInterface = () => {
   // Get typing users for current conversation
   const typingUsers = selectedCustomer ? getTypingUsers(selectedCustomer.conversationId) : [];
 
-  // Connection status indicator
-  const ConnectionStatus = () => (
-    <div className={`flex items-center gap-2 text-sm ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-      {isConnected ? 'Connected' : 'Disconnected'}
-    </div>
-  );
+  // Enhanced connection status indicator
+  const ConnectionStatus = () => {
+    const getStatus = () => {
+      if (!user?.id) return { color: 'text-yellow-600', bg: 'bg-yellow-500', text: 'Initializing...' };
+      if (!isConnected && connectionError) return { color: 'text-red-600', bg: 'bg-red-500', text: 'Connection Failed' };
+      if (!isConnected) return { color: 'text-orange-600', bg: 'bg-orange-500', text: 'Connecting...' };
+      return { color: 'text-green-600', bg: 'bg-green-500', text: 'Connected' };
+    };
+
+    const status = getStatus();
+    
+    return (
+      <div className={`flex items-center gap-2 text-sm ${status.color}`}>
+        <div className={`w-2 h-2 rounded-full ${status.bg}`}></div>
+        {status.text}
+        {connectionError && (
+          <span className="text-xs text-red-500 ml-1">({connectionError})</span>
+        )}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -564,6 +611,9 @@ const MerchantChatInterface = () => {
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
             <p className="text-gray-600">Loading merchant chat...</p>
             {user && <p className="text-sm text-gray-500 mt-2">User: {user.name} ({user.id})</p>}
+            <p className="text-xs text-gray-400 mt-1">
+              Auth: {merchantAuthService.isAuthenticated() ? '✅' : '❌'}
+            </p>
           </div>
         </div>
       </Layout>
@@ -581,7 +631,7 @@ const MerchantChatInterface = () => {
               <div className="flex items-center gap-4 mt-1">
                 <p className="text-sm text-gray-500">Manage customer conversations</p>
                 <ConnectionStatus />
-                {user && <span className="text-xs text-gray-400">User: {user.name}</span>}
+                {user && <span className="text-xs text-gray-400">User: {user.name} (ID: {user.id})</span>}
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -595,7 +645,7 @@ const MerchantChatInterface = () => {
               )}
               <button
                 onClick={handleRefresh}
-                disabled={refreshing}
+                disabled={refreshing || !user?.id}
                 className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -645,6 +695,9 @@ const MerchantChatInterface = () => {
                     <MessageCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                     <p className="font-medium">No conversations</p>
                     <p className="text-sm">Customer conversations will appear here</p>
+                    {!isConnected && (
+                      <p className="text-xs text-red-500 mt-1">Socket disconnected</p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -832,13 +885,13 @@ const MerchantChatInterface = () => {
                         onKeyPress={handleKeyPress}
                         placeholder="Type a message..."
                         rows={1}
-                        disabled={sendingMessage}
+                        disabled={sendingMessage || !isConnected}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32 disabled:bg-gray-100"
                       />
                     </div>
                     <button
                       onClick={handleSendMessage}
-                      disabled={!message.trim() || sendingMessage}
+                      disabled={!message.trim() || sendingMessage || !isConnected}
                       className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
                     >
                       {sendingMessage ? (
