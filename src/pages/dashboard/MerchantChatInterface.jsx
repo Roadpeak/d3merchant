@@ -1,9 +1,9 @@
-// pages/MerchantChatInterface.jsx - Fixed User Initialization
+// pages/MerchantChatInterface.jsx - FIXED: Only receive customer messages
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, User, Clock, Check, CheckCheck, AlertCircle, Star, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
 import Layout from '../../elements/Layout';
 import merchantChatService from '../services/merchantChatService';
-import merchantAuthService from '../../services/merchantAuthService'; // Add this import
+import merchantAuthService from '../../services/merchantAuthService';
 import useSocket from '../hooks/useSocket';
 
 const MerchantChatInterface = () => {
@@ -19,10 +19,7 @@ const MerchantChatInterface = () => {
   const [refreshing, setRefreshing] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Debug logs for user state
   console.log('🏪 MerchantChatInterface DEBUG: User state:', user);
-  console.log('🏪 MerchantChatInterface DEBUG: User ID:', user?.id);
-  console.log('🏪 MerchantChatInterface DEBUG: Loading state:', loading);
 
   // Enhanced merchant initialization
   useEffect(() => {
@@ -30,17 +27,13 @@ const MerchantChatInterface = () => {
       try {
         console.log('🏪 DEBUG: Starting enhanced merchant initialization...');
         
-        // First check if user is authenticated
         if (!merchantAuthService.isAuthenticated()) {
           console.log('🏪 DEBUG: User not authenticated, redirecting...');
           setError('Please log in to access merchant chat');
           setLoading(false);
-          // Optionally redirect to login
-          // window.location.href = '/accounts/sign-in';
           return;
         }
 
-        // Get current merchant profile using the auth service
         console.log('🏪 DEBUG: Getting current merchant profile...');
         const profileResponse = await merchantAuthService.getCurrentMerchantProfile();
         
@@ -49,7 +42,6 @@ const MerchantChatInterface = () => {
         if (profileResponse && profileResponse.success && profileResponse.merchantProfile) {
           const merchantProfile = profileResponse.merchantProfile;
           
-          // Create user object for socket connection
           const userData = {
             id: merchantProfile.id || merchantProfile.merchant_id,
             name: `${merchantProfile.first_name || 'Merchant'} ${merchantProfile.last_name || ''}`.trim(),
@@ -63,12 +55,9 @@ const MerchantChatInterface = () => {
 
           console.log('✅ Enhanced merchant user initialized:', userData);
           setUser(userData);
-
-          // Store user data in localStorage for persistence
           localStorage.setItem('currentUser', JSON.stringify(userData));
           
         } else {
-          // Fallback: try to get from localStorage
           console.log('🏪 DEBUG: Profile API failed, trying localStorage fallback...');
           
           const storedUser = localStorage.getItem('currentUser');
@@ -85,10 +74,8 @@ const MerchantChatInterface = () => {
             }
           }
 
-          // Last resort: construct from available data
           console.log('🏪 DEBUG: Constructing user from available auth data...');
           
-          // Try to get basic info from token or other sources
           const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
           if (token) {
             try {
@@ -119,7 +106,6 @@ const MerchantChatInterface = () => {
         console.error('🏪 DEBUG: Error in enhanced merchant initialization:', error);
         setError('Failed to initialize merchant chat: ' + error.message);
         
-        // If it's an auth error, redirect to login
         if (error.message?.includes('Authentication') || 
             error.message?.includes('401') || 
             error.message?.includes('403')) {
@@ -135,7 +121,7 @@ const MerchantChatInterface = () => {
     initializeMerchant();
   }, []);
 
-  // Initialize socket with conditional user - only when user is ready
+  // Initialize socket with conditional user
   const {
     socket,
     isConnected,
@@ -151,55 +137,61 @@ const MerchantChatInterface = () => {
 
   console.log('🔌 Socket connection status:', { isConnected, connectionError, userReady: !!user?.id });
 
-  // Enhanced socket event handlers for merchant interface
+  // FIXED: Enhanced socket event handlers - Only handle customer messages
   useEffect(() => {
     if (!socket || !user || !isConnected) {
       console.log('🏪 DEBUG: Skipping socket handlers - socket, user, or connection not ready');
-      console.log('🏪 DEBUG: Socket:', !!socket, 'User:', !!user, 'Connected:', isConnected);
       return;
     }
 
-    console.log('🔌 Setting up merchant socket event handlers');
+    console.log('🔌 Setting up MERCHANT socket event handlers for user:', user.id);
 
-    // Handle new customer messages (primary event for merchants)
+    // FIXED: Handle new customer messages (primary event for merchants)
     const handleNewCustomerMessage = (messageData) => {
       console.log('📨 Merchant received new customer message:', messageData);
       
-      // Add message to messages if it's for the currently selected chat
-      if (selectedCustomer && messageData.conversationId === selectedCustomer.conversationId) {
-        setMessages(prev => [...prev, messageData]);
-        scrollToBottom();
-      }
-      
-      // Update customer list with new message info
-      setCustomers(prev => prev.map(customer => {
-        if (customer.id === messageData.conversationId) {
-          return {
-            ...customer,
-            lastMessage: messageData.text,
-            lastMessageTime: messageData.timestamp,
-            unreadCount: (customer.unreadCount || 0) + 1
-          };
+      // CRITICAL FIX: Only add messages FROM customers (not from this merchant)
+      if (messageData.sender === 'user' || messageData.sender === 'customer' || messageData.sender_type === 'user') {
+        // Add message to messages if it's for the currently selected chat
+        if (selectedCustomer && messageData.conversationId === selectedCustomer.conversationId) {
+          console.log('✅ Adding customer message to merchant chat');
+          setMessages(prev => [...prev, messageData]);
+          scrollToBottom();
         }
-        return customer;
-      }));
+        
+        // Update customer list with new message info
+        setCustomers(prev => prev.map(customer => {
+          if (customer.id === messageData.conversationId) {
+            return {
+              ...customer,
+              lastMessage: messageData.text || messageData.content,
+              lastMessageTime: messageData.timestamp || 'now',
+              unreadCount: (customer.unreadCount || 0) + 1
+            };
+          }
+          return customer;
+        }));
 
-      // Show browser notification if not in focus
-      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification(`New message from ${messageData.chatInfo?.customer?.name || 'Customer'}`, {
-          body: messageData.text,
-          icon: messageData.chatInfo?.customer?.avatar || '/default-avatar.png'
-        });
+        // Show browser notification if not in focus
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification(`New message from ${messageData.chatInfo?.customer?.name || 'Customer'}`, {
+            body: messageData.text || messageData.content,
+            icon: messageData.chatInfo?.customer?.avatar || '/default-avatar.png'
+          });
+        }
+      } else {
+        console.log('⚠️ Ignoring message from merchant (this should appear in customer interface)');
       }
     };
 
-    // Handle general new messages (backup handler)
+    // FIXED: Handle general new messages but filter properly
     const handleNewMessage = (messageData) => {
       console.log('📨 Merchant received general new message:', messageData);
       
-      // Only handle if it's from a customer (not from this merchant)
-      if (messageData.sender === 'user' || messageData.sender === 'customer') {
+      // CRITICAL FIX: Only handle if it's from a customer (not from this merchant)
+      if (messageData.sender === 'user' || messageData.sender === 'customer' || messageData.sender_type === 'user') {
         if (selectedCustomer && messageData.conversationId === selectedCustomer.conversationId) {
+          console.log('✅ Adding customer message to merchant interface');
           setMessages(prev => [...prev, messageData]);
           scrollToBottom();
         }
@@ -209,13 +201,15 @@ const MerchantChatInterface = () => {
           if (customer.id === messageData.conversationId) {
             return {
               ...customer,
-              lastMessage: messageData.text,
-              lastMessageTime: messageData.timestamp,
+              lastMessage: messageData.text || messageData.content,
+              lastMessageTime: messageData.timestamp || 'now',
               unreadCount: (customer.unreadCount || 0) + 1
             };
           }
           return customer;
         }));
+      } else {
+        console.log('⚠️ Ignoring merchant message in merchant interface (this should appear in customer interface)');
       }
     };
 
@@ -223,7 +217,6 @@ const MerchantChatInterface = () => {
     const handleNewConversation = (conversationData) => {
       console.log('🆕 Merchant received new conversation:', conversationData);
       
-      // Add new conversation to the list
       const newCustomerChat = {
         id: conversationData.conversationId,
         conversationId: conversationData.conversationId,
@@ -248,7 +241,6 @@ const MerchantChatInterface = () => {
 
       setCustomers(prev => [newCustomerChat, ...prev]);
 
-      // Show notification
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(`New customer conversation: ${conversationData.customer.name}`, {
           body: conversationData.initialMessage || 'Started a new conversation',
@@ -262,7 +254,6 @@ const MerchantChatInterface = () => {
       console.log('📋 Merchant received chat update:', updateData);
       
       if (updateData.action === 'new_message') {
-        // Update unread count for specific chat
         setCustomers(prev => prev.map(customer => {
           if (customer.id === updateData.chatId) {
             return {
@@ -285,9 +276,8 @@ const MerchantChatInterface = () => {
 
     // Handle messages read events
     const handleMessagesRead = ({ readBy, chatId }) => {
-      console.log('📖 Messages read by:', readBy, 'in chat:', chatId);
+      console.log('📖 Messages read by customer:', readBy, 'in chat:', chatId);
       
-      // Update read status for messages in current chat
       if (selectedCustomer && chatId === selectedCustomer.conversationId) {
         setMessages(prev => prev.map(msg => 
           msg.sender === 'merchant' ? { ...msg, status: 'read' } : msg
@@ -298,7 +288,6 @@ const MerchantChatInterface = () => {
     // Handle customer status updates
     const handleCustomerStatusUpdate = ({ customerId, isOnline }) => {
       console.log('👤 Customer status update:', customerId, isOnline);
-      // Update customer online status in the list
       setCustomers(prev => prev.map(customer => {
         if (customer.customer?.id === customerId) {
           return {
@@ -345,9 +334,7 @@ const MerchantChatInterface = () => {
       setError(null);
       
       console.log('🏪 DEBUG: Loading merchant conversations for user:', user.id);
-      console.log('🏪 DEBUG: Auth status:', merchantAuthService.isAuthenticated());
       
-      // Double-check authentication before API call
       if (!merchantAuthService.isAuthenticated()) {
         throw new Error('Authentication expired. Please log in again.');
       }
@@ -365,9 +352,7 @@ const MerchantChatInterface = () => {
       }
     } catch (error) {
       console.error('🏪 DEBUG: Error in loadConversations:', error);
-      console.error('🏪 DEBUG: Error message:', error.message);
       
-      // Handle authentication errors
       if (error.message?.includes('Authentication') || 
           error.message?.includes('401') || 
           error.message?.includes('403')) {
@@ -402,7 +387,6 @@ const MerchantChatInterface = () => {
       setRefreshing(true);
       await loadConversations();
       
-      // If a customer is selected, reload their messages
       if (selectedCustomer) {
         await loadMessages(selectedCustomer.conversationId);
       }
@@ -446,18 +430,12 @@ const MerchantChatInterface = () => {
     // Set selected customer with proper conversation ID
     const customerData = {
       ...customer,
-      conversationId: customer.id // The chat ID from the API
+      conversationId: customer.id
     };
     
     setSelectedCustomer(customerData);
-
-    // Join new conversation
     joinConversation(customer.id);
-
-    // Load messages
     loadMessages(customer.id);
-
-    // Mark messages as read
     markAsRead(customer.id);
   };
 
@@ -477,7 +455,7 @@ const MerchantChatInterface = () => {
     }
   };
 
-  // Enhanced send message function
+  // FIXED: Enhanced send message function for merchants
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedCustomer || sendingMessage) return;
 
@@ -488,9 +466,10 @@ const MerchantChatInterface = () => {
       setError(null);
       setMessage('');
 
-      console.log('📤 Sending merchant message:', {
+      console.log('📤 Merchant sending message:', {
         chatId: selectedCustomer.conversationId,
-        content: messageText
+        content: messageText,
+        userType: 'merchant'
       });
 
       const response = await merchantChatService.replyToCustomer(
@@ -500,7 +479,25 @@ const MerchantChatInterface = () => {
       );
 
       if (response.success) {
-        console.log('✅ Message sent successfully');
+        console.log('✅ Merchant message sent successfully');
+        
+        // FIXED: Add the message to the merchant's view immediately
+        const newMessage = {
+          id: response.data.id || `temp-${Date.now()}`,
+          text: messageText,
+          sender: 'merchant',
+          senderInfo: {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar
+          },
+          timestamp: 'now',
+          status: 'sent',
+          messageType: 'text'
+        };
+
+        setMessages(prev => [...prev, newMessage]);
+        scrollToBottom();
         
         // Update customer list
         setCustomers(prev => prev.map(customer =>
@@ -516,7 +513,7 @@ const MerchantChatInterface = () => {
         throw new Error(response.message || 'Failed to send message');
       }
     } catch (error) {
-      console.error('❌ Failed to send message:', error);
+      console.error('❌ Failed to send merchant message:', error);
       setError(`Failed to send message: ${error.message}`);
       setMessage(messageText); // Restore message on error
     } finally {
@@ -528,7 +525,6 @@ const MerchantChatInterface = () => {
   const handleMessageChange = (e) => {
     setMessage(e.target.value);
 
-    // Handle typing indicators
     if (selectedCustomer) {
       handleTyping(selectedCustomer.conversationId);
     }
@@ -816,16 +812,22 @@ const MerchantChatInterface = () => {
                     messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex ${msg.sender === 'merchant' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${
+                          // FIXED: Merchant messages align right, customer messages align left
+                          msg.sender === 'merchant' ? 'justify-end' : 'justify-start'
+                        }`}
                       >
                         <div
-                          className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-lg ${msg.sender === 'merchant'
+                          className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-lg ${
+                            // FIXED: Merchant messages blue, customer messages white
+                            msg.sender === 'merchant'
                               ? 'bg-blue-500 text-white rounded-br-sm'
                               : 'bg-white text-gray-900 rounded-bl-sm border'
                             }`}
                         >
                           <p className="text-sm">{msg.text}</p>
-                          <div className={`flex items-center justify-end mt-1 space-x-1 ${msg.sender === 'merchant' ? 'text-blue-100' : 'text-gray-500'
+                          <div className={`flex items-center justify-end mt-1 space-x-1 ${
+                            msg.sender === 'merchant' ? 'text-blue-100' : 'text-gray-500'
                             }`}>
                             <Clock className="w-3 h-3" />
                             <span className="text-xs">{msg.timestamp}</span>
@@ -904,7 +906,7 @@ const MerchantChatInterface = () => {
                 </div>
               </>
             ) : (
-              /* Welcome Screen - Only visible on desktop when no chat selected */
+              /* Welcome Screen */
               <div className="flex-1 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                   <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
