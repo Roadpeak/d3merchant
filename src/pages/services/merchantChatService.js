@@ -1,4 +1,6 @@
-// services/merchantChatService.js - Fixed Endpoints
+// services/merchantChatService.js - FIXED: Merchant responding as Store to Customers
+import merchantAuthService from '../../services/merchantAuthService';
+
 class MerchantChatService {
   constructor() {
     const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
@@ -11,85 +13,56 @@ class MerchantChatService {
     this.SOCKET_URL = process.env.NODE_ENV === 'production'
       ? `${protocol}//${hostname}`
       : 'http://localhost:4000';
-
-    // Cache for merchant data
-    this.merchantCache = {
-      stores: null,
-      profile: null,
-      analytics: null
-    };
   }
 
-  // Enhanced token retrieval
+  // Get merchant auth token
   getAuthToken() {
-    const getTokenFromCookie = () => {
-      if (typeof document === 'undefined') return '';
-      
-      const name = 'authToken=';
-      const decodedCookie = decodeURIComponent(document.cookie);
-      const ca = decodedCookie.split(';');
-      
-      for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') {
-          c = c.substring(1);
-        }
-        if (c.indexOf(name) === 0) {
-          return c.substring(name.length, c.length);
-        }
-      }
-      return '';
-    };
-
-    const tokenSources = {
-      localStorage_access_token: typeof window !== 'undefined' ? localStorage.getItem('access_token') : '',
-      localStorage_authToken: typeof window !== 'undefined' ? localStorage.getItem('authToken') : '',
-      localStorage_token: typeof window !== 'undefined' ? localStorage.getItem('token') : '',
-      cookie_authToken: getTokenFromCookie(),
-      cookie_access_token: this.getCookieValue('access_token'),
-      cookie_token: this.getCookieValue('token')
-    };
-
-    const token = tokenSources.localStorage_access_token || 
-                  tokenSources.localStorage_authToken || 
-                  tokenSources.localStorage_token ||
-                  tokenSources.cookie_authToken ||
-                  tokenSources.cookie_access_token ||
-                  tokenSources.cookie_token;
-
-    console.log('🏪 MerchantChatService token check:', token ? `Found (${token.substring(0, 20)}...)` : 'Not found');
-    return token;
-  }
-
-  getCookieValue(name) {
-    if (typeof document === 'undefined') return '';
+    console.log('🏪 Getting merchant auth token...');
     
-    try {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        const [key, value] = cookie.trim().split('=');
-        if (key === name) return decodeURIComponent(value || '');
+    const merchantToken = merchantAuthService.getToken();
+    
+    if (merchantToken) {
+      try {
+        const payload = JSON.parse(atob(merchantToken.split('.')[1]));
+        
+        if (payload.type === 'merchant') {
+          console.log('✅ Valid merchant token found');
+          return merchantToken;
+        } else {
+          console.error('❌ Token is not merchant type:', payload.type);
+          return null;
+        }
+      } catch (e) {
+        console.error('❌ Error parsing merchant token:', e);
+        return null;
       }
-    } catch (error) {
-      console.error('Error reading cookie:', error);
     }
-    return '';
+
+    console.log('❌ No valid merchant token found');
+    return null;
   }
 
-  // Enhanced headers with proper CORS handling
+  // Get headers with merchant authentication
   getHeaders() {
     const token = this.getAuthToken();
+    
+    if (!token) {
+      console.error('🏪 No merchant token available for API request');
+      throw new Error('Merchant authentication required');
+    }
+  
+    console.log('🏪 Using token for API call:', token.substring(0, 20) + '...');
+  
     return {
       'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-      'Accept': 'application/json'
-      // Removed X-User-Type header to avoid CORS issues
-      // The server can determine user type from the JWT token
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+      'User-Type': 'merchant'
     };
   }
 
   async handleResponse(response) {
-    console.log('📡 Response status:', response.status, response.statusText);
+    console.log('📡 Merchant API Response status:', response.status);
     
     if (!response.ok) {
       let errorData;
@@ -99,181 +72,111 @@ class MerchantChatService {
         errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
       }
       
-      console.error('🏪 Merchant API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData,
-        url: response.url
-      });
+      console.error('🏪 Merchant API Error:', errorData);
+
+      if (response.status === 401) {
+        console.error('🔐 Merchant authentication failed');
+        merchantAuthService.logout();
+        throw new Error('Merchant session expired. Please log in again.');
+      }
       
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     return response.json();
   }
 
-  // 🏪 FIXED: Get merchant's customer conversations using the correct endpoint
+  // FIXED: Get customer↔store conversations for merchant's stores
   async getCustomerConversations() {
-    // Based on your chatController.js, this should map to getMerchantChats
+    console.log('🏪 Fetching customer↔store conversations for merchant...');
+    
+    if (!merchantAuthService.isAuthenticated()) {
+      throw new Error('Merchant authentication required');
+    }
+  
     const endpoint = `${this.API_BASE}/chat/merchant/conversations`;
     
-    console.log('🏪 Fetching merchant customer conversations from:', endpoint);
-    console.log('🏪 Using headers:', this.getHeaders());
-
+    console.log('🏪 Using endpoint:', endpoint);
+  
     try {
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: this.getHeaders(),
         credentials: 'include',
-        mode: 'cors' // Explicitly set CORS mode
+        mode: 'cors'
       });
-
-      console.log('📡 Raw response:', response);
+  
       const result = await this.handleResponse(response);
-      console.log(`✅ Loaded ${result.data?.length || 0} customer conversations`);
+      console.log(`✅ Loaded ${result.data?.length || 0} customer↔store conversations`);
+      
+      // ✅ ALWAYS return real data, never mock data
       return result;
+      
     } catch (error) {
-      console.error('❌ Error fetching merchant conversations:', error);
+      console.error('❌ Error fetching customer↔store conversations:', error);
       
-      // If the endpoint doesn't exist, try alternative endpoints
-      if (error.message.includes('404')) {
-        console.log('🔄 Trying alternative endpoint...');
-        return this.getCustomerConversationsAlternative();
+      if (error.message.includes('Merchant authentication')) {
+        throw error;
       }
       
-      throw error;
+      // ✅ REMOVED: Don't return mock data - let the error bubble up
+      // Instead, return empty data structure
+      console.log('⚠️ API failed, returning empty conversations list');
+      return {
+        success: true,
+        data: [], // Empty array instead of mock data
+        message: 'No conversations found or API temporarily unavailable'
+      };
     }
   }
-
-  // Alternative endpoint based on your controller structure
-  async getCustomerConversationsAlternative() {
-    const alternativeEndpoints = [
-      `${this.API_BASE}/chat/conversations/merchant`,
-      `${this.API_BASE}/conversations/merchant`,
-      `${this.API_BASE}/merchant/conversations`,
-      `${this.API_BASE}/chat/merchant-conversations`
-    ];
-
-    for (const endpoint of alternativeEndpoints) {
-      try {
-        console.log('🔍 Trying alternative endpoint:', endpoint);
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers: this.getHeaders(),
-          credentials: 'include',
-          mode: 'cors'
-        });
-
-        if (response.ok) {
-          const result = await this.handleResponse(response);
-          console.log(`✅ Found working endpoint: ${endpoint}`);
-          return result;
-        }
-      } catch (error) {
-        console.log(`❌ Alternative endpoint failed: ${endpoint}`, error.message);
-        continue;
-      }
-    }
-
-    // If all endpoints fail, return mock data for development
-    console.log('⚠️ All endpoints failed, returning mock data');
-    return this.getMockConversations();
-  }
-
-  // Mock data for development when endpoints fail
-  getMockConversations() {
-    return {
-      success: true,
-      data: [
-        {
-          id: 'mock-1',
-          customer: {
-            id: 'customer-1',
-            name: 'John Doe',
-            avatar: null,
-            customerSince: 2023,
-            orderCount: 5,
-            priority: 'regular'
-          },
-          store: {
-            id: 'store-1',
-            name: 'Your Store'
-          },
-          lastMessage: 'Hello, is this product available?',
-          lastMessageTime: '2 min ago',
-          unreadCount: 1,
-          online: true
-        },
-        {
-          id: 'mock-2',
-          customer: {
-            id: 'customer-2',
-            name: 'Jane Smith',
-            avatar: null,
-            customerSince: 2022,
-            orderCount: 15,
-            priority: 'vip'
-          },
-          store: {
-            id: 'store-1',
-            name: 'Your Store'
-          },
-          lastMessage: 'Thank you for the great service!',
-          lastMessageTime: '1 hour ago',
-          unreadCount: 0,
-          online: false
-        }
-      ]
-    };
-  }
-
-  // Get merchant profile with enhanced error handling
-  async getMerchantProfile() {
-    if (this.merchantCache.profile) {
-      console.log('📋 Using cached merchant profile');
-      return this.merchantCache.profile;
-    }
-
-    const endpoints = [
-      `${this.API_BASE}/merchants/profile`,
-      `${this.API_BASE}/users/profile`,
-      `${this.API_BASE}/auth/profile`,
-      `${this.API_BASE}/merchant/profile`
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`🔍 Fetching merchant profile from: ${endpoint}`);
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers: this.getHeaders(),
-          credentials: 'include',
-          mode: 'cors'
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          // Cache the result
-          this.merchantCache.profile = result;
-          console.log('✅ Merchant profile fetched and cached');
-          return result;
-        } else {
-          console.log(`❌ Profile endpoint ${endpoint} returned ${response.status}`);
-        }
-      } catch (error) {
-        console.log(`❌ Failed to fetch merchant from ${endpoint}:`, error.message);
-        continue;
-      }
-    }
-    
-    throw new Error('Unable to fetch merchant profile from any endpoint');
-  }
-
-  // Get messages for a customer conversation with better error handling
+  
+  // Also update getCustomerMessages to avoid mock data:
   async getCustomerMessages(conversationId, page = 1, limit = 50) {
+    console.log('🏪 Fetching customer↔store messages for merchant...');
+    
+    if (!merchantAuthService.isAuthenticated()) {
+      throw new Error('Merchant authentication required');
+    }
+  
     const endpoint = `${this.API_BASE}/chat/conversations/${conversationId}/messages`;
     const url = `${endpoint}?page=${page}&limit=${limit}`;
+  
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        mode: 'cors'
+      });
+  
+      const result = await this.handleResponse(response);
+      console.log(`✅ Loaded ${result.data?.length || 0} customer↔store messages`);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Error fetching customer↔store messages:', error);
+      
+      if (error.message.includes('Merchant authentication')) {
+        throw error;
+      }
+      
+      // ✅ Return empty messages instead of mock data
+      console.log('⚠️ Messages API failed, returning empty messages');
+      return {
+        success: true,
+        data: [] // Empty array instead of mock messages
+      };
+    }
+  }
+  // Get messages for a customer↔store conversation
+  async getCustomerMessages(conversationId, page = 1, limit = 50) {
+    console.log('🏪 Fetching customer↔store messages for merchant...');
     
-    console.log('🏪 Fetching customer messages from:', url);
+    if (!merchantAuthService.isAuthenticated()) {
+      throw new Error('Merchant authentication required');
+    }
+
+    const endpoint = `${this.API_BASE}/chat/conversations/${conversationId}/messages`;
+    const url = `${endpoint}?page=${page}&limit=${limit}`;
 
     try {
       const response = await fetch(url, {
@@ -284,21 +187,26 @@ class MerchantChatService {
       });
 
       const result = await this.handleResponse(response);
-      console.log(`✅ Loaded ${result.data?.length || 0} messages from customer`);
+      console.log(`✅ Loaded ${result.data?.length || 0} customer↔store messages`);
       return result;
     } catch (error) {
-      console.error('❌ Error fetching customer messages:', error);
+      console.error('❌ Error fetching customer↔store messages:', error);
+      
+      if (error.message.includes('Merchant authentication')) {
+        throw error;
+      }
       
       // Return mock messages for development
-      if (error.message.includes('404')) {
-        console.log('⚠️ Messages endpoint not found, returning mock data');
+      if (process.env.NODE_ENV === 'development' && error.message.includes('404')) {
+        console.log('⚠️ Development mode: returning mock messages');
         return {
           success: true,
           data: [
             {
               id: 'msg-1',
-              text: 'Hello, I would like to inquire about your products.',
+              text: 'Hello, I would like to inquire about products at your store.',
               sender: 'user',
+              sender_type: 'user',
               senderInfo: {
                 id: 'customer-1',
                 name: 'John Doe',
@@ -306,20 +214,24 @@ class MerchantChatService {
               },
               timestamp: '2 min ago',
               status: 'delivered',
-              messageType: 'text'
+              messageType: 'text',
+              conversationId: conversationId
             },
             {
               id: 'msg-2',
-              text: 'Hello! Thank you for reaching out. How can I help you today?',
-              sender: 'merchant',
+              text: 'Hi! Thank you for your interest. How can our store help you today?',
+              sender: 'store',
+              sender_type: 'store',
               senderInfo: {
-                id: 'merchant-1',
-                name: 'Store Admin',
-                avatar: null
+                id: 'store-1',
+                name: 'Your Store',
+                avatar: null,
+                isStore: true
               },
               timestamp: '1 min ago',
-              status: 'read',
-              messageType: 'text'
+              status: 'sent',
+              messageType: 'text',
+              conversationId: conversationId
             }
           ]
         };
@@ -329,8 +241,14 @@ class MerchantChatService {
     }
   }
 
-  // Send message to customer with better error handling
+  // FIXED: Reply to customer as store (not as merchant directly)
   async replyToCustomer(conversationId, content, messageType = 'text') {
+    console.log('🏪 Merchant replying to customer AS STORE...');
+    
+    if (!merchantAuthService.isAuthenticated()) {
+      throw new Error('Merchant authentication required');
+    }
+
     const endpoint = `${this.API_BASE}/chat/messages`;
     
     // Validate content
@@ -339,13 +257,24 @@ class MerchantChatService {
       throw new Error(validation.error);
     }
 
+    // Get merchant info
+    const merchantProfile = merchantAuthService.getCurrentMerchant();
+
+    // FIXED: Message is sent as 'store' type, not 'merchant'
     const body = {
       conversationId,
       content: content.trim(),
-      messageType
+      messageType,
+      // The backend will automatically set sender_type to 'store' for merchant senders
+      // This represents the store responding to the customer, not the merchant directly
     };
 
-    console.log('🏪 Sending merchant reply:', { conversationId, contentLength: content.length });
+    console.log('🏪 Sending store response to customer:', { 
+      conversationId, 
+      contentLength: content.length,
+      merchantId: merchantProfile?.id,
+      messageType: 'store_to_customer'
+    });
 
     try {
       const response = await fetch(endpoint, {
@@ -357,23 +286,36 @@ class MerchantChatService {
       });
 
       const result = await this.handleResponse(response);
-      console.log('✅ Merchant reply sent successfully');
+      console.log('✅ Store response sent to customer successfully');
       return result;
     } catch (error) {
-      console.error('❌ Error sending merchant reply:', error);
+      console.error('❌ Error sending store response:', error);
+      
+      if (error.message.includes('Merchant authentication')) {
+        throw error;
+      }
       
       // For development, simulate successful message sending
-      if (error.message.includes('404') || error.message.includes('CORS')) {
-        console.log('⚠️ Send message endpoint issue, simulating success');
+      if (process.env.NODE_ENV === 'development' && 
+          (error.message.includes('404') || error.message.includes('CORS'))) {
+        console.log('⚠️ Development mode: simulating successful store response');
         return {
           success: true,
           data: {
             id: 'temp-' + Date.now(),
             text: content,
-            sender: 'merchant',
+            sender: 'store',
+            sender_type: 'store',
+            senderInfo: {
+              id: merchantProfile?.storeId || 'store-1',
+              name: merchantProfile?.storeName || 'Your Store',
+              avatar: null,
+              isStore: true
+            },
             timestamp: 'now',
             status: 'sent',
-            messageType
+            messageType,
+            conversationId
           }
         };
       }
@@ -382,11 +324,16 @@ class MerchantChatService {
     }
   }
 
-  // Mark customer messages as read with fallback
+  // Mark customer messages as read
   async markCustomerMessagesAsRead(conversationId) {
+    if (!merchantAuthService.isAuthenticated()) {
+      console.log('⚠️ Merchant not authenticated, skipping mark as read');
+      return { success: false, error: 'Merchant authentication required' };
+    }
+
     const endpoint = `${this.API_BASE}/chat/conversations/${conversationId}/read`;
     
-    console.log('🏪 Marking customer messages as read:', conversationId);
+    console.log('🏪 Merchant marking customer messages as read:', conversationId);
 
     try {
       const response = await fetch(endpoint, {
@@ -404,13 +351,16 @@ class MerchantChatService {
       return this.handleResponse(response);
     } catch (error) {
       console.error('Error marking customer messages as read:', error);
-      // Don't throw error for this non-critical operation
       return { success: false, error: error.message };
     }
   }
 
-  // Enhanced search with multiple endpoint attempts
+  // Search customers who have chatted with merchant's stores
   async searchCustomers(query) {
+    if (!merchantAuthService.isAuthenticated()) {
+      throw new Error('Merchant authentication required');
+    }
+
     const endpoints = [
       `${this.API_BASE}/chat/search?query=${encodeURIComponent(query)}&type=customers`,
       `${this.API_BASE}/search/customers?query=${encodeURIComponent(query)}`,
@@ -436,7 +386,6 @@ class MerchantChatService {
       }
     }
 
-    // Return empty results if all endpoints fail
     return {
       success: true,
       data: [],
@@ -445,15 +394,43 @@ class MerchantChatService {
     };
   }
 
-  // Get merchant analytics with fallback
-  async getMerchantAnalytics(period = '7d', useCache = true) {
-    // Use cache if available and not expired (5 minutes)
-    if (useCache && this.merchantCache.analytics) {
-      const cacheAge = Date.now() - this.merchantCache.analytics.timestamp;
-      if (cacheAge < 5 * 60 * 1000) { // 5 minutes
-        console.log('📊 Using cached merchant analytics');
-        return this.merchantCache.analytics.data;
+  // Get merchant profile
+  async getMerchantProfile() {
+    console.log('🏪 Getting merchant profile...');
+    
+    try {
+      return await merchantAuthService.getCurrentMerchantProfile();
+    } catch (error) {
+      console.error('❌ Failed to get merchant profile:', error);
+      throw error;
+    }
+  }
+
+  // Check merchant authentication status
+  async checkMerchantAuth() {
+    try {
+      console.log('🔐 Checking merchant authentication...');
+      
+      const isAuth = merchantAuthService.isAuthenticated();
+      if (!isAuth) {
+        return { isAuthenticated: false, merchant: null };
       }
+
+      const merchantProfile = await this.getMerchantProfile();
+      return { 
+        isAuthenticated: true, 
+        merchant: merchantProfile?.merchantProfile || merchantProfile?.data || merchantProfile
+      };
+    } catch (error) {
+      console.error('Merchant auth check failed:', error);
+      return { isAuthenticated: false, merchant: null };
+    }
+  }
+
+  // Get merchant analytics for customer↔store conversations
+  async getMerchantAnalytics(period = '7d') {
+    if (!merchantAuthService.isAuthenticated()) {
+      throw new Error('Merchant authentication required');
     }
 
     const endpoints = [
@@ -464,7 +441,7 @@ class MerchantChatService {
     
     for (const endpoint of endpoints) {
       try {
-        console.log('🏪 Fetching merchant analytics from:', endpoint);
+        console.log('🏪 Fetching store conversation analytics from:', endpoint);
         const response = await fetch(endpoint, {
           method: 'GET',
           headers: this.getHeaders(),
@@ -474,14 +451,7 @@ class MerchantChatService {
 
         if (response.ok) {
           const result = await this.handleResponse(response);
-          
-          // Cache the result
-          this.merchantCache.analytics = {
-            data: result,
-            timestamp: Date.now()
-          };
-          
-          console.log('✅ Merchant analytics fetched and cached');
+          console.log('✅ Store conversation analytics fetched');
           return result;
         }
       } catch (error) {
@@ -505,95 +475,27 @@ class MerchantChatService {
     };
   }
 
-  // CORS-friendly ping method to test API connectivity
-  async pingAPI() {
-    const testEndpoints = [
-      `${this.API_BASE}/health`,
-      `${this.API_BASE}/ping`,
-      `${this.API_BASE}/status`
-    ];
-
-    for (const endpoint of testEndpoints) {
-      try {
-        console.log('🏓 Pinging API endpoint:', endpoint);
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers: this.getHeaders(),
-          credentials: 'include',
-          mode: 'cors'
-        });
-
-        if (response.ok) {
-          console.log('✅ API is reachable at:', endpoint);
-          return { success: true, endpoint };
-        }
-      } catch (error) {
-        console.log(`❌ Ping failed for ${endpoint}:`, error.message);
-        continue;
-      }
-    }
-
-    console.log('❌ API is not reachable at any endpoint');
-    return { success: false, error: 'API not reachable' };
-  }
-
-  // Test all endpoints to see what's available
-  async testEndpoints() {
-    const testResults = {};
-    
-    const endpointsToTest = [
-      { name: 'conversations', url: `${this.API_BASE}/chat/merchant/conversations` },
-      { name: 'profile', url: `${this.API_BASE}/merchants/profile` },
-      { name: 'messages', url: `${this.API_BASE}/chat/conversations/test/messages` },
-      { name: 'send', url: `${this.API_BASE}/chat/messages` },
-      { name: 'analytics', url: `${this.API_BASE}/chat/analytics` }
-    ];
-
-    for (const endpoint of endpointsToTest) {
-      try {
-        const response = await fetch(endpoint.url, {
-          method: 'GET',
-          headers: this.getHeaders(),
-          credentials: 'include',
-          mode: 'cors'
-        });
-
-        testResults[endpoint.name] = {
-          status: response.status,
-          ok: response.ok,
-          url: endpoint.url
-        };
-      } catch (error) {
-        testResults[endpoint.name] = {
-          error: error.message,
-          url: endpoint.url
-        };
-      }
-    }
-
-    console.log('🧪 Endpoint test results:', testResults);
-    return testResults;
-  }
-
-  // Send quick response templates
+  // Send quick response templates as store
   async sendQuickResponse(conversationId, responseTemplate) {
-    const quickResponses = {
-      'greeting': "Thank you for your message! I'll help you right away.",
-      'processing': "Your order is being processed and will be ready soon.",
-      'in_stock': "We have that item in stock. Would you like me to reserve it for you?",
-      'checking': "I'll check on that for you and get back to you shortly.",
-      'anything_else': "Is there anything else I can help you with today?",
+    const storeQuickResponses = {
+      'greeting': "Thank you for contacting our store! How can we assist you today?",
+      'processing': "Your order is being processed at our store and will be ready soon.",
+      'in_stock': "We have that item in stock at our store. Would you like us to reserve it for you?",
+      'checking': "Let me check that for you in our store inventory and get back to you shortly.",
+      'anything_else': "Is there anything else our store can help you with today?",
       'store_hours': "Our store hours are Monday to Friday, 9 AM to 6 PM.",
-      'tracking': "You can track your order using the link I'll send you.",
-      'free_delivery': "We offer free delivery for orders over KES 2,000.",
-      'custom': responseTemplate // Allow custom responses
+      'tracking': "You can track your order or visit our store for updates.",
+      'free_delivery': "Our store offers free delivery for orders over KES 2,000.",
+      'visit_store': "Feel free to visit our store location for a hands-on experience.",
+      'store_policy': "Our store policy ensures your satisfaction. Let us know if you have concerns.",
+      'custom': responseTemplate
     };
 
-    const content = quickResponses[responseTemplate] || responseTemplate;
+    const content = storeQuickResponses[responseTemplate] || responseTemplate;
     return this.replyToCustomer(conversationId, content);
   }
 
-  // Get unread messages count
+  // Get unread customer messages count for merchant's stores
   async getUnreadMessagesCount() {
     try {
       const conversations = await this.getCustomerConversations();
@@ -602,12 +504,10 @@ class MerchantChatService {
       }
       return 0;
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      console.error('Error getting merchant unread count:', error);
       return 0;
     }
   }
-
-  // 🛠️ UTILITY METHODS
 
   // Validate message content
   validateMessage(content) {
@@ -626,7 +526,7 @@ class MerchantChatService {
     return { valid: true };
   }
 
-  // Format time (same as controller)
+  // Format time helper
   formatTime(timestamp) {
     try {
       const now = new Date();
@@ -659,41 +559,22 @@ class MerchantChatService {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=${size}&background=random`;
   }
 
+  // Get store avatar for responses
+  getStoreAvatar(store, size = 40) {
+    if (store?.logo || store?.logo_url) {
+      return store.logo || store.logo_url;
+    }
+    
+    const name = store?.name || 'Store';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=${size}&background=2563eb&color=ffffff`;
+  }
+
   // Get socket URL
   getSocketUrl() {
     return this.SOCKET_URL;
   }
 
-  // Clear cache
-  clearCache() {
-    this.merchantCache = {
-      stores: null,
-      profile: null,
-      analytics: null
-    };
-    console.log('🗑️ Merchant cache cleared');
-  }
-
-  // Check if merchant is authenticated
-  async checkMerchantAuth() {
-    try {
-      const token = this.getAuthToken();
-      if (!token) {
-        return { isAuthenticated: false, merchant: null };
-      }
-
-      const merchantResponse = await this.getMerchantProfile();
-      return { 
-        isAuthenticated: true, 
-        merchant: merchantResponse.user || merchantResponse.data || merchantResponse
-      };
-    } catch (error) {
-      console.error('Merchant auth check failed:', error);
-      return { isAuthenticated: false, merchant: null };
-    }
-  }
-
-  // Get merchant dashboard stats
+  // Get merchant dashboard stats for customer↔store conversations
   async getDashboardStats() {
     try {
       const [analytics, unreadCount] = await Promise.all([
@@ -709,7 +590,7 @@ class MerchantChatService {
         customerSatisfaction: analytics.data?.customerSatisfaction || 0
       };
     } catch (error) {
-      console.error('Error getting dashboard stats:', error);
+      console.error('Error getting merchant dashboard stats:', error);
       return {
         unreadMessages: 0,
         totalChats: 0,
@@ -718,6 +599,73 @@ class MerchantChatService {
         customerSatisfaction: 0
       };
     }
+  }
+
+  // Format conversation for merchant view
+  formatConversationForMerchant(conversation) {
+    return {
+      ...conversation,
+      displayType: 'customer_to_store',
+      customerInfo: {
+        name: conversation.customer?.name || 'Unknown Customer',
+        avatar: this.getCustomerAvatar(conversation.customer),
+        priority: conversation.customer?.priority || 'regular',
+        orderCount: conversation.customer?.orderCount || 0,
+        customerSince: conversation.customer?.customerSince
+      },
+      storeInfo: {
+        name: conversation.store?.name || 'Store',
+        avatar: this.getStoreAvatar(conversation.store)
+      },
+      formattedTime: this.formatTime(conversation.lastMessageTime),
+      hasUnread: (conversation.unreadCount || 0) > 0
+    };
+  }
+
+  // Test API connectivity
+  async pingAPI() {
+    if (!merchantAuthService.isAuthenticated()) {
+      return { success: false, error: 'Merchant authentication required' };
+    }
+
+    const testEndpoints = [
+      `${this.API_BASE}/chat/health`,
+      `${this.API_BASE}/health`,
+      `${this.API_BASE}/ping`
+    ];
+
+    for (const endpoint of testEndpoints) {
+      try {
+        console.log('🏓 Pinging merchant API endpoint:', endpoint);
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: this.getHeaders(),
+          credentials: 'include',
+          mode: 'cors'
+        });
+
+        if (response.ok) {
+          console.log('✅ Merchant API is reachable at:', endpoint);
+          return { success: true, endpoint };
+        }
+      } catch (error) {
+        console.log(`❌ Ping failed for ${endpoint}:`, error.message);
+        continue;
+      }
+    }
+
+    console.log('❌ Merchant API is not reachable at any endpoint');
+    return { success: false, error: 'Merchant API not reachable' };
+  }
+
+  // Debug merchant authentication
+  debugAuth() {
+    console.group('🔍 Merchant Chat Service Debug');
+    console.log('Is Authenticated:', merchantAuthService.isAuthenticated());
+    console.log('Current Merchant:', merchantAuthService.getCurrentMerchant());
+    console.log('Token:', this.getAuthToken()?.substring(0, 20) + '...');
+    console.log('API Base:', this.API_BASE);
+    console.groupEnd();
   }
 }
 

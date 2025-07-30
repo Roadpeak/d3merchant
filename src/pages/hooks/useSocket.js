@@ -1,6 +1,7 @@
-// hooks/useSocket.js - Enhanced JavaScript version
+// hooks/useSocket.js - FIXED: Customer↔Store Communication Events
 import { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
+import merchantAuthService from '../../services/merchantAuthService';
 
 const useSocket = (user) => {
   const [socket, setSocket] = useState(null);
@@ -14,9 +15,9 @@ const useSocket = (user) => {
   const maxReconnectAttempts = 5;
   const typingTimeouts = useRef(new Map());
 
-  // Enhanced token retrieval with better error handling
+  // FIXED: Enhanced token retrieval with customer↔store distinction
   const getAuthToken = useCallback(() => {
-    console.log('🔍 Getting auth token...');
+    console.log('🔍 Getting auth token for user type:', user?.userType);
     
     const getLocalStorage = (key) => {
       try {
@@ -41,34 +42,86 @@ const useSocket = (user) => {
       return null;
     };
 
-    const tokenSources = {
-      localStorage_access_token: getLocalStorage('access_token'),
-      localStorage_authToken: getLocalStorage('authToken'),
-      localStorage_token: getLocalStorage('token'),
-      cookie_authToken: getCookieValue('authToken'),
-      cookie_access_token: getCookieValue('access_token'),
-      cookie_token: getCookieValue('token')
-    };
+    let token = null;
+    
+    if (user?.userType === 'merchant') {
+      // For merchants, use merchant auth service
+      console.log('🏪 Getting merchant token for store communication...');
+      token = merchantAuthService.getToken();
+      
+      if (!token) {
+        console.log('🏪 No merchant token from auth service, trying fallback...');
+        const tokenSources = {
+          localStorage_access_token: getLocalStorage('access_token'),
+          localStorage_authToken: getLocalStorage('authToken'),
+          localStorage_token: getLocalStorage('token'),
+          cookie_authToken: getCookieValue('authToken'),
+          cookie_access_token: getCookieValue('access_token'),
+          cookie_token: getCookieValue('token')
+        };
 
-    console.log('🔍 Token sources found:', Object.keys(tokenSources).filter(key => tokenSources[key]));
+        token = tokenSources.localStorage_access_token ||
+                tokenSources.localStorage_authToken ||
+                tokenSources.localStorage_token ||
+                tokenSources.cookie_authToken ||
+                tokenSources.cookie_access_token ||
+                tokenSources.cookie_token;
+      }
+    } else {
+      // For customers, use standard token sources
+      console.log('👤 Getting customer token for store communication...');
+      const tokenSources = {
+        localStorage_access_token: getLocalStorage('access_token'),
+        localStorage_authToken: getLocalStorage('authToken'),
+        localStorage_token: getLocalStorage('token'),
+        cookie_authToken: getCookieValue('authToken'),
+        cookie_access_token: getCookieValue('access_token'),
+        cookie_token: getCookieValue('token')
+      };
 
-    const token = tokenSources.localStorage_access_token ||
-                  tokenSources.localStorage_authToken ||
-                  tokenSources.localStorage_token ||
-                  tokenSources.cookie_authToken ||
-                  tokenSources.cookie_access_token ||
-                  tokenSources.cookie_token;
+      token = tokenSources.localStorage_access_token ||
+              tokenSources.localStorage_authToken ||
+              tokenSources.localStorage_token ||
+              tokenSources.cookie_authToken ||
+              tokenSources.cookie_access_token ||
+              tokenSources.cookie_token;
+    }
 
     if (token) {
-      console.log('✅ Token found:', token.substring(0, 20) + '...');
+      console.log(`✅ Token found for ${user?.userType}:`, token.substring(0, 20) + '...');
+      
+      // Validate token type matches user type
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔍 Token validation for customer↔store communication:', {
+          tokenType: payload.type,
+          userType: user?.userType,
+          tokenUserId: payload.userId || payload.id,
+          userIdProvided: user?.id,
+          match: payload.type === user?.userType
+        });
+
+        if (user?.userType === 'merchant' && payload.type !== 'merchant') {
+          console.error('❌ Token type mismatch: Expected merchant, got', payload.type);
+          return null;
+        }
+        
+        if (user?.userType !== 'merchant' && payload.type === 'merchant') {
+          console.error('❌ Token type mismatch: Expected customer, got merchant');
+          return null;
+        }
+      } catch (e) {
+        console.error('❌ Error validating token:', e);
+        return null;
+      }
     } else {
-      console.log('❌ No token found in any source');
+      console.log(`❌ No token found for ${user?.userType}`);
     }
 
     return token;
-  }, []);
+  }, [user]);
 
-  // Validate token format with better error handling
+  // Enhanced token validation
   const validateToken = useCallback((token) => {
     if (!token) return false;
     
@@ -80,17 +133,20 @@ const useSocket = (user) => {
       }
       
       const payload = JSON.parse(atob(parts[1]));
-      console.log('🔍 Token payload preview:', {
-        userId: payload.userId,
-        id: payload.id,
-        type: payload.type,
-        userType: payload.userType,
-        exp: payload.exp ? new Date(payload.exp * 1000) : 'No expiration',
-        isExpired: payload.exp ? Date.now() >= payload.exp * 1000 : false
-      });
       
       if (payload.exp && Date.now() >= payload.exp * 1000) {
         console.error('❌ Token is expired');
+        return false;
+      }
+
+      // Validate token type matches expected user type for customer↔store communication
+      if (user?.userType === 'merchant' && payload.type !== 'merchant') {
+        console.error('❌ Token type mismatch for merchant store communication');
+        return false;
+      }
+
+      if (user?.userType === 'customer' && payload.type === 'merchant') {
+        console.error('❌ Token type mismatch for customer store communication');
         return false;
       }
       
@@ -99,7 +155,7 @@ const useSocket = (user) => {
       console.error('❌ Error validating token:', error);
       return false;
     }
-  }, []);
+  }, [user]);
 
   // Clear invalid tokens
   const clearTokens = useCallback(() => {
@@ -110,45 +166,69 @@ const useSocket = (user) => {
     ['authToken', 'access_token', 'token'].forEach(key => {
       document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     });
-  }, []);
 
-  // Initialize socket connection
+    if (user?.userType === 'merchant') {
+      merchantAuthService.logout();
+    }
+  }, [user]);
+
+  // FIXED: Initialize socket for customer↔store communication
   useEffect(() => {
     if (!user?.id) {
       console.log('⚠️ No user provided to socket hook');
       return;
     }
 
+    console.log('🔌 Initializing customer↔store socket for:', {
+      userId: user.id,
+      userType: user.userType,
+      role: user.role,
+      storeName: user.storeName,
+      merchantId: user.merchantId
+    });
+
     const token = getAuthToken();
     if (!token) {
-      console.log('⚠️ No auth token available for socket connection');
-      setConnectionError('No authentication token available');
+      console.log('⚠️ No auth token available for customer↔store socket');
+      setConnectionError(`No authentication token available for ${user.userType}`);
       return;
     }
 
     if (!validateToken(token)) {
-      console.log('⚠️ Invalid token format or expired');
+      console.log('⚠️ Invalid token for customer↔store communication');
       setConnectionError('Invalid or expired authentication token');
       return;
     }
-
-    console.log('🔌 Initializing socket connection for user:', user.id, 'role:', user.role || user.userType);
 
     const socketUrl = process.env.NODE_ENV === 'production'
       ? window.location.origin
       : 'http://localhost:4000';
 
-    console.log('🌐 Connecting to socket server:', socketUrl);
+    console.log('🌐 Connecting to customer↔store socket server:', socketUrl);
 
+    // Enhanced socket configuration for customer↔store communication
     const newSocket = io(socketUrl, {
-      auth: { token },
+      auth: { 
+        token,
+        userType: user.userType,
+        userId: user.id,
+        merchantId: user.merchantId || user.id,
+        storeId: user.storeId,
+        storeName: user.storeName
+      },
       query: {
         token,
         userId: user.id,
-        userRole: user.role || user.userType || 'customer'
+        userRole: user.role || user.userType || 'customer',
+        userType: user.userType,
+        merchantId: user.merchantId || (user.userType === 'merchant' ? user.id : null),
+        storeId: user.storeId,
+        communicationType: 'customer_store' // Identify this as customer↔store communication
       },
       extraHeaders: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'User-Type': user.userType,
+        'Communication-Type': 'customer-store'
       },
       transports: ['websocket', 'polling'],
       timeout: 10000,
@@ -161,22 +241,41 @@ const useSocket = (user) => {
 
     // Connection event handlers
     newSocket.on('connect', () => {
-      console.log('✅ Socket connected successfully');
+      console.log(`✅ Customer↔Store socket connected for ${user.userType}`);
       console.log('🔗 Socket ID:', newSocket.id);
       setIsConnected(true);
       setConnectionError(null);
       reconnectAttempts.current = 0;
       
+      // Send proper user join for customer↔store communication
       newSocket.emit('user_join', {
         id: user.id,
         name: user.name,
         role: user.role || user.userType || 'customer',
+        userType: user.userType,
+        merchantId: user.merchantId,
+        storeId: user.storeId,
+        storeName: user.storeName,
+        communicationType: 'customer_store',
         timestamp: new Date().toISOString()
       });
+
+      // Join appropriate rooms for customer↔store communication
+      if (user.userType === 'merchant') {
+        console.log('🏪 Joining merchant store rooms...');
+        newSocket.emit('join_merchant_store_room', {
+          merchantId: user.merchantId || user.id,
+          storeId: user.storeId,
+          storeName: user.storeName
+        });
+      } else {
+        console.log('👤 Joining customer store rooms...');
+        newSocket.emit('join_customer_store_room', user.id);
+      }
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected:', reason);
+      console.log(`❌ Customer↔Store socket disconnected (${user.userType}):`, reason);
       setIsConnected(false);
       
       if (reason === 'io server disconnect') {
@@ -190,7 +289,7 @@ const useSocket = (user) => {
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('❌ Socket connection error:', error);
+      console.error(`❌ Customer↔Store socket error (${user.userType}):`, error);
       setConnectionError(error.message);
       reconnectAttempts.current++;
       
@@ -213,22 +312,24 @@ const useSocket = (user) => {
     });
 
     newSocket.on('reconnect', (attemptNumber) => {
-      console.log(`🔄 Socket reconnected after ${attemptNumber} attempts`);
+      console.log(`🔄 Customer↔Store socket reconnected after ${attemptNumber} attempts`);
       setIsConnected(true);
       setConnectionError(null);
     });
 
     newSocket.on('reconnect_failed', () => {
-      console.error('❌ Socket reconnection failed');
+      console.error('❌ Customer↔Store socket reconnection failed');
       setConnectionError('Reconnection failed');
     });
 
-    // User status events
+    // User status events for customer↔store communication
     newSocket.on('user_online', (userId) => {
+      console.log('👥 User came online:', userId);
       setOnlineUsers(prev => new Set([...prev, userId]));
     });
 
     newSocket.on('user_offline', (userId) => {
+      console.log('👥 User went offline:', userId);
       setOnlineUsers(prev => {
         const newSet = new Set(prev);
         newSet.delete(userId);
@@ -236,60 +337,88 @@ const useSocket = (user) => {
       });
     });
 
-    // Enhanced message events
+    // FIXED: Enhanced message events for customer↔store communication
     newSocket.on('new_message', (messageData) => {
-      console.log('📨 Received new_message:', messageData);
-      if (eventHandlers.current.has('new_message')) {
-        eventHandlers.current.get('new_message')(messageData);
-      }
-    });
-
-    // Customer-specific events
-    newSocket.on('new_merchant_message', (messageData) => {
-      console.log('📨 Received new merchant message:', messageData);
-      if (eventHandlers.current.has('new_message')) {
-        eventHandlers.current.get('new_message')(messageData);
-      }
+      console.log(`📨 ${user.userType} received new_message:`, messageData);
       
-      if (eventHandlers.current.has('new_merchant_message')) {
-        eventHandlers.current.get('new_merchant_message')(messageData);
+      // Filter messages based on customer↔store communication model
+      if (user.userType === 'merchant') {
+        // Merchants should only receive customer→store messages
+        if ((messageData.sender === 'user' || messageData.sender === 'customer' || messageData.sender_type === 'user') &&
+            (messageData.type === 'customer_to_store' || messageData.recipient_type === 'merchant')) {
+          console.log('✅ Customer→Store message for merchant');
+          if (eventHandlers.current.has('new_message')) {
+            eventHandlers.current.get('new_message')(messageData);
+          }
+        } else {
+          console.log('⚠️ Message not relevant for merchant store interface');
+        }
+      } else {
+        // Customers should only receive store→customer messages
+        if ((messageData.sender === 'store' || messageData.sender_type === 'store') &&
+            (messageData.type === 'store_to_customer' || messageData.recipient_type === 'customer')) {
+          console.log('✅ Store→Customer message for customer');
+          if (eventHandlers.current.has('new_message')) {
+            eventHandlers.current.get('new_message')(messageData);
+          }
+        } else {
+          console.log('⚠️ Message not relevant for customer store interface');
+        }
       }
     });
 
-    newSocket.on('customer_chat_update', (updateData) => {
-      console.log('📋 Received customer chat update:', updateData);
-      if (eventHandlers.current.has('customer_chat_update')) {
-        eventHandlers.current.get('customer_chat_update')(updateData);
-      }
-    });
+    // FIXED: Customer↔Store specific events
+    if (user.userType === 'merchant') {
+      // Merchant-specific events for store communication
+      newSocket.on('new_customer_to_store_message', (messageData) => {
+        console.log('📨 MERCHANT received customer→store message:', messageData);
+        if (eventHandlers.current.has('new_customer_to_store_message')) {
+          eventHandlers.current.get('new_customer_to_store_message')(messageData);
+        }
+        // Also trigger generic handler
+        if (eventHandlers.current.has('new_message')) {
+          eventHandlers.current.get('new_message')(messageData);
+        }
+      });
 
-    // Merchant-specific events
-    newSocket.on('new_customer_message', (messageData) => {
-      console.log('📨 Received new customer message:', messageData);
-      if (eventHandlers.current.has('new_message')) {
-        eventHandlers.current.get('new_message')(messageData);
-      }
-      
-      if (eventHandlers.current.has('new_customer_message')) {
-        eventHandlers.current.get('new_customer_message')(messageData);
-      }
-    });
+      newSocket.on('new_customer_store_conversation', (conversationData) => {
+        console.log('🆕 MERCHANT received new customer→store conversation:', conversationData);
+        if (eventHandlers.current.has('new_customer_store_conversation')) {
+          eventHandlers.current.get('new_customer_store_conversation')(conversationData);
+        }
+        if (eventHandlers.current.has('new_conversation')) {
+          eventHandlers.current.get('new_conversation')(conversationData);
+        }
+      });
 
-    newSocket.on('merchant_chat_update', (updateData) => {
-      console.log('📋 Received merchant chat update:', updateData);
-      if (eventHandlers.current.has('merchant_chat_update')) {
-        eventHandlers.current.get('merchant_chat_update')(updateData);
-      }
-    });
+      newSocket.on('merchant_store_chat_update', (updateData) => {
+        console.log('📋 MERCHANT received store chat update:', updateData);
+        if (eventHandlers.current.has('merchant_chat_update')) {
+          eventHandlers.current.get('merchant_chat_update')(updateData);
+        }
+      });
+    } else {
+      // Customer-specific events for store communication
+      newSocket.on('new_store_to_customer_message', (messageData) => {
+        console.log('📨 CUSTOMER received store→customer message:', messageData);
+        if (eventHandlers.current.has('new_store_to_customer_message')) {
+          eventHandlers.current.get('new_store_to_customer_message')(messageData);
+        }
+        // Also trigger generic handler
+        if (eventHandlers.current.has('new_message')) {
+          eventHandlers.current.get('new_message')(messageData);
+        }
+      });
 
-    newSocket.on('new_conversation', (conversationData) => {
-      console.log('🆕 Received new conversation notification:', conversationData);
-      if (eventHandlers.current.has('new_conversation')) {
-        eventHandlers.current.get('new_conversation')(conversationData);
-      }
-    });
+      newSocket.on('customer_store_chat_update', (updateData) => {
+        console.log('📋 CUSTOMER received store chat update:', updateData);
+        if (eventHandlers.current.has('customer_chat_update')) {
+          eventHandlers.current.get('customer_chat_update')(updateData);
+        }
+      });
+    }
 
-    // Enhanced typing events with better state management
+    // Enhanced typing events for customer↔store communication
     newSocket.on('typing_start', ({ userId, userRole, conversationId }) => {
       console.log(`⌨️ User ${userId} (${userRole}) started typing in ${conversationId}`);
       setTypingUsers(prev => {
@@ -331,26 +460,30 @@ const useSocket = (user) => {
       }
     });
 
-    // Enhanced user status events
-    newSocket.on('merchant_status_update', (statusData) => {
-      console.log('🏪 Merchant status update:', statusData);
+    // Enhanced user status events for customer↔store communication
+    newSocket.on('merchant_store_status_update', (statusData) => {
+      console.log('🏪 Merchant store status update:', statusData);
       if (statusData.isOnline) {
-        setOnlineUsers(prev => new Set([...prev, statusData.merchantId]));
+        statusData.storeIds?.forEach(storeId => {
+          setOnlineUsers(prev => new Set([...prev, `store_${storeId}`]));
+        });
       } else {
-        setOnlineUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(statusData.merchantId);
-          return newSet;
+        statusData.storeIds?.forEach(storeId => {
+          setOnlineUsers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(`store_${storeId}`);
+            return newSet;
+          });
         });
       }
       
-      if (eventHandlers.current.has('merchant_status_update')) {
-        eventHandlers.current.get('merchant_status_update')(statusData);
+      if (eventHandlers.current.has('merchant_store_status_update')) {
+        eventHandlers.current.get('merchant_store_status_update')(statusData);
       }
     });
 
-    newSocket.on('customer_status_update', (statusData) => {
-      console.log('👤 Customer status update:', statusData);
+    newSocket.on('customer_store_status_update', (statusData) => {
+      console.log('👤 Customer store status update:', statusData);
       if (statusData.isOnline) {
         setOnlineUsers(prev => new Set([...prev, statusData.customerId]));
       } else {
@@ -361,8 +494,8 @@ const useSocket = (user) => {
         });
       }
 
-      if (eventHandlers.current.has('customer_status_update')) {
-        eventHandlers.current.get('customer_status_update')(statusData);
+      if (eventHandlers.current.has('customer_store_status_update')) {
+        eventHandlers.current.get('customer_store_status_update')(statusData);
       }
     });
 
@@ -377,8 +510,7 @@ const useSocket = (user) => {
     setSocket(newSocket);
 
     return () => {
-      console.log('🧹 Cleaning up socket connection');
-      // Clear any typing timeouts
+      console.log(`🧹 Cleaning up customer↔store socket for ${user.userType}`);
       typingTimeouts.current.forEach(timeout => clearTimeout(timeout));
       typingTimeouts.current.clear();
       
@@ -386,29 +518,42 @@ const useSocket = (user) => {
     };
   }, [user, getAuthToken, validateToken, clearTokens]);
 
-  // Join conversation
+  // FIXED: Join conversation for customer↔store communication
   const joinConversation = useCallback((conversationId) => {
     if (socket && isConnected) {
-      console.log(`🏠 Joining conversation: ${conversationId}`);
-      socket.emit('join_conversation', conversationId);
+      console.log(`🏠 ${user?.userType} joining customer↔store conversation: ${conversationId}`);
+      socket.emit('join_conversation', {
+        conversationId,
+        userType: user?.userType,
+        userId: user?.id,
+        merchantId: user?.merchantId,
+        storeId: user?.storeId,
+        communicationType: 'customer_store'
+      });
     } else {
-      console.log('⚠️ Cannot join conversation - socket not connected');
+      console.log('⚠️ Cannot join customer↔store conversation - socket not connected');
     }
-  }, [socket, isConnected]);
+  }, [socket, isConnected, user]);
 
-  // Leave conversation
+  // FIXED: Leave conversation for customer↔store communication
   const leaveConversation = useCallback((conversationId) => {
     if (socket && isConnected) {
-      console.log(`🚪 Leaving conversation: ${conversationId}`);
-      socket.emit('leave_conversation', conversationId);
+      console.log(`🚪 ${user?.userType} leaving customer↔store conversation: ${conversationId}`);
+      socket.emit('leave_conversation', {
+        conversationId,
+        userType: user?.userType,
+        userId: user?.id,
+        merchantId: user?.merchantId,
+        storeId: user?.storeId,
+        communicationType: 'customer_store'
+      });
     }
-  }, [socket, isConnected]);
+  }, [socket, isConnected, user]);
 
-  // Enhanced typing handler with timeout management
+  // Enhanced typing handler for customer↔store communication
   const handleTyping = useCallback((conversationId, action = 'start') => {
     if (!socket || !isConnected || !user?.id) return;
 
-    // Clear existing timeout for this conversation
     const existingTimeout = typingTimeouts.current.get(conversationId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
@@ -416,71 +561,112 @@ const useSocket = (user) => {
     }
 
     if (action === 'start') {
-      socket.emit('typing_start', { conversationId, userId: user.id });
+      socket.emit('typing_start', { 
+        conversationId, 
+        userId: user.id,
+        userType: user.userType,
+        merchantId: user.merchantId,
+        storeId: user.storeId,
+        communicationType: 'customer_store'
+      });
       
-      // Set timeout to automatically stop typing
       const timeout = setTimeout(() => {
-        socket.emit('typing_stop', { conversationId, userId: user.id });
+        socket.emit('typing_stop', { 
+          conversationId, 
+          userId: user.id,
+          userType: user.userType,
+          merchantId: user.merchantId,
+          storeId: user.storeId,
+          communicationType: 'customer_store'
+        });
         typingTimeouts.current.delete(conversationId);
       }, 2000);
       
       typingTimeouts.current.set(conversationId, timeout);
       
-      // Return cleanup function
       return () => {
         clearTimeout(timeout);
-        socket.emit('typing_stop', { conversationId, userId: user.id });
+        socket.emit('typing_stop', { 
+          conversationId, 
+          userId: user.id,
+          userType: user.userType,
+          merchantId: user.merchantId,
+          storeId: user.storeId,
+          communicationType: 'customer_store'
+        });
         typingTimeouts.current.delete(conversationId);
       };
     } else {
-      socket.emit('typing_stop', { conversationId, userId: user.id });
+      socket.emit('typing_stop', { 
+        conversationId, 
+        userId: user.id,
+        userType: user.userType,
+        merchantId: user.merchantId,
+        storeId: user.storeId,
+        communicationType: 'customer_store'
+      });
     }
   }, [socket, isConnected, user]);
 
   // Event subscription with automatic cleanup
   const on = useCallback((event, handler) => {
-    console.log(`📡 Subscribing to event: ${event}`);
+    console.log(`📡 ${user?.userType} subscribing to customer↔store event: ${event}`);
     eventHandlers.current.set(event, handler);
     
     if (socket) {
       socket.on(event, handler);
     }
 
-    // Return unsubscribe function
     return () => {
-      console.log(`📡 Auto-unsubscribing from event: ${event}`);
+      console.log(`📡 Auto-unsubscribing from customer↔store event: ${event}`);
       eventHandlers.current.delete(event);
       if (socket) {
         socket.off(event, handler);
       }
     };
-  }, [socket]);
+  }, [socket, user]);
 
   // Event unsubscription
   const off = useCallback((event, handler) => {
-    console.log(`📡 Unsubscribing from event: ${event}`);
+    console.log(`📡 ${user?.userType} unsubscribing from customer↔store event: ${event}`);
     eventHandlers.current.delete(event);
     
     if (socket) {
       socket.off(event, handler);
     }
-  }, [socket]);
+  }, [socket, user]);
 
-  // Emit custom event with connection check
+  // Emit custom event with customer↔store context
   const emit = useCallback((event, data) => {
     if (socket && isConnected) {
-      console.log(`📤 Emitting event: ${event}`, data);
-      socket.emit(event, data);
+      const enhancedData = {
+        ...data,
+        userType: user?.userType,
+        userId: user?.id,
+        merchantId: user?.merchantId,
+        storeId: user?.storeId,
+        communicationType: 'customer_store'
+      };
+      console.log(`📤 ${user?.userType} emitting customer↔store event: ${event}`, enhancedData);
+      socket.emit(event, enhancedData);
       return true;
     } else {
-      console.log(`⚠️ Cannot emit ${event} - socket not connected`);
+      console.log(`⚠️ Cannot emit customer↔store ${event} - socket not connected`);
       return false;
     }
-  }, [socket, isConnected]);
+  }, [socket, isConnected, user]);
 
-  // Check if user is online
+  // Check if user is online (enhanced for customer↔store communication)
   const isUserOnline = useCallback((userId) => {
-    return userId ? onlineUsers.has(userId.toString()) : false;
+    if (!userId) return false;
+    
+    // Check direct user ID
+    if (onlineUsers.has(userId.toString())) return true;
+    
+    // For store IDs, check store-prefixed version
+    if (onlineUsers.has(`store_${userId}`)) return true;
+    
+    return false;
   }, [onlineUsers]);
 
   // Get typing users for a conversation (excluding current user)
@@ -489,7 +675,7 @@ const useSocket = (user) => {
     return users ? Array.from(users).filter(userId => userId !== user?.id) : [];
   }, [typingUsers, user]);
 
-  // Get connection status with detailed info
+  // Get connection status with customer↔store info
   const getConnectionStatus = useCallback(() => {
     return {
       isConnected,
@@ -497,31 +683,95 @@ const useSocket = (user) => {
       reconnectAttempts: reconnectAttempts.current,
       socketId: socket?.id,
       hasToken: !!getAuthToken(),
-      userConnected: !!user?.id
+      userConnected: !!user?.id,
+      userType: user?.userType,
+      merchantId: user?.merchantId,
+      storeId: user?.storeId,
+      communicationType: 'customer_store'
     };
   }, [isConnected, connectionError, socket, getAuthToken, user]);
 
   // Force reconnection
   const forceReconnect = useCallback(() => {
     if (socket) {
-      console.log('🔄 Forcing socket reconnection...');
+      console.log(`🔄 Forcing customer↔store socket reconnection for ${user?.userType}...`);
       socket.disconnect();
       setTimeout(() => {
         socket.connect();
       }, 1000);
     }
-  }, [socket]);
+  }, [socket, user]);
 
-  // Update user status (online/offline)
+  // Update user status for customer↔store communication
   const updateUserStatus = useCallback((status) => {
     if (socket && isConnected && user?.id) {
       socket.emit('user_status_update', {
         userId: user.id,
+        userType: user.userType,
+        merchantId: user.merchantId,
+        storeId: user.storeId,
+        storeName: user.storeName,
         status,
+        communicationType: 'customer_store',
         timestamp: new Date().toISOString()
       });
     }
   }, [socket, isConnected, user]);
+
+  // Enhanced debugging for customer↔store communication
+  const debugConnection = useCallback(() => {
+    console.group(`🔍 Customer↔Store Socket Debug for ${user?.userType}`);
+    console.log('User Info:', {
+      id: user?.id,
+      userType: user?.userType,
+      merchantId: user?.merchantId,
+      storeId: user?.storeId,
+      storeName: user?.storeName,
+      name: user?.name
+    });
+    console.log('Connection Status:', getConnectionStatus());
+    console.log('Online Users:', Array.from(onlineUsers));
+    console.log('Active Typing Users:', Object.fromEntries(typingUsers));
+    console.log('Event Handlers:', Array.from(eventHandlers.current.keys()));
+    console.log('Communication Type: Customer↔Store');
+    console.groupEnd();
+  }, [user, getConnectionStatus, onlineUsers, typingUsers]);
+
+  // Helper to emit customer↔store specific events
+  const emitCustomerStoreEvent = useCallback((eventType, data) => {
+    if (!socket || !isConnected) return false;
+
+    const eventData = {
+      ...data,
+      userId: user?.id,
+      userType: user?.userType,
+      merchantId: user?.merchantId,
+      storeId: user?.storeId,
+      storeName: user?.storeName,
+      communicationType: 'customer_store',
+      timestamp: new Date().toISOString()
+    };
+
+    console.log(`📤 Emitting customer↔store event: ${eventType}`, eventData);
+    
+    try {
+      socket.emit(eventType, eventData);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error emitting customer↔store event ${eventType}:`, error);
+      return false;
+    }
+  }, [socket, isConnected, user]);
+
+  // Check if store is online (for customers)
+  const isStoreOnline = useCallback((storeId) => {
+    return onlineUsers.has(`store_${storeId}`) || onlineUsers.has(storeId?.toString());
+  }, [onlineUsers]);
+
+  // Check if customer is online (for merchants)
+  const isCustomerOnline = useCallback((customerId) => {
+    return onlineUsers.has(customerId?.toString());
+  }, [onlineUsers]);
 
   return {
     // Core socket functionality
@@ -529,9 +779,11 @@ const useSocket = (user) => {
     isConnected,
     connectionError,
     
-    // User management
+    // User management for customer↔store communication
     onlineUsers,
     isUserOnline,
+    isStoreOnline,
+    isCustomerOnline,
     updateUserStatus,
     
     // Conversation management
@@ -546,10 +798,12 @@ const useSocket = (user) => {
     on,
     off,
     emit,
+    emitCustomerStoreEvent,
     
     // Utility functions
     getConnectionStatus,
-    forceReconnect
+    forceReconnect,
+    debugConnection
   };
 };
 
