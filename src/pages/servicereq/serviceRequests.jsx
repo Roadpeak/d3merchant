@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../elements/Layout';
+import merchantServiceRequestService from '../services/merchantServiceRequestService';
+import merchantAuthService from '../services/merchantAuthService';
 
-// Custom SVG Icons
+// SVG Icons
 const Search = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -106,124 +108,53 @@ const Trash = ({ className }) => (
   </svg>
 );
 
+const BarChart = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <line x1="12" y1="20" x2="12" y2="10"></line>
+    <line x1="18" y1="20" x2="18" y2="4"></line>
+    <line x1="6" y1="20" x2="6" y2="16"></line>
+  </svg>
+);
+
+const Calendar = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="16" y1="2" x2="16" y2="6"></line>
+    <line x1="8" y1="2" x2="8" y2="6"></line>
+    <line x1="3" y1="10" x2="21" y2="10"></line>
+  </svg>
+);
+
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-8">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
   </div>
 );
 
-// API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
-const getAuthToken = () => localStorage.getItem('authToken');
-
-const merchantAPI = {
-  // Get service requests for merchant
-  getServiceRequests: async (filters = {}) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') {
-        queryParams.append(key, value);
-      }
-    });
-
-    const response = await fetch(`${API_BASE_URL}/merchant/service-requests?${queryParams}`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) throw new Error('Failed to fetch service requests');
-    return response.json();
-  },
-
-  // Create store offer
-  createStoreOffer: async (requestId, offerData) => {
-    const response = await fetch(`${API_BASE_URL}/merchant/service-requests/${requestId}/offers`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(offerData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to create offer');
-    }
-    return response.json();
-  },
-
-  // Get merchant offers
-  getMerchantOffers: async (filters = {}) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') {
-        queryParams.append(key, value);
-      }
-    });
-
-    const response = await fetch(`${API_BASE_URL}/merchant/offers?${queryParams}`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) throw new Error('Failed to fetch offers');
-    return response.json();
-  },
-
-  // Get merchant stores
-  getMerchantStores: async () => {
-    const response = await fetch(`${API_BASE_URL}/merchant/stores`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) throw new Error('Failed to fetch stores');
-    return response.json();
-  },
-
-  // Get dashboard stats
-  getDashboardStats: async () => {
-    const response = await fetch(`${API_BASE_URL}/merchant/dashboard/stats`, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-    return response.json();
-  },
-
-  // Update offer status
-  updateOfferStatus: async (offerId, status, reason) => {
-    const response = await fetch(`${API_BASE_URL}/merchant/offers/${offerId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ status, reason })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to update offer');
-    }
-    return response.json();
+// Error handler with fallback data
+const withFallback = async (apiCall, fallbackData = null) => {
+  try {
+    return await apiCall();
+  } catch (error) {
+    console.warn('API call failed, using fallback:', error.message);
+    return {
+      success: true,
+      data: fallbackData,
+      isFallback: true
+    };
   }
 };
 
-export default function MerchantDashboard() {
+export default function MerchantServiceRequestDashboard() {
+  // State management
   const [activeTab, setActiveTab] = useState('requests');
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showStoreForm, setShowStoreForm] = useState(false);
+
+  // Merchant authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentMerchant, setCurrentMerchant] = useState(null);
 
   // Data states
   const [serviceRequests, setServiceRequests] = useState([]);
@@ -251,13 +182,50 @@ export default function MerchantDashboard() {
   // Pagination state
   const [pagination, setPagination] = useState({});
 
-  // Form state
+  // Form states
   const [offerForm, setOfferForm] = useState({
     storeId: '',
     quotedPrice: '',
     message: '',
-    availability: ''
+    availability: '',
+    estimatedDuration: '',
+    includesSupplies: false
   });
+
+  const [storeForm, setStoreForm] = useState({
+    name: '',
+    description: '',
+    categories: [],
+    location: ''
+  });
+
+  // Check authentication state
+  const checkAuthState = useCallback(() => {
+    try {
+      setIsAuthenticated(merchantServiceRequestService.isAuthenticated());
+      
+      if (merchantServiceRequestService.isAuthenticated()) {
+        const merchant = merchantServiceRequestService.getCurrentMerchant();
+        setCurrentMerchant(merchant);
+        
+        // Debug merchant auth service status
+        if (process.env.NODE_ENV === 'development') {
+          merchantAuthService.debug?.();
+        }
+      } else {
+        setCurrentMerchant(null);
+      }
+    } catch (error) {
+      console.error('Error checking merchant auth state:', error);
+      setIsAuthenticated(false);
+      setCurrentMerchant(null);
+    }
+  }, []);
+
+  // Initialize authentication state
+  useEffect(() => {
+    checkAuthState();
+  }, [checkAuthState]);
 
   // Load initial data
   const loadInitialData = async () => {
@@ -265,10 +233,15 @@ export default function MerchantDashboard() {
       setLoading(true);
       setError(null);
 
+      // Check authentication first
+      if (!isAuthenticated) {
+        throw new Error('Please log in as a merchant to access this dashboard.');
+      }
+
       const [statsRes, storesRes] = await Promise.all([
-        merchantAPI.getDashboardStats().catch(() => ({
-          success: true,
-          data: {
+        withFallback(
+          () => merchantServiceRequestService.getDashboardStats(),
+          {
             totalOffers: 25,
             pendingOffers: 8,
             acceptedOffers: 15,
@@ -277,10 +250,10 @@ export default function MerchantDashboard() {
             activeStores: 2,
             acceptanceRate: 60.0
           }
-        })),
-        merchantAPI.getMerchantStores().catch(() => ({
-          success: true,
-          data: [
+        ),
+        withFallback(
+          () => merchantServiceRequestService.getMerchantStores(),
+          [
             {
               id: 'store-1',
               name: 'Clean Pro Services',
@@ -300,7 +273,7 @@ export default function MerchantDashboard() {
               verified: true
             }
           ]
-        }))
+        )
       ]);
 
       setDashboardStats(statsRes.data || {});
@@ -314,13 +287,15 @@ export default function MerchantDashboard() {
     }
   };
 
-  // Load service requests
+  // Load service requests for merchant
   const loadServiceRequests = async () => {
+    if (!isAuthenticated) return;
+
     try {
       setError(null);
-      const response = await merchantAPI.getServiceRequests(filters).catch(() => ({
-        success: true,
-        data: {
+      const response = await withFallback(
+        () => merchantServiceRequestService.getServiceRequests(filters),
+        {
           requests: [
             {
               id: 'demo-1',
@@ -381,18 +356,11 @@ export default function MerchantDashboard() {
               ]
             }
           ],
-          pagination: { currentPage: 1, totalPages: 1, totalCount: 3, hasNext: false, hasPrev: false },
-          merchantStores: [
-            { id: 'store-1', name: 'Clean Pro Services', categories: ['Home Services'] },
-            { id: 'store-2', name: 'Auto Care Center', categories: ['Auto Services'] }
-          ]
+          pagination: { currentPage: 1, totalPages: 1, totalCount: 3, hasNext: false, hasPrev: false }
         }
-      }));
+      );
 
       setServiceRequests(response.data.requests || []);
-      if (response.data.merchantStores) {
-        setMerchantStores(response.data.merchantStores);
-      }
       setPagination(response.data.pagination || {});
     } catch (err) {
       setError(err.message);
@@ -401,11 +369,13 @@ export default function MerchantDashboard() {
 
   // Load merchant offers
   const loadMerchantOffers = async () => {
+    if (!isAuthenticated) return;
+
     try {
       setError(null);
-      const response = await merchantAPI.getMerchantOffers(filters).catch(() => ({
-        success: true,
-        data: {
+      const response = await withFallback(
+        () => merchantServiceRequestService.getMerchantOffers(filters),
+        {
           offers: [
             {
               id: 'offer-1',
@@ -453,10 +423,9 @@ export default function MerchantDashboard() {
               requestLocation: 'CBD, Nairobi'
             }
           ],
-          pagination: { currentPage: 1, totalPages: 1, totalCount: 3, hasNext: false, hasPrev: false },
-          stats: { pending: 8, accepted: 15, rejected: 2 }
+          pagination: { currentPage: 1, totalPages: 1, totalCount: 3, hasNext: false, hasPrev: false }
         }
-      }));
+      );
 
       setMerchantOffers(response.data.offers || []);
       setPagination(response.data.pagination || {});
@@ -467,34 +436,53 @@ export default function MerchantDashboard() {
 
   // Load initial data
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (isAuthenticated) {
+      loadInitialData();
+    }
+  }, [isAuthenticated]);
 
   // Load data when filters change
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     if (activeTab === 'requests') {
       loadServiceRequests();
     } else if (activeTab === 'offers') {
       loadMerchantOffers();
     }
-  }, [filters, activeTab]);
+  }, [filters, activeTab, isAuthenticated]);
 
+  // Event handlers
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
   const handleOfferFormSubmit = async (e) => {
     e.preventDefault();
+    
     try {
       setSubmitting(true);
-      await merchantAPI.createStoreOffer(selectedRequest.id, offerForm);
+      
+      // Validate form data
+      const validationErrors = merchantServiceRequestService.validateOfferData(offerForm);
+      if (validationErrors.length > 0) {
+        alert(`Please fix the following errors:\n${validationErrors.join('\n')}`);
+        return;
+      }
+
+      await merchantServiceRequestService.createStoreOffer(selectedRequest.id, offerForm);
+      
       setShowOfferForm(false);
-      setOfferForm({ storeId: '', quotedPrice: '', message: '', availability: '' });
+      setOfferForm({
+        storeId: '', quotedPrice: '', message: '', availability: '',
+        estimatedDuration: '', includesSupplies: false
+      });
       setSelectedRequest(null);
+      
       await loadServiceRequests();
       alert('Offer submitted successfully!');
     } catch (err) {
-      alert(err.message);
+      alert(`Error: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -505,42 +493,73 @@ export default function MerchantDashboard() {
 
     try {
       setSubmitting(true);
-      await merchantAPI.updateOfferStatus(offerId, 'withdrawn', 'Merchant withdrew offer');
+      await merchantServiceRequestService.withdrawOffer(offerId, 'Merchant withdrew offer');
       await loadMerchantOffers();
       alert('Offer withdrawn successfully!');
     } catch (err) {
-      alert(err.message);
+      alert(`Error: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getTimelineLabel = (timeline) => {
-    const timelineMap = {
-      'urgent': 'ASAP/Urgent', 'thisweek': 'This Week', 'nextweek': 'Next Week',
-      'thismonth': 'This Month', 'flexible': 'Flexible'
-    };
-    return timelineMap[timeline] || timeline;
+  const handleStoreFormSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setSubmitting(true);
+      
+      // Validate store data
+      const validationErrors = merchantServiceRequestService.validateStoreData(storeForm);
+      if (validationErrors.length > 0) {
+        alert(`Please fix the following errors:\n${validationErrors.join('\n')}`);
+        return;
+      }
+
+      await merchantServiceRequestService.createStore(storeForm);
+      
+      setShowStoreForm(false);
+      setStoreForm({ name: '', description: '', categories: [], location: '' });
+      
+      await loadInitialData();
+      alert('Store created successfully!');
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      'pending': { color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-      'accepted': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      'rejected': { color: 'bg-red-100 text-red-800', icon: XCircle },
-      'withdrawn': { color: 'bg-gray-100 text-gray-800', icon: XCircle }
-    };
+  const handleCategoryChange = (category, checked) => {
+    setStoreForm(prev => ({
+      ...prev,
+      categories: checked
+        ? [...prev.categories, category]
+        : prev.categories.filter(cat => cat !== category)
+    }));
+  };
 
-    const config = statusMap[status] || statusMap['pending'];
-    const Icon = config.icon;
-
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
+      <Layout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+            <h2 className="text-2xl font-bold mb-4">Merchant Access Required</h2>
+            <p className="text-gray-600 mb-6">
+              Please log in as a merchant to access the service request dashboard.
+            </p>
+            <button
+              onClick={() => window.location.href = '/merchant/login'}
+              className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 font-medium"
+            >
+              Login as Merchant
+            </button>
+          </div>
+        </div>
+      </Layout>
     );
-  };
+  }
 
   if (loading) {
     return (
@@ -577,13 +596,23 @@ export default function MerchantDashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Merchant Dashboard</h1>
                 <p className="text-gray-600">Manage your store offers and service requests</p>
+                
+                {/* Merchant info for development */}
+                {process.env.NODE_ENV === 'development' && currentMerchant && (
+                  <div className="mt-2 text-sm text-gray-500">
+                    Merchant: {currentMerchant.first_name || currentMerchant.firstName} {currentMerchant.last_name || currentMerchant.lastName} ({currentMerchant.email_address || currentMerchant.email})
+                  </div>
+                )}
               </div>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Store className="w-4 h-4" />
                   <span>{merchantStores.length} Active Store{merchantStores.length !== 1 ? 's' : ''}</span>
                 </div>
-                <button className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center space-x-2">
+                <button 
+                  onClick={() => setShowStoreForm(true)}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center space-x-2"
+                >
                   <Plus className="w-4 h-4" />
                   <span>New Store</span>
                 </button>
@@ -690,6 +719,12 @@ export default function MerchantDashboard() {
                 className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'offers' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
               >
                 My Offers ({dashboardStats.totalOffers || 0})
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'analytics' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
+              >
+                Analytics
               </button>
             </div>
           </div>
@@ -831,7 +866,7 @@ export default function MerchantDashboard() {
                             </div>
                             <div className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{getTimelineLabel(request.timeline)}</span>
+                              <span>{merchantServiceRequestService.getTimelineLabel(request.timeline)}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <User className="w-4 h-4" />
@@ -968,7 +1003,11 @@ export default function MerchantDashboard() {
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <h3 className="text-lg font-semibold">{offer.requestTitle}</h3>
-                            {getStatusBadge(offer.status)}
+                            {merchantServiceRequestService.getStatusBadgeConfig && (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${merchantServiceRequestService.getStatusBadgeConfig(offer.status).color}`}>
+                                {merchantServiceRequestService.getStatusBadgeConfig(offer.status).label}
+                              </span>
+                            )}
                             <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
                               {offer.requestCategory}
                             </span>
@@ -1018,7 +1057,7 @@ export default function MerchantDashboard() {
                               <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
                                 View Request
                               </button>
-                              {offer.status === 'pending' && (
+                              {offer.status === 'pending' && merchantServiceRequestService.canWithdrawOffer && merchantServiceRequestService.canWithdrawOffer(offer) && (
                                 <button
                                   onClick={() => handleWithdrawOffer(offer.id)}
                                   className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 font-medium flex items-center space-x-2"
@@ -1041,36 +1080,56 @@ export default function MerchantDashboard() {
                   </div>
                 ))
               )}
+            </div>
+          )}
 
-              {/* Pagination for Offers */}
-              {pagination.totalPages > 1 && (
-                <div className="flex justify-center items-center space-x-4 mt-8">
-                  <button
-                    onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
-                    disabled={!pagination.hasPrev}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-
-                  <span className="text-sm text-gray-600">
-                    Page {pagination.currentPage} of {pagination.totalPages}
-                  </span>
-
-                  <button
-                    onClick={() => handleFilterChange('page', Math.min(pagination.totalPages, filters.page + 1))}
-                    disabled={!pagination.hasNext}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
+          {/* Analytics Tab */}
+          {activeTab === 'analytics' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-600 mb-2">{dashboardStats.totalOffers || 0}</div>
+                    <div className="text-gray-600">Total Offers Sent</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600 mb-2">{dashboardStats.acceptanceRate || 0}%</div>
+                    <div className="text-gray-600">Acceptance Rate</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-purple-600 mb-2">${dashboardStats.totalEarnings?.toLocaleString() || 0}</div>
+                    <div className="text-gray-600">Total Earnings</div>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Store Performance</h3>
+                <div className="space-y-4">
+                  {merchantStores.map((store) => (
+                    <div key={store.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium text-gray-900">{store.name}</h4>
+                        <p className="text-sm text-gray-600">{store.categories.join(', ')}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center space-x-2">
+                          <Star className="w-4 h-4 text-yellow-400" />
+                          <span className="font-medium">{store.rating}</span>
+                          <span className="text-gray-500">({store.reviewCount} reviews)</span>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ${store.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {store.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
-
-        <Footer />
 
         {/* Offer Form Modal */}
         {showOfferForm && selectedRequest && (
@@ -1078,7 +1137,7 @@ export default function MerchantDashboard() {
             <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Send Offer</h2>
+                  <h2 className="text-2xl font-bold">Send Store Offer</h2>
                   <button onClick={() => setShowOfferForm(false)} className="text-gray-500 hover:text-gray-700 text-2xl">
                     ×
                   </button>
@@ -1123,7 +1182,7 @@ export default function MerchantDashboard() {
                     rows="4"
                     value={offerForm.message}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, message: e.target.value }))}
-                    placeholder="Describe your offer, experience, and why you're the best choice..."
+                    placeholder="Describe your offer, experience, and why your store is the best choice..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                     required
                   />
@@ -1141,12 +1200,36 @@ export default function MerchantDashboard() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Duration</label>
+                  <input
+                    type="text"
+                    value={offerForm.estimatedDuration}
+                    onChange={(e) => setOfferForm(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                    placeholder="How long will the service take? (e.g., 2-3 hours, Half day)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="includesSupplies"
+                    checked={offerForm.includesSupplies}
+                    onChange={(e) => setOfferForm(prev => ({ ...prev, includesSupplies: e.target.checked }))}
+                    className="mr-2"
+                  />
+                  <label htmlFor="includesSupplies" className="text-sm text-gray-700">
+                    Price includes all supplies and materials
+                  </label>
+                </div>
+
                 {/* Request Details Summary */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-2">Request Summary</h4>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p><span className="font-medium">Category:</span> {selectedRequest.category}</p>
-                    <p><span className="font-medium">Timeline:</span> {getTimelineLabel(selectedRequest.timeline)}</p>
+                    <p><span className="font-medium">Timeline:</span> {merchantServiceRequestService.getTimelineLabel(selectedRequest.timeline)}</p>
                     <p><span className="font-medium">Location:</span> {selectedRequest.location}</p>
                     {selectedRequest.requirements && selectedRequest.requirements.length > 0 && (
                       <p><span className="font-medium">Requirements:</span> {selectedRequest.requirements.join(', ')}</p>
@@ -1169,6 +1252,96 @@ export default function MerchantDashboard() {
                     disabled={submitting}
                   >
                     {submitting ? 'Sending Offer...' : 'Send Offer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Store Form Modal */}
+        {showStoreForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Create New Store</h2>
+                  <button onClick={() => setShowStoreForm(false)} className="text-gray-500 hover:text-gray-700 text-2xl">
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleStoreFormSubmit} className="p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Store Name *</label>
+                  <input
+                    type="text"
+                    value={storeForm.name}
+                    onChange={(e) => setStoreForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter your store name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                  <textarea
+                    rows="3"
+                    value={storeForm.description}
+                    onChange={(e) => setStoreForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe your store and services..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Categories *</label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {['Home Services', 'Auto Services', 'Beauty & Wellness', 'Tech Support', 'Event Services', 'Tutoring', 'Fitness', 'Photography'].map((category) => (
+                      <label key={category} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={storeForm.categories.includes(category)}
+                          onChange={(e) => handleCategoryChange(category, e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">{category}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Select all categories your store can handle</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
+                  <input
+                    type="text"
+                    value={storeForm.location}
+                    onChange={(e) => setStoreForm(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Enter your store location"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-4 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowStoreForm(false)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Creating Store...' : 'Create Store'}
                   </button>
                 </div>
               </form>
