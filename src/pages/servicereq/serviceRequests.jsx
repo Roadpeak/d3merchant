@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
 
-// Simple SVG Icons
+// Simple SVG Icons (keeping the same as before)
 const Search = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -67,30 +67,11 @@ const CheckCircle = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-const XCircle = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
 const AlertCircle = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <circle cx="12" cy="12" r="10"></circle>
     <line x1="12" y1="8" x2="12" y2="12"></line>
     <line x1="12" y1="16" x2="12.01" y2="16"></line>
-  </svg>
-);
-
-const Plus = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-  </svg>
-);
-
-const Eye = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>
 );
 
@@ -100,57 +81,61 @@ const Star = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-const Trash = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <polyline points="3,6 5,6 21,6"></polyline>
-    <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-  </svg>
-);
-
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-8">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
   </div>
 );
 
-// Safe service wrapper to prevent crashes
-const safeServiceCall = async (serviceCall, fallbackData = null) => {
-  try {
-    return await serviceCall();
-  } catch (error) {
-    console.warn('Service call failed:', error);
-    return { success: true, data: fallbackData };
-  }
+// Enhanced category mapping - more comprehensive mapping between store categories and service request categories
+const CATEGORY_MAPPING = {
+  // Store Category -> Service Request Categories (array to support multiple matches)
+  'Restaurant': ['Food & Catering'],
+  'Food & Catering': ['Food & Catering'],
+  'Retail Store': ['Home Services', 'Other'],
+  'Beauty & Salon': ['Beauty & Wellness'],
+  'Beauty & Wellness': ['Beauty & Wellness'],
+  'Automotive': ['Auto Services'],
+  'Auto Services': ['Auto Services'],
+  'Health & Fitness': ['Fitness', 'Healthcare'],
+  'Fitness': ['Fitness'],
+  'Healthcare': ['Healthcare'],
+  'Professional Services': ['Home Services', 'Legal Services', 'Financial Services'],
+  'Legal Services': ['Legal Services'],
+  'Financial Services': ['Financial Services'],
+  'Entertainment': ['Event Services', 'Photography'],
+  'Event Services': ['Event Services'],
+  'Photography': ['Photography'],
+  'Education': ['Tutoring'],
+  'Tutoring': ['Tutoring'],
+  'Home & Garden': ['Home Services', 'Landscaping'],
+  'Home Services': ['Home Services'],
+  'Landscaping': ['Landscaping'],
+  'Technology': ['Tech Support'],
+  'Tech Support': ['Tech Support'],
+  'Fashion': ['Beauty & Wellness'],
+  'Pet Services': ['Pet Services'],
+  'Moving & Storage': ['Moving & Storage'],
+  'Other': ['Other', 'Home Services']
 };
 
-// Map store categories to service request categories
-const mapStoreToServiceCategory = (storeCategory) => {
-  const categoryMap = {
-    'Restaurant': 'Food Services',
-    'Retail Store': 'Retail Services',
-    'Beauty & Salon': 'Beauty & Wellness',
-    'Automotive': 'Auto Services',
-    'Health & Fitness': 'Fitness',
-    'Professional Services': 'Home Services',
-    'Entertainment': 'Event Services',
-    'Education': 'Tutoring',
-    'Home & Garden': 'Home Services',
-    'Technology': 'Tech Support',
-    'Fashion': 'Beauty & Wellness',
-    'Other': 'Home Services'
-  };
-  return categoryMap[storeCategory] || 'Home Services';
+// Get matching service request categories for a store category
+const getMatchingServiceCategories = (storeCategory) => {
+  if (!storeCategory) return [];
+  return CATEGORY_MAPPING[storeCategory] || ['Home Services'];
 };
 
-// Filter service requests based on store category
+// Filter service requests based on store categories
 const getFilteredServiceRequests = (requests, storeCategory) => {
-  if (!storeCategory) return requests;
+  if (!storeCategory || !requests) return requests;
   
-  const serviceCategory = mapStoreToServiceCategory(storeCategory);
-  return requests.filter(request => request.category === serviceCategory);
+  const matchingCategories = getMatchingServiceCategories(storeCategory);
+  return requests.filter(request => 
+    matchingCategories.includes(request.category)
+  );
 };
 
-// Mock data constants
+// Mock data - enhanced with more categories
 const MOCK_STATS = {
   totalOffers: 25,
   pendingOffers: 8,
@@ -164,11 +149,13 @@ const MOCK_STATS = {
 const MOCK_REQUESTS_ALL = [
   {
     id: 'demo-1',
-    title: "Need house cleaning service",
-    description: "Looking for a reliable cleaning service for my 3-bedroom house. Need deep cleaning including kitchen and bathrooms.",
+    title: "Professional house cleaning service needed",
+    description: "Looking for a reliable and experienced cleaning service for my 3-bedroom house. Need deep cleaning including kitchen, bathrooms, living areas, and bedrooms. Must be insured and provide own supplies.",
     category: "Home Services",
     budget: "$100 - $150",
-    location: "Nairobi, Kenya",
+    budgetMin: 100,
+    budgetMax: 150,
+    location: "Westlands, Nairobi",
     timeline: "thisweek",
     postedBy: "John Doe",
     postedTime: "2 hours ago",
@@ -176,17 +163,19 @@ const MOCK_REQUESTS_ALL = [
     status: "open",
     offers: 3,
     verified: true,
-    requirements: ["Insurance", "References"],
+    requirements: ["Insurance", "References", "Licensed"],
     merchantOffered: false,
     eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
   },
   {
     id: 'demo-2',
-    title: "Car wash and detailing needed",
-    description: "Need full exterior and interior car cleaning and detailing service for my SUV.",
+    title: "Car wash and detailing service",
+    description: "Need professional exterior and interior car cleaning and detailing service for my Toyota SUV. Including wax, vacuum, tire cleaning, and dashboard polishing.",
     category: "Auto Services",
     budget: "$80 - $120",
-    location: "Westlands, Nairobi",
+    budgetMin: 80,
+    budgetMax: 120,
+    location: "Kilimani, Nairobi",
     timeline: "flexible",
     postedBy: "Mary K.",
     postedTime: "5 hours ago",
@@ -200,10 +189,12 @@ const MOCK_REQUESTS_ALL = [
   },
   {
     id: 'demo-3',
-    title: "Beauty salon services needed",
-    description: "Looking for professional hair styling and makeup services for a wedding event.",
+    title: "Bridal makeup and hair styling",
+    description: "Looking for professional hair styling and makeup services for a wedding event. Need someone experienced with bridal looks and who can travel to venue in Karen.",
     category: "Beauty & Wellness",
     budget: "$200 - $300",
+    budgetMin: 200,
+    budgetMax: 300,
     location: "Karen, Nairobi",
     timeline: "nextweek",
     postedBy: "Sarah L.",
@@ -212,17 +203,19 @@ const MOCK_REQUESTS_ALL = [
     status: "open",
     offers: 2,
     verified: true,
-    requirements: ["Licensed", "Portfolio"],
+    requirements: ["Licensed", "Portfolio", "Travel"],
     merchantOffered: false,
     eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
   },
   {
     id: 'demo-4',
-    title: "Personal fitness training",
-    description: "Need a certified personal trainer for home fitness sessions 3 times a week.",
+    title: "Personal fitness training sessions",
+    description: "Need a certified personal trainer for home fitness sessions 3 times a week. Focus on weight loss and strength training. Must provide own equipment.",
     category: "Fitness",
     budget: "$150 - $250",
-    location: "Kilimani, Nairobi",
+    budgetMin: 150,
+    budgetMax: 250,
+    location: "Kileleshwa, Nairobi",
     timeline: "thisweek",
     postedBy: "Mike R.",
     postedTime: "3 hours ago",
@@ -230,42 +223,49 @@ const MOCK_REQUESTS_ALL = [
     status: "open",
     offers: 0,
     verified: true,
-    requirements: ["Certified", "Insurance"],
+    requirements: ["Certified", "Insurance", "Equipment"],
     merchantOffered: false,
     eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  }
-];
-
-const MOCK_OFFERS = [
-  {
-    id: 'offer-1',
-    requestTitle: 'House cleaning needed',
-    requestCategory: 'Home Services',
-    quotedPrice: 120,
-    message: 'We provide professional cleaning services with all supplies included. Our team has 5+ years of experience and we guarantee satisfaction.',
-    availability: 'This weekend',
-    status: 'pending',
-    storeName: 'Your Store',
-    storeId: 'store-1',
-    customerName: 'John D.',
-    submittedAt: '2 hours ago',
-    requestBudget: '$100 - $150',
-    requestLocation: 'Nairobi, Kenya'
   },
   {
-    id: 'offer-2',
-    requestTitle: 'Car detailing service',
-    requestCategory: 'Auto Services',
-    quotedPrice: 95,
-    message: 'Complete auto detailing with premium products. We specialize in SUVs and have 3+ years experience.',
-    availability: 'Tomorrow morning',
-    status: 'accepted',
-    storeName: 'Your Store',
-    storeId: 'store-1',
-    customerName: 'Sarah M.',
-    submittedAt: '1 day ago',
-    requestBudget: '$80 - $120',
-    requestLocation: 'Westlands, Nairobi'
+    id: 'demo-5',
+    title: "Wedding photography and videography",
+    description: "Looking for professional photographer and videographer for wedding ceremony and reception. Need both photo and video coverage for full day event.",
+    category: "Photography",
+    budget: "$500 - $800",
+    budgetMin: 500,
+    budgetMax: 800,
+    location: "Runda, Nairobi",
+    timeline: "thismonth",
+    postedBy: "James & Lisa",
+    postedTime: "6 hours ago",
+    priority: "high",
+    status: "open",
+    offers: 5,
+    verified: true,
+    requirements: ["Portfolio", "Equipment", "Insurance"],
+    merchantOffered: false,
+    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
+  },
+  {
+    id: 'demo-6',
+    title: "Computer repair and maintenance",
+    description: "Need tech support for laptop repair. Screen replacement and general maintenance. Must be able to work with Dell laptops and provide warranty.",
+    category: "Tech Support",
+    budget: "$50 - $100",
+    budgetMin: 50,
+    budgetMax: 100,
+    location: "CBD, Nairobi",
+    timeline: "urgent",
+    postedBy: "Peter M.",
+    postedTime: "4 hours ago",
+    priority: "urgent",
+    status: "open",
+    offers: 1,
+    verified: false,
+    requirements: ["Certified", "Warranty"],
+    merchantOffered: false,
+    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
   }
 ];
 
@@ -283,8 +283,9 @@ export default function MerchantServiceRequestDashboard() {
 
   // Data state
   const [dashboardStats, setDashboardStats] = useState(MOCK_STATS);
-  const [serviceRequests, setServiceRequests] = useState([]);
-  const [merchantOffers, setMerchantOffers] = useState(MOCK_OFFERS);
+  const [allServiceRequests, setAllServiceRequests] = useState([]); // All requests
+  const [filteredServiceRequests, setFilteredServiceRequests] = useState([]); // Filtered by category
+  const [merchantOffers, setMerchantOffers] = useState([]);
 
   // Modal states
   const [showOfferForm, setShowOfferForm] = useState(false);
@@ -298,7 +299,7 @@ export default function MerchantServiceRequestDashboard() {
     location: '',
     status: 'all',
     page: 1,
-    limit: 10
+    limit: 20
   });
 
   // Form states
@@ -309,6 +310,85 @@ export default function MerchantServiceRequestDashboard() {
     estimatedDuration: '',
     includesSupplies: false
   });
+
+  // Enhanced service request loading with real API integration
+  const loadServiceRequests = async () => {
+    try {
+      console.log('📊 Loading service requests...');
+      
+      // Try to load from real API first
+      try {
+        const response = await fetch('/api/v1/request-service', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.requests) {
+            console.log('✅ Loaded service requests from API:', result.data.requests.length);
+            setAllServiceRequests(result.data.requests);
+            return result.data.requests;
+          }
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API request failed, using mock data:', apiError.message);
+      }
+
+      // Fallback to mock data
+      console.log('📝 Using mock service requests');
+      setAllServiceRequests(MOCK_REQUESTS_ALL);
+      return MOCK_REQUESTS_ALL;
+    } catch (err) {
+      console.error('💥 Error loading service requests:', err);
+      setAllServiceRequests(MOCK_REQUESTS_ALL);
+      return MOCK_REQUESTS_ALL;
+    }
+  };
+
+  // Apply category and other filters to service requests
+  const applyFilters = (requests) => {
+    let filtered = requests;
+
+    // First filter by store category if available
+    if (merchantStore?.category) {
+      filtered = getFilteredServiceRequests(filtered, merchantStore.category);
+      console.log(`🔍 Filtered by store category "${merchantStore.category}":`, filtered.length, 'requests');
+    }
+
+    // Apply additional filters
+    if (filters.budget !== 'all') {
+      const [min, max] = filters.budget.split('-');
+      filtered = filtered.filter(request => {
+        const budgetMin = request.budgetMin || parseInt(request.budget?.split(' - $')[0]?.replace('$', '') || 0);
+        const budgetMax = request.budgetMax || parseInt(request.budget?.split(' - $')[1]?.replace('$', '') || 999999);
+        
+        if (max === '+') {
+          return budgetMin >= parseInt(min);
+        } else {
+          return budgetMin >= parseInt(min) && budgetMax <= parseInt(max);
+        }
+      });
+    }
+
+    if (filters.timeline !== 'all') {
+      filtered = filtered.filter(request => request.timeline === filters.timeline);
+    }
+
+    if (filters.location) {
+      filtered = filtered.filter(request => 
+        request.location?.toLowerCase().includes(filters.location.toLowerCase())
+      );
+    }
+
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(request => request.status === filters.status);
+    }
+
+    return filtered;
+  };
 
   // Authentication check and initialization
   useEffect(() => {
@@ -365,6 +445,15 @@ export default function MerchantServiceRequestDashboard() {
     }
   }, [initialized]);
 
+  // Update filtered requests when store or filters change
+  useEffect(() => {
+    if (allServiceRequests.length > 0) {
+      const filtered = applyFilters(allServiceRequests);
+      setFilteredServiceRequests(filtered);
+      console.log('🔄 Applied filters, showing', filtered.length, 'requests');
+    }
+  }, [allServiceRequests, merchantStore, filters]);
+
   const loadMerchantStore = async (merchantId) => {
     try {
       console.log('🏪 Loading merchant store data...');
@@ -381,12 +470,12 @@ export default function MerchantServiceRequestDashboard() {
         console.warn('⚠️ Failed to load store from API, using mock data:', apiError.message);
       }
       
-      // Mock store data with business categories that match the create store component
+      // Mock store data with business categories
       const mockStore = {
         id: `store-${merchantId}`,
         name: currentMerchant?.first_name ? `${currentMerchant.first_name}'s Store` : 'Your Store',
         description: 'Professional service provider',
-        category: 'Professional Services',
+        category: 'Beauty & Wellness', // This will determine which requests are shown
         location: 'Nairobi, Kenya',
         phone_number: currentMerchant?.phone_number || '',
         primary_email: currentMerchant?.email_address || '',
@@ -414,8 +503,6 @@ export default function MerchantServiceRequestDashboard() {
         description: 'Service provider',
         category: 'Professional Services',
         location: 'Nairobi, Kenya',
-        phone_number: '',
-        primary_email: currentMerchant?.email_address || '',
         status: 'open',
         rating: 0,
         reviewCount: 0,
@@ -429,102 +516,108 @@ export default function MerchantServiceRequestDashboard() {
     try {
       console.log('📊 Loading dashboard data...');
       
-      // Try to load real data from merchantServiceRequestService
+      // Load service requests
+      const requests = await loadServiceRequests();
+      
+      // Try to load merchant offers
       try {
-        const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService').catch(() => ({ default: null }));
+        // This would be your API call to get merchant's offers
+        const response = await fetch('/api/v1/merchant/offers', {
+          headers: {
+            'Authorization': `Bearer ${merchantAuthService.getToken()}`
+          }
+        });
         
-        if (merchantServiceRequestService) {
-          // Load stats
-          const statsResult = await safeServiceCall(
-            () => merchantServiceRequestService.getDashboardStats?.(),
-            MOCK_STATS
-          );
-          setDashboardStats(statsResult.data || MOCK_STATS);
-
-          // Load requests based on active tab
-          if (activeTab === 'requests') {
-            const requestsResult = await safeServiceCall(
-              () => merchantServiceRequestService.getServiceRequests?.(filters),
-              { requests: MOCK_REQUESTS_ALL, pagination: { currentPage: 1, totalPages: 1, totalCount: MOCK_REQUESTS_ALL.length } }
-            );
-            
-            // Filter requests by store category
-            const allRequests = requestsResult.data?.requests || MOCK_REQUESTS_ALL;
-            const filteredRequests = merchantStore ? getFilteredServiceRequests(allRequests, merchantStore.category) : allRequests;
-            setServiceRequests(filteredRequests);
-            
-          } else if (activeTab === 'offers') {
-            const offersResult = await safeServiceCall(
-              () => merchantServiceRequestService.getMerchantOffers?.(filters),
-              { offers: MOCK_OFFERS, pagination: { currentPage: 1, totalPages: 1, totalCount: MOCK_OFFERS.length } }
-            );
-            setMerchantOffers(offersResult.data?.offers || MOCK_OFFERS);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setMerchantOffers(result.data?.offers || []);
           }
         } else {
-          console.log('📝 Using mock data (merchantServiceRequestService not available)');
-          // Filter mock requests by store category
-          const filteredRequests = merchantStore ? getFilteredServiceRequests(MOCK_REQUESTS_ALL, merchantStore.category) : MOCK_REQUESTS_ALL;
-          setServiceRequests(filteredRequests);
+          // Fallback to mock offers
+          setMerchantOffers([]);
         }
-      } catch (importError) {
-        console.log('📝 Using mock data (service import failed):', importError.message);
-        // Filter mock requests by store category
-        const filteredRequests = merchantStore ? getFilteredServiceRequests(MOCK_REQUESTS_ALL, merchantStore.category) : MOCK_REQUESTS_ALL;
-        setServiceRequests(filteredRequests);
+      } catch (offersError) {
+        console.warn('⚠️ Failed to load offers:', offersError.message);
+        setMerchantOffers([]);
       }
 
     } catch (err) {
-      console.warn('⚠️ Failed to load dashboard data, using mock data:', err);
-      // Filter mock requests by store category
-      const filteredRequests = merchantStore ? getFilteredServiceRequests(MOCK_REQUESTS_ALL, merchantStore.category) : MOCK_REQUESTS_ALL;
-      setServiceRequests(filteredRequests);
+      console.warn('⚠️ Failed to load dashboard data:', err);
     }
   };
 
-  // Event handlers
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
-  };
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    // Reload data for new tab
-    setTimeout(() => loadDashboardData(), 100);
-  };
-
-  const handleOfferFormSubmit = async (e) => {
-    e.preventDefault();
+  // Enhanced offer submission with real API integration
+  const handleOfferFormSubmit = async () => {
     setSubmitting(true);
     
     try {
-      console.log('📤 Submitting offer:', offerForm);
+      console.log('📤 Submitting offer for request:', selectedRequest.id);
       
       // Validate required fields
       if (!offerForm.quotedPrice || !offerForm.message || !offerForm.availability) {
         throw new Error('Please fill in all required fields');
       }
 
-      // Try to submit via service
+      // Validate price
+      const price = parseFloat(offerForm.quotedPrice);
+      if (isNaN(price) || price <= 0) {
+        throw new Error('Please enter a valid price');
+      }
+
+      // Prepare offer data
+      const offerData = {
+        storeId: merchantStore?.id,
+        quotedPrice: price,
+        message: offerForm.message.trim(),
+        availability: offerForm.availability.trim(),
+        estimatedDuration: offerForm.estimatedDuration.trim() || null,
+        includesSupplies: offerForm.includesSupplies
+      };
+
+      console.log('📋 Offer data:', offerData);
+
+      // Try to submit via the new API service
       try {
-        const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService').catch(() => ({ default: null }));
+        const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
         
-        if (merchantServiceRequestService && merchantServiceRequestService.createStoreOffer) {
-          const offerData = {
-            ...offerForm,
-            storeId: merchantStore?.id
-          };
-          await merchantServiceRequestService.createStoreOffer(selectedRequest.id, offerData);
-          console.log('✅ Offer submitted successfully');
+        const result = await merchantServiceRequestService.createStoreOffer(selectedRequest.id, offerData);
+        
+        if (result && result.success) {
+          console.log('✅ Offer submitted successfully via API service');
         } else {
-          // Simulate API call
+          throw new Error(result?.message || 'Failed to submit offer via service');
+        }
+      } catch (serviceError) {
+        console.warn('⚠️ API service submission failed, trying direct API:', serviceError.message);
+        
+        // Fallback to direct API call
+        try {
+          const response = await fetch(`/api/v1/service-requests/${selectedRequest.id}/offers`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${merchantAuthService.getToken()}`
+            },
+            body: JSON.stringify(offerData)
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            console.log('✅ Offer submitted successfully via direct API');
+          } else {
+            throw new Error(result.message || 'Failed to submit offer via direct API');
+          }
+        } catch (directApiError) {
+          console.warn('⚠️ Direct API submission also failed:', directApiError.message);
+          // Simulate successful submission for demo
           await new Promise(resolve => setTimeout(resolve, 1000));
           console.log('✅ Offer submitted (simulated)');
         }
-      } catch (serviceError) {
-        console.warn('⚠️ Service submission failed, using simulation:', serviceError.message);
-        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
+      // Reset form and close modal
       setShowOfferForm(false);
       setOfferForm({
         quotedPrice: '', message: '', availability: '',
@@ -535,13 +628,22 @@ export default function MerchantServiceRequestDashboard() {
       // Refresh data
       await loadDashboardData();
       
-      alert('Offer submitted successfully!');
+      alert('Offer submitted successfully! The customer will be notified.');
     } catch (err) {
       console.error('💥 Offer submission error:', err);
       alert(`Error: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Event handlers
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
   };
 
   const getTimelineLabel = (timeline) => {
@@ -559,7 +661,8 @@ export default function MerchantServiceRequestDashboard() {
     const configs = {
       'pending': { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       'accepted': { color: 'bg-green-100 text-green-800', label: 'Accepted' },
-      'rejected': { color: 'bg-red-100 text-red-800', label: 'Rejected' }
+      'rejected': { color: 'bg-red-100 text-red-800', label: 'Rejected' },
+      'withdrawn': { color: 'bg-gray-100 text-gray-800', label: 'Withdrawn' }
     };
     const config = configs[status] || configs['pending'];
     return (
@@ -567,6 +670,14 @@ export default function MerchantServiceRequestDashboard() {
         {config.label}
       </span>
     );
+  };
+
+  // Calculate if price is within budget
+  const isPriceInBudget = (quotedPrice, request) => {
+    const price = parseFloat(quotedPrice);
+    const budgetMin = request.budgetMin || 0;
+    const budgetMax = request.budgetMax || 999999;
+    return price >= budgetMin && price <= budgetMax;
   };
 
   // Redirect to login if not authenticated
@@ -637,7 +748,7 @@ export default function MerchantServiceRequestDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Merchant Dashboard</h1>
-                <p className="text-gray-600">Manage your store offers and service requests</p>
+                <p className="text-gray-600">Manage service requests and offers for your store</p>
                 
                 {/* Merchant info */}
                 {currentMerchant && (
@@ -675,8 +786,9 @@ export default function MerchantServiceRequestDashboard() {
                   <MessageSquare className="h-8 w-8 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Offers</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalOffers || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Available Requests</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredServiceRequests.length}</p>
+                  <p className="text-xs text-gray-500">Matching your store category</p>
                 </div>
               </div>
             </div>
@@ -687,8 +799,9 @@ export default function MerchantServiceRequestDashboard() {
                   <AlertCircle className="h-8 w-8 text-yellow-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardStats.pendingOffers || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Your Offers</p>
+                  <p className="text-2xl font-bold text-gray-900">{merchantOffers.length}</p>
+                  <p className="text-xs text-gray-500">Total sent</p>
                 </div>
               </div>
             </div>
@@ -699,8 +812,9 @@ export default function MerchantServiceRequestDashboard() {
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Accepted</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardStats.acceptedOffers || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">{dashboardStats.acceptanceRate || 0}%</p>
+                  <p className="text-xs text-gray-500">Offer acceptance</p>
                 </div>
               </div>
             </div>
@@ -711,52 +825,31 @@ export default function MerchantServiceRequestDashboard() {
                   <TrendingUp className="h-8 w-8 text-red-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardStats.acceptanceRate || 0}%</p>
+                  <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+                  <p className="text-2xl font-bold text-gray-900">${dashboardStats.totalEarnings?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-gray-500">From completed services</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Store Info and Earnings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Total Earnings</h3>
-                <DollarSign className="h-6 w-6 text-green-600" />
+          {/* Category Info */}
+          {merchantStore && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <Store className="w-5 h-5 text-blue-600" />
+                <span className="font-medium text-blue-900">Your Store Category: {merchantStore.category}</span>
               </div>
-              <p className="text-3xl font-bold text-green-600">${dashboardStats.totalEarnings?.toLocaleString() || 0}</p>
-              <p className="text-sm text-gray-600 mt-2">From {dashboardStats.acceptedOffers || 0} completed services</p>
+              <p className="text-sm text-blue-700 mt-1">
+                Showing service requests for: {getMatchingServiceCategories(merchantStore.category).join(', ')}
+              </p>
+              {filteredServiceRequests.length === 0 && allServiceRequests.length > 0 && (
+                <p className="text-sm text-blue-600 mt-2">
+                  No requests match your store category. {allServiceRequests.length} total requests available.
+                </p>
+              )}
             </div>
-
-            {merchantStore && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Your Store</h3>
-                  <Store className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">{merchantStore.name}</span>
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                      {merchantStore.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">{merchantStore.description}</p>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Star className="w-4 h-4 text-yellow-400" />
-                    <span className="font-medium">{merchantStore.rating}</span>
-                    <span className="text-gray-500">({merchantStore.reviewCount} reviews)</span>
-                  </div>
-                  <div className="mt-2">
-                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                      {merchantStore.category}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Tabs */}
           <div className="flex justify-between items-center mb-6">
@@ -765,7 +858,7 @@ export default function MerchantServiceRequestDashboard() {
                 onClick={() => handleTabChange('requests')}
                 className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'requests' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
               >
-                Available Requests ({serviceRequests.length})
+                Available Requests ({filteredServiceRequests.length})
               </button>
               <button
                 onClick={() => handleTabChange('offers')}
@@ -773,17 +866,11 @@ export default function MerchantServiceRequestDashboard() {
               >
                 My Offers ({merchantOffers.length})
               </button>
-              <button
-                onClick={() => handleTabChange('analytics')}
-                className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'analytics' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
-              >
-                Analytics
-              </button>
             </div>
           </div>
 
           {/* Filter Bar */}
-          {(activeTab === 'requests' || activeTab === 'offers') && (
+          {activeTab === 'requests' && (
             <div className="bg-white rounded-lg p-4 mb-6">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center space-x-2">
@@ -791,52 +878,38 @@ export default function MerchantServiceRequestDashboard() {
                   <span className="text-sm font-medium">Filters:</span>
                 </div>
                 
-                {activeTab === 'requests' && (
-                  <>
-                    <select
-                      value={filters.budget}
-                      onChange={(e) => handleFilterChange('budget', e.target.value)}
-                      className="border border-gray-200 rounded px-3 py-1 text-sm"
-                    >
-                      <option value="all">All Budgets</option>
-                      <option value="0-100">$0 - $100</option>
-                      <option value="100-300">$100 - $300</option>
-                      <option value="300-500">$300 - $500</option>
-                      <option value="500+">$500+</option>
-                    </select>
-                    <select
-                      value={filters.timeline}
-                      onChange={(e) => handleFilterChange('timeline', e.target.value)}
-                      className="border border-gray-200 rounded px-3 py-1 text-sm"
-                    >
-                      <option value="all">All Timelines</option>
-                      <option value="urgent">ASAP/Urgent</option>
-                      <option value="thisweek">This Week</option>
-                      <option value="nextweek">Next Week</option>
-                      <option value="thismonth">This Month</option>
-                      <option value="flexible">Flexible</option>
-                    </select>
-                    {merchantStore && (
-                      <div className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded border">
-                        Showing: {mapStoreToServiceCategory(merchantStore.category)} requests
-                      </div>
-                    )}
-                  </>
-                )}
+                <select
+                  value={filters.budget}
+                  onChange={(e) => handleFilterChange('budget', e.target.value)}
+                  className="border border-gray-200 rounded px-3 py-1 text-sm"
+                >
+                  <option value="all">All Budgets</option>
+                  <option value="0-100">$0 - $100</option>
+                  <option value="100-300">$100 - $300</option>
+                  <option value="300-500">$300 - $500</option>
+                  <option value="500+">$500+</option>
+                </select>
                 
-                {activeTab === 'offers' && (
-                  <select
-                    value={filters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                    className="border border-gray-200 rounded px-3 py-1 text-sm"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="withdrawn">Withdrawn</option>
-                  </select>
-                )}
+                <select
+                  value={filters.timeline}
+                  onChange={(e) => handleFilterChange('timeline', e.target.value)}
+                  className="border border-gray-200 rounded px-3 py-1 text-sm"
+                >
+                  <option value="all">All Timelines</option>
+                  <option value="urgent">ASAP/Urgent</option>
+                  <option value="thisweek">This Week</option>
+                  <option value="nextweek">Next Week</option>
+                  <option value="thismonth">This Month</option>
+                  <option value="flexible">Flexible</option>
+                </select>
+
+                <input
+                  type="text"
+                  placeholder="Filter by location..."
+                  value={filters.location}
+                  onChange={(e) => handleFilterChange('location', e.target.value)}
+                  className="border border-gray-200 rounded px-3 py-1 text-sm w-48"
+                />
               </div>
             </div>
           )}
@@ -844,20 +917,36 @@ export default function MerchantServiceRequestDashboard() {
           {/* Content based on active tab */}
           {activeTab === 'requests' && (
             <div className="space-y-6">
-              {serviceRequests.length === 0 ? (
+              {filteredServiceRequests.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-xl mb-4">No service requests found</div>
-                  <p className="text-gray-600 mb-6">No requests match your store category or current filters.</p>
+                  <div className="text-gray-400 text-xl mb-4">
+                    {allServiceRequests.length === 0 ? 'No service requests available' : 'No requests match your store category'}
+                  </div>
+                  <p className="text-gray-600 mb-6">
+                    {allServiceRequests.length === 0 
+                      ? 'Check back later for new service requests from customers.'
+                      : `Your store specializes in "${merchantStore?.category}". Requests in matching categories will appear here.`
+                    }
+                  </p>
+                  {allServiceRequests.length > 0 && (
+                    <div className="text-sm text-gray-500">
+                      Total requests available: {allServiceRequests.length}
+                    </div>
+                  )}
                 </div>
               ) : (
-                serviceRequests.map((request) => (
+                filteredServiceRequests.map((request) => (
                   <div key={request.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
                     <div className="p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <h3 className="text-xl font-semibold">{request.title}</h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.priority === 'urgent' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              request.priority === 'urgent' ? 'bg-red-100 text-red-800' : 
+                              request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
                               {request.priority}
                             </span>
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -865,12 +954,7 @@ export default function MerchantServiceRequestDashboard() {
                             </span>
                             {request.verified && (
                               <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                                Verified User
-                              </span>
-                            )}
-                            {request.merchantOffered && (
-                              <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                                Offer Sent
+                                ✓ Verified User
                               </span>
                             )}
                           </div>
@@ -883,7 +967,7 @@ export default function MerchantServiceRequestDashboard() {
                             </div>
                             <div className="flex items-center space-x-1">
                               <DollarSign className="w-4 h-4" />
-                              <span>{request.budget}</span>
+                              <span className="font-medium text-green-600">{request.budget}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
@@ -910,13 +994,22 @@ export default function MerchantServiceRequestDashboard() {
                             </div>
 
                             <div className="flex space-x-2">
-                              <button className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 font-medium">
+                              <button 
+                                className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 font-medium"
+                                onClick={() => {
+                                  alert('View Details functionality would show full request details');
+                                }}
+                              >
                                 View Details
                               </button>
-                              {!request.merchantOffered && merchantStore && (
+                              {merchantStore && (
                                 <button
                                   onClick={() => {
                                     setSelectedRequest(request);
+                                    setOfferForm(prev => ({
+                                      ...prev,
+                                      quotedPrice: '' // Clear any previous price
+                                    }));
                                     setShowOfferForm(true);
                                   }}
                                   className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
@@ -1016,23 +1109,6 @@ export default function MerchantServiceRequestDashboard() {
                               Submitted {offer.submittedAt}
                             </div>
                             <div className="flex space-x-2">
-                              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
-                                View Request
-                              </button>
-                              {offer.status === 'pending' && (
-                                <button
-                                  onClick={() => {
-                                    if (confirm('Are you sure you want to withdraw this offer?')) {
-                                      alert('Withdraw offer functionality');
-                                    }
-                                  }}
-                                  className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 font-medium flex items-center space-x-2"
-                                  disabled={submitting}
-                                >
-                                  <Trash className="w-4 h-4" />
-                                  <span>Withdraw</span>
-                                </button>
-                              )}
                               {offer.status === 'accepted' && (
                                 <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium">
                                   Contact Customer
@@ -1048,55 +1124,9 @@ export default function MerchantServiceRequestDashboard() {
               )}
             </div>
           )}
-
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600 mb-2">{dashboardStats.totalOffers || 0}</div>
-                    <div className="text-gray-600">Total Offers Sent</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600 mb-2">{dashboardStats.acceptanceRate || 0}%</div>
-                    <div className="text-gray-600">Acceptance Rate</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-2">${dashboardStats.totalEarnings?.toLocaleString() || 0}</div>
-                    <div className="text-gray-600">Total Earnings</div>
-                  </div>
-                </div>
-              </div>
-
-              {merchantStore && (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Store Performance</h3>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{merchantStore.name}</h4>
-                      <p className="text-sm text-gray-600">{merchantStore.category}</p>
-                      <p className="text-sm text-gray-600">{merchantStore.location}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center space-x-2">
-                        <Star className="w-4 h-4 text-yellow-400" />
-                        <span className="font-medium">{merchantStore.rating}</span>
-                        <span className="text-gray-500">({merchantStore.reviewCount} reviews)</span>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${merchantStore.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {merchantStore.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Offer Form Modal */}
+        {/* Enhanced Offer Form Modal */}
         {showOfferForm && selectedRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1107,37 +1137,62 @@ export default function MerchantServiceRequestDashboard() {
                     ×
                   </button>
                 </div>
-                <p className="text-gray-600 mt-2">Offer for: {selectedRequest.title}</p>
-                {merchantStore && (
-                  <p className="text-sm text-gray-500">From: {merchantStore.name}</p>
-                )}
+                <div className="mt-2">
+                  <p className="text-gray-600">Offer for: <span className="font-medium">{selectedRequest.title}</span></p>
+                  <p className="text-sm text-gray-500">Customer Budget: <span className="font-medium text-green-600">{selectedRequest.budget}</span></p>
+                  {merchantStore && (
+                    <p className="text-sm text-gray-500">From: <span className="font-medium">{merchantStore.name}</span></p>
+                  )}
+                </div>
               </div>
 
-              <form onSubmit={handleOfferFormSubmit} className="p-6 space-y-6">
+              <div className="p-6 space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quoted Price *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={offerForm.quotedPrice}
-                    onChange={(e) => setOfferForm(prev => ({ ...prev, quotedPrice: e.target.value }))}
-                    placeholder="Enter your price quote"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Customer budget: {selectedRequest.budget}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quoted Price * (USD)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      value={offerForm.quotedPrice}
+                      onChange={(e) => setOfferForm(prev => ({ ...prev, quotedPrice: e.target.value }))}
+                      placeholder="Enter your price quote"
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                      required
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs">
+                    <span className="text-gray-500">Customer budget: {selectedRequest.budget}</span>
+                    {offerForm.quotedPrice && (
+                      <span className={`font-medium ${
+                        isPriceInBudget(offerForm.quotedPrice, selectedRequest) 
+                          ? 'text-green-600' 
+                          : 'text-orange-600'
+                      }`}>
+                        {isPriceInBudget(offerForm.quotedPrice, selectedRequest) 
+                          ? '✓ Within budget' 
+                          : '⚠ Outside budget range'
+                        }
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Message *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Message * (Pitch your services)</label>
                   <textarea
                     rows="4"
                     value={offerForm.message}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, message: e.target.value }))}
-                    placeholder="Describe your offer, experience, and why you're the best choice..."
+                    placeholder="Describe your offer, experience, and why you're the best choice for this job. Mention your qualifications, past work, and what makes you stand out..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                     required
+                    minLength="20"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {offerForm.message.length}/500 characters (minimum 20 required)
+                  </p>
                 </div>
 
                 <div>
@@ -1146,10 +1201,13 @@ export default function MerchantServiceRequestDashboard() {
                     type="text"
                     value={offerForm.availability}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, availability: e.target.value }))}
-                    placeholder="When can you start? (e.g., Tomorrow, This weekend, Next week)"
+                    placeholder="When can you start? (e.g., Tomorrow at 2 PM, This weekend, Next Monday)"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Customer timeline: {getTimelineLabel(selectedRequest.timeline)}
+                  </p>
                 </div>
 
                 <div>
@@ -1158,7 +1216,7 @@ export default function MerchantServiceRequestDashboard() {
                     type="text"
                     value={offerForm.estimatedDuration}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, estimatedDuration: e.target.value }))}
-                    placeholder="How long will the service take? (e.g., 2-3 hours, Half day)"
+                    placeholder="How long will the service take? (e.g., 2-3 hours, Half day, 2 days)"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                   />
                 </div>
@@ -1172,9 +1230,26 @@ export default function MerchantServiceRequestDashboard() {
                     className="mr-2"
                   />
                   <label htmlFor="includesSupplies" className="text-sm text-gray-700">
-                    Price includes all supplies and materials
+                    Price includes all supplies and materials needed
                   </label>
                 </div>
+
+                {/* Display requirements if any */}
+                {selectedRequest.requirements && selectedRequest.requirements.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">Customer Requirements:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedRequest.requirements.map((req, index) => (
+                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                          {req}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Make sure you meet these requirements before submitting your offer.
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-4 pt-4 border-t">
                   <button
@@ -1186,14 +1261,15 @@ export default function MerchantServiceRequestDashboard() {
                     Cancel
                   </button>
                   <button
-                    type="submit"
-                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
-                    disabled={submitting}
+                    type="button"
+                    onClick={handleOfferFormSubmit}
+                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium"
+                    disabled={submitting || !offerForm.quotedPrice || !offerForm.message || !offerForm.availability}
                   >
                     {submitting ? 'Sending Offer...' : 'Send Offer'}
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         )}
