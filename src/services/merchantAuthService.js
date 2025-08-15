@@ -1,4 +1,4 @@
-// services/merchantAuthService.js - Complete Updated Version with Store-as-Main-Branch Support
+// services/merchantAuthService.js - Fixed Version with Better Authentication Flow
 import CryptoJS from 'crypto-js';
 import Cookies from 'js-cookie';
 
@@ -11,6 +11,7 @@ class MerchantAuthService {
     this.baseURL = `${API_BASE_URL}/merchants`;
     this.storeURL = `${API_BASE_URL}/stores`;
     this.isInitialized = false;
+    this.authCheckInProgress = false;
     this.init();
   }
 
@@ -23,13 +24,8 @@ class MerchantAuthService {
       console.log('🔑 API Key configured:', API_KEY ? 'Yes' : 'No');
       console.log('🔐 Secret Key configured:', SECRET_KEY ? 'Yes' : 'No');
       
-      // Check if user is authenticated and token is valid
-      if (this.isAuthenticated()) {
-        console.log('✅ User is authenticated');
-      } else {
-        console.log('❌ User is not authenticated');
-      }
-      
+      // Don't check authentication during initialization - let components handle it
+      console.log('✅ Service initialized - authentication check deferred to components');
       this.isInitialized = true;
     } catch (error) {
       console.error('💥 Error initializing MerchantAuthService:', error);
@@ -65,423 +61,24 @@ class MerchantAuthService {
     return headers;
   }
 
-  // Test API connection and key
-  async testConnection() {
-    try {
-      console.log('🔍 Testing API connection and key...');
-      
-      const response = await fetch(`${this.baseURL}/test`, {
-        method: 'GET',
-        headers: this.getHeaders(false), // Only API key, no auth
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `API test failed with status ${response.status}`);
-      }
-
-      console.log('✅ API connection test successful:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ API connection test failed:', error);
-      
-      // Check if it's a network error vs API error
-      if (error.message.includes('fetch')) {
-        throw new Error(`Cannot connect to API server at ${this.baseURL}. Please check if the server is running.`);
-      } else {
-        throw new Error(`API connection failed: ${error.message}`);
-      }
-    }
-  }
-
-  // Register new merchant
-  async register(merchantData) {
-    try {
-      console.log('🔑 Registering new merchant...');
-      console.log('📝 Registration data:', { ...merchantData, password: '[HIDDEN]' });
-      
-      const response = await fetch(`${this.baseURL}/register`, {
-        method: 'POST',
-        headers: this.getHeaders(false),
-        body: JSON.stringify(merchantData),
-      });
-
-      const data = await response.json();
-      console.log('📨 Registration response:', data);
-
-      if (!response.ok) {
-        throw new Error(data.message || `Registration failed with status ${response.status}`);
-      }
-
-      // If registration includes auth data, store it
-      if (data.access_token && data.merchant) {
-        const authData = {
-          token: data.access_token,
-          merchant: data.merchant,
-          timestamp: Date.now()
-        };
-        this.storeAuthData(authData);
-        console.log('✅ Registration successful, auth data stored');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('💥 Registration error:', error);
-      throw error;
-    }
-  }
-
-  // Login merchant
-  async login(credentials) {
-    try {
-      console.log('🔑 Logging in merchant...');
-      console.log('📧 Login email:', credentials.email);
-      
-      const response = await fetch(`${this.baseURL}/login`, {
-        method: 'POST',
-        headers: this.getHeaders(false),
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await response.json();
-      console.log('📨 Login response received');
-
-      if (!response.ok) {
-        throw new Error(data.message || `Login failed with status ${response.status}`);
-      }
-
-      // Store authentication data
-      const authData = {
-        token: data.access_token,
-        merchant: {
-          id: data.id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email_address: data.email_address,
-          phone_number: data.phone_number,
-          joined: data.joined,
-          updated: data.updated,
-          last_login: data.last_login
-        },
-        timestamp: Date.now()
-      };
-
-      this.storeAuthData(authData);
-      console.log('✅ Login successful, auth data stored');
-
-      return data;
-    } catch (error) {
-      console.error('💥 Login error:', error);
-      throw error;
-    }
-  }
-
-  // Request password reset
-  async requestPasswordReset(email) {
-    try {
-      console.log('🔄 Requesting password reset for:', email);
-      
-      const response = await fetch(`${this.baseURL}/request-password-reset`, {
-        method: 'POST',
-        headers: this.getHeaders(false),
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `Password reset request failed with status ${response.status}`);
-      }
-
-      console.log('✅ Password reset OTP sent');
-      return data;
-    } catch (error) {
-      console.error('💥 Password reset request error:', error);
-      throw error;
-    }
-  }
-
-  // Reset password with OTP
-  async resetPassword(email, otp, newPassword) {
-    try {
-      console.log('🔄 Resetting password for:', email);
-      
-      const response = await fetch(`${this.baseURL}/reset-password`, {
-        method: 'POST',
-        headers: this.getHeaders(false),
-        body: JSON.stringify({ email, otp, newPassword }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `Password reset failed with status ${response.status}`);
-      }
-
-      console.log('✅ Password reset successful');
-      return data;
-    } catch (error) {
-      console.error('💥 Password reset error:', error);
-      throw error;
-    }
-  }
-
-  // Get current merchant profile (recommended method)
-  async getCurrentMerchantProfile() {
-    try {
-      console.log('📋 Fetching current merchant profile...');
-      
-      // Test connection in development mode
-      if (import.meta.env.DEV) {
-        try {
-          await this.testConnection();
-        } catch (testError) {
-          console.warn('⚠️ API connection test failed, but continuing...', testError.message);
-        }
-      }
-
-      const response = await fetch(`${this.baseURL}/profile`, {
-        method: 'GET',
-        headers: this.getHeaders(true), // Include both API key and auth token
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('❌ Profile fetch failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: data
-        });
-
-        // Handle specific error codes
-        this.handleApiError(response, data);
-        return null;
-      }
-
-      console.log('✅ Current merchant profile fetched successfully');
-      return data;
-    } catch (error) {
-      console.error('💥 Profile fetch error:', error);
-      this.handleAuthError(error);
-      throw error;
-    }
-  }
-
-  // Get merchant profile by ID (for backward compatibility)
-  async getMerchantProfile(merchantId = null) {
-    try {
-      console.log('📋 Fetching merchant profile...', merchantId ? `ID: ${merchantId}` : 'Current');
-      
-      const endpoint = merchantId ? `${this.baseURL}/${merchantId}` : `${this.baseURL}/profile`;
-      
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('❌ Profile fetch failed:', {
-          status: response.status,
-          error: data
-        });
-
-        this.handleApiError(response, data);
-        return null;
-      }
-
-      console.log('✅ Merchant profile fetched successfully');
-      return data;
-    } catch (error) {
-      console.error('💥 Profile fetch error:', error);
-      this.handleAuthError(error);
-      throw error;
-    }
-  }
-
-  // Update merchant profile (personal info only)
-  async updateMerchantProfile(merchantId = null, profileData = null) {
-    try {
-      // Handle both old and new calling patterns
-      let updateData, targetMerchantId;
-      
-      if (merchantId && typeof merchantId === 'object' && profileData === null) {
-        // Called as updateMerchantProfile(profileData)
-        updateData = merchantId;
-        targetMerchantId = this.getMerchantId();
-      } else {
-        // Called as updateMerchantProfile(merchantId, profileData) or updateMerchantProfile(null, profileData)
-        updateData = profileData || merchantId;
-        targetMerchantId = (typeof merchantId === 'string' || typeof merchantId === 'number') ? merchantId : this.getMerchantId();
-      }
-
-      if (!targetMerchantId) {
-        throw new Error('No merchant ID available. Please log in again.');
-      }
-
-      console.log('🔄 Updating merchant profile...', targetMerchantId);
-      console.log('📝 Update data:', updateData);
-      
-      // Use store routes for merchant profile updates
-      const response = await fetch(`${this.storeURL}/merchant/profile`, {
-        method: 'PUT',
-        headers: this.getHeaders(true),
-        body: JSON.stringify(updateData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('❌ Profile update failed:', {
-          status: response.status,
-          error: data
-        });
-
-        this.handleApiError(response, data);
-        throw new Error(data.message || `Failed to update profile: ${response.status}`);
-      }
-
-      // Update stored merchant data if successful
-      if (data.merchantProfile) {
-        this.updateStoredMerchantProfile(data.merchantProfile);
-        console.log('✅ Local profile data updated');
-      }
-
-      console.log('✅ Profile updated successfully');
-      return data;
-    } catch (error) {
-      console.error('💥 Profile update error:', error);
-      this.handleAuthError(error);
-      throw error;
-    }
-  }
-
-  // Update store profile (which serves as main branch info)
-  async updateStoreProfile(storeId, storeData) {
-    try {
-      console.log('🏪 Updating store profile (main branch info):', storeId, storeData);
-
-      const response = await fetch(`${this.storeURL}/profile/${storeId}`, {
-        method: 'PUT',
-        headers: this.getHeaders(true),
-        body: JSON.stringify(storeData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `Failed to update store: ${response.status}`);
-      }
-
-      console.log('✅ Store profile updated successfully (main branch updated)');
-      return data;
-
-    } catch (error) {
-      console.error('💥 Error updating store profile:', error);
-      throw error;
-    }
-  }
-
-  // Get store details (main branch info)
-  async getStoreDetails(storeId) {
-    try {
-      console.log('📋 Fetching store details (main branch info):', storeId);
-
-      const response = await fetch(`${this.storeURL}/profile/${storeId}`, {
-        method: 'GET',
-        headers: this.getHeaders(true)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `Failed to fetch store details: ${response.status}`);
-      }
-
-      console.log('✅ Store details fetched successfully');
-      return data;
-
-    } catch (error) {
-      console.error('💥 Error fetching store details:', error);
-      throw error;
-    }
-  }
-
-  // Change password
-  async changePassword(currentPassword, newPassword) {
-    try {
-      const merchantId = this.getMerchantId();
-      if (!merchantId) {
-        throw new Error('No merchant ID found. Please log in again.');
-      }
-
-      console.log('🔄 Changing password...');
-      
-      const response = await fetch(`${this.baseURL}/${merchantId}/change-password`, {
-        method: 'PUT',
-        headers: this.getHeaders(true),
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        this.handleApiError(response, data);
-        throw new Error(data.message || 'Password change failed');
-      }
-
-      console.log('✅ Password changed successfully');
-      return data;
-    } catch (error) {
-      console.error('💥 Password change error:', error);
-      this.handleAuthError(error);
-      throw error;
-    }
-  }
-
-  // Refresh token
-  async refreshToken() {
-    try {
-      console.log('🔄 Refreshing authentication token...');
-      
-      const response = await fetch(`${this.baseURL}/refresh-token`, {
-        method: 'POST',
-        headers: this.getHeaders(true),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('❌ Token refresh failed');
-        this.logout();
-        throw new Error(data.message || 'Token refresh failed');
-      }
-
-      // Update stored auth data with new token
-      const authData = this.getAuthData();
-      if (authData) {
-        authData.token = data.access_token;
-        authData.timestamp = Date.now();
-        this.storeAuthData(authData);
-        console.log('✅ Token refreshed and stored');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('💥 Token refresh error:', error);
-      this.logout();
-      throw error;
-    }
-  }
-
   // Store authentication data securely
   storeAuthData(authData) {
     try {
       if (!SECRET_KEY) {
-        throw new Error('SECRET_KEY not configured');
+        console.warn('⚠️ SECRET_KEY not configured, storing auth data without encryption');
+        // Fallback to unencrypted storage in development
+        const fallbackData = {
+          ...authData,
+          unencrypted: true,
+          timestamp: Date.now()
+        };
+        Cookies.set('merchant_auth_fallback', JSON.stringify(fallbackData), { 
+          expires: 7,
+          secure: import.meta.env.PROD,
+          sameSite: 'strict',
+          path: '/'
+        });
+        return;
       }
 
       const encryptedData = CryptoJS.AES.encrypt(
@@ -496,6 +93,8 @@ class MerchantAuthService {
         path: '/'
       });
 
+      // Clear fallback cookie if it exists
+      Cookies.remove('merchant_auth_fallback', { path: '/' });
       console.log('✅ Auth data stored securely');
     } catch (error) {
       console.error('💥 Error storing auth data:', error);
@@ -506,37 +105,45 @@ class MerchantAuthService {
   // Get stored authentication data
   getAuthData() {
     try {
+      // Try encrypted data first
       const encryptedData = Cookies.get('merchant_auth');
-      if (!encryptedData) {
-        console.log('📭 No auth data found in cookies');
-        return null;
+      if (encryptedData && SECRET_KEY) {
+        try {
+          const decryptedBytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY);
+          const decryptedData = decryptedBytes.toString(CryptoJS.enc.Utf8);
+          
+          if (decryptedData) {
+            return JSON.parse(decryptedData);
+          }
+        } catch (decryptError) {
+          console.warn('⚠️ Failed to decrypt auth data, trying fallback...', decryptError.message);
+        }
       }
 
-      if (!SECRET_KEY) {
-        console.error('❌ SECRET_KEY not configured for decryption');
-        return null;
+      // Try fallback unencrypted data
+      const fallbackData = Cookies.get('merchant_auth_fallback');
+      if (fallbackData) {
+        console.log('📭 Using fallback auth data');
+        return JSON.parse(fallbackData);
       }
 
-      const decryptedBytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY);
-      const decryptedData = decryptedBytes.toString(CryptoJS.enc.Utf8);
-      
-      if (!decryptedData) {
-        console.error('❌ Failed to decrypt auth data');
-        this.logout();
-        return null;
-      }
-
-      return JSON.parse(decryptedData);
+      console.log('📭 No auth data found in cookies');
+      return null;
     } catch (error) {
       console.error('💥 Error retrieving auth data:', error);
-      this.logout(); // Clear invalid data
+      // Don't automatically logout on retrieval errors
       return null;
     }
   }
 
-  // Check if merchant is authenticated
+  // Check if merchant is authenticated (non-destructive)
   isAuthenticated() {
     try {
+      if (this.authCheckInProgress) {
+        console.log('🔄 Authentication check already in progress');
+        return false;
+      }
+
       const authData = this.getAuthData();
       const hasValidData = authData && authData.token && authData.merchant;
       
@@ -545,10 +152,10 @@ class MerchantAuthService {
         return false;
       }
 
+      // Check token expiration without automatic logout
       const isExpired = this.isTokenExpired();
       if (isExpired) {
         console.log('❌ Token is expired');
-        this.logout();
         return false;
       }
 
@@ -558,6 +165,21 @@ class MerchantAuthService {
       console.error('💥 Error checking authentication:', error);
       return false;
     }
+  }
+
+  // Safe authentication check that doesn't trigger logout
+  checkAuthenticationStatus() {
+    const isAuth = this.isAuthenticated();
+    const authData = this.getAuthData();
+    
+    return {
+      isAuthenticated: isAuth,
+      hasAuthData: !!authData,
+      hasToken: !!(authData?.token),
+      hasMerchant: !!(authData?.merchant),
+      isTokenExpired: authData?.token ? this.isTokenExpired() : true,
+      merchant: authData?.merchant || null
+    };
   }
 
   // Get current merchant data
@@ -600,6 +222,253 @@ class MerchantAuthService {
     }
   }
 
+  // Login merchant
+  async login(credentials) {
+    try {
+      console.log('🔑 Logging in merchant...');
+      console.log('📧 Login email:', credentials.email);
+      
+      this.authCheckInProgress = true;
+      
+      const response = await fetch(`${this.baseURL}/login`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await response.json();
+      console.log('📨 Login response received');
+
+      if (!response.ok) {
+        throw new Error(data.message || `Login failed with status ${response.status}`);
+      }
+
+      // Store authentication data
+      const authData = {
+        token: data.access_token,
+        merchant: {
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email_address: data.email_address,
+          phone_number: data.phone_number,
+          joined: data.joined,
+          updated: data.updated,
+          last_login: data.last_login
+        },
+        timestamp: Date.now()
+      };
+
+      this.storeAuthData(authData);
+      console.log('✅ Login successful, auth data stored');
+
+      return data;
+    } catch (error) {
+      console.error('💥 Login error:', error);
+      throw error;
+    } finally {
+      this.authCheckInProgress = false;
+    }
+  }
+
+  // Register new merchant
+  async register(merchantData) {
+    try {
+      console.log('🔑 Registering new merchant...');
+      console.log('📝 Registration data:', { ...merchantData, password: '[HIDDEN]' });
+      
+      const response = await fetch(`${this.baseURL}/register`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify(merchantData),
+      });
+
+      const data = await response.json();
+      console.log('📨 Registration response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || `Registration failed with status ${response.status}`);
+      }
+
+      // If registration includes auth data, store it
+      if (data.access_token && data.merchant) {
+        const authData = {
+          token: data.access_token,
+          merchant: data.merchant,
+          timestamp: Date.now()
+        };
+        this.storeAuthData(authData);
+        console.log('✅ Registration successful, auth data stored');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('💥 Registration error:', error);
+      throw error;
+    }
+  }
+
+  // Get current merchant profile
+  async getCurrentMerchantProfile() {
+    try {
+      console.log('📋 Fetching current merchant profile...');
+      
+      const response = await fetch(`${this.baseURL}/profile`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Profile fetch failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data
+        });
+
+        this.handleApiError(response, data);
+        return null;
+      }
+
+      console.log('✅ Current merchant profile fetched successfully');
+      return data;
+    } catch (error) {
+      console.error('💥 Profile fetch error:', error);
+      throw error;
+    }
+  }
+
+  // Update merchant profile
+  async updateMerchantProfile(merchantId = null, profileData = null) {
+    try {
+      let updateData, targetMerchantId;
+      
+      if (merchantId && typeof merchantId === 'object' && profileData === null) {
+        updateData = merchantId;
+        targetMerchantId = this.getMerchantId();
+      } else {
+        updateData = profileData || merchantId;
+        targetMerchantId = (typeof merchantId === 'string' || typeof merchantId === 'number') ? merchantId : this.getMerchantId();
+      }
+
+      if (!targetMerchantId) {
+        throw new Error('No merchant ID available. Please log in again.');
+      }
+
+      console.log('🔄 Updating merchant profile...', targetMerchantId);
+      
+      const response = await fetch(`${this.storeURL}/merchant/profile`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(updateData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        this.handleApiError(response, data);
+        throw new Error(data.message || `Failed to update profile: ${response.status}`);
+      }
+
+      if (data.merchantProfile) {
+        this.updateStoredMerchantProfile(data.merchantProfile);
+      }
+
+      console.log('✅ Profile updated successfully');
+      return data;
+    } catch (error) {
+      console.error('💥 Profile update error:', error);
+      throw error;
+    }
+  }
+
+  // Get store details
+  async getStoreDetails(storeId) {
+    try {
+      console.log('📋 Fetching store details:', storeId);
+
+      const response = await fetch(`${this.storeURL}/profile/${storeId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `Failed to fetch store details: ${response.status}`);
+      }
+
+      console.log('✅ Store details fetched successfully');
+      return data;
+    } catch (error) {
+      console.error('💥 Error fetching store details:', error);
+      throw error;
+    }
+  }
+
+  // Handle API errors (less aggressive)
+  handleApiError(response, data) {
+    const status = response.status;
+    const errorCode = data.code;
+    const message = data.message;
+
+    console.error(`❌ API Error [${status}]:`, { code: errorCode, message });
+
+    // Only trigger logout for specific auth errors, not all 401s
+    if (status === 401) {
+      const criticalAuthErrors = [
+        'TOKEN_EXPIRED', 'INVALID_TOKEN', 'MERCHANT_NOT_FOUND', 
+        'PASSWORD_CHANGED'
+      ];
+
+      if (criticalAuthErrors.includes(errorCode)) {
+        console.log('🚪 Critical authentication error detected');
+        // Set a flag instead of immediate logout
+        this._shouldLogout = true;
+        throw new Error('Your session has expired. Please log in again.');
+      }
+    }
+
+    throw new Error(message || `Request failed with status ${status}`);
+  }
+
+  // Check if logout is needed (non-destructive)
+  shouldLogout() {
+    return this._shouldLogout === true;
+  }
+
+  // Clear logout flag
+  clearLogoutFlag() {
+    this._shouldLogout = false;
+  }
+
+  // Logout merchant (only when explicitly called)
+  logout() {
+    try {
+      console.log('🚪 Logging out merchant...');
+      
+      // Clear stored auth data
+      Cookies.remove('merchant_auth', { path: '/' });
+      Cookies.remove('merchant_auth_fallback', { path: '/' });
+      
+      // Clear any other related data
+      localStorage.removeItem('merchant_temp_data');
+      sessionStorage.clear();
+      
+      // Clear logout flag
+      this._shouldLogout = false;
+      
+      console.log('✅ Logout completed');
+      
+      // Redirect to login page
+      window.location.href = '/accounts/sign-in';
+    } catch (error) {
+      console.error('💥 Error during logout:', error);
+      window.location.href = '/accounts/sign-in';
+    }
+  }
+
   // Update merchant profile in storage
   updateStoredMerchantProfile(updatedMerchant) {
     try {
@@ -615,116 +484,18 @@ class MerchantAuthService {
     }
   }
 
-  // Handle API errors
-  handleApiError(response, data) {
-    const status = response.status;
-    const errorCode = data.code;
-    const message = data.message;
-
-    console.error(`❌ API Error [${status}]:`, { code: errorCode, message });
-
-    // Handle authentication errors
-    if (status === 401) {
-      const authErrorCodes = [
-        'TOKEN_EXPIRED', 'INVALID_TOKEN', 'MISSING_TOKEN', 
-        'TOKEN_VERIFICATION_FAILED', 'MERCHANT_NOT_FOUND', 
-        'PASSWORD_CHANGED'
-      ];
-
-      if (authErrorCodes.includes(errorCode)) {
-        console.log('🚪 Authentication error, logging out...');
-        this.logout();
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      if (errorCode === 'MISSING_API_KEY' || errorCode === 'INVALID_API_KEY') {
-        throw new Error('API configuration error. Please check your API key configuration.');
-      }
-    }
-
-    // Handle authorization errors
-    if (status === 403) {
-      if (errorCode === 'ADMIN_ACCESS_REQUIRED') {
-        throw new Error('Admin access required for this operation.');
-      }
-      if (errorCode === 'INVALID_TOKEN_TYPE') {
-        this.logout();
-        throw new Error('Invalid access credentials. Please log in again.');
-      }
-    }
-
-    // Handle rate limiting
-    if (status === 429) {
-      const retryAfter = data.retryAfter || 15;
-      throw new Error(`Too many requests. Please try again in ${retryAfter} minutes.`);
-    }
-
-    // Generic error handling
-    throw new Error(message || `Request failed with status ${status}`);
-  }
-
-  // Handle authentication errors
-  handleAuthError(error) {
-    console.error('🚨 Authentication error handler:', error);
-    
-    const authErrorIndicators = [
-      'session has expired', 'log in again', 'Authentication', 
-      'API configuration', '401', '403', 'Unauthorized', 
-      'Invalid token', 'TOKEN_', 'API_KEY'
-    ];
-    
-    const isAuthError = authErrorIndicators.some(indicator => 
-      error.message?.includes(indicator)
-    );
-
-    if (isAuthError) {
-      console.log('🚪 Auth error detected, logging out...');
-      // Don't call logout immediately to avoid infinite loops
-      setTimeout(() => this.logout(), 100);
-    }
-  }
-
-  // Logout merchant
-  logout() {
-    try {
-      console.log('🚪 Logging out merchant...');
-      
-      // Clear stored auth data
-      Cookies.remove('merchant_auth', { path: '/' });
-      
-      // Clear any other related data
-      localStorage.removeItem('merchant_temp_data');
-      sessionStorage.clear();
-      
-      console.log('✅ Logout completed');
-      
-      // Redirect to login page
-      window.location.href = '/accounts/sign-in';
-    } catch (error) {
-      console.error('💥 Error during logout:', error);
-      // Force redirect even if cleanup fails
-      window.location.href = '/accounts/sign-in';
-    }
-  }
-
-  // Initialize service on first use
-  initialize() {
-    if (!this.isInitialized) {
-      this.init();
-    }
-    return this.isInitialized;
-  }
-
   // Get service status
   getStatus() {
+    const authStatus = this.checkAuthenticationStatus();
     return {
       isInitialized: this.isInitialized,
-      isAuthenticated: this.isAuthenticated(),
+      isAuthenticated: authStatus.isAuthenticated,
       hasApiKey: !!API_KEY,
       hasSecretKey: !!SECRET_KEY,
       baseURL: this.baseURL,
       storeURL: this.storeURL,
-      currentMerchant: this.getCurrentMerchant()
+      authStatus,
+      shouldLogout: this.shouldLogout()
     };
   }
 
@@ -734,7 +505,6 @@ class MerchantAuthService {
       console.group('🔍 MerchantAuthService Debug Info');
       console.log('Status:', this.getStatus());
       console.log('Auth Data:', this.getAuthData());
-      console.log('Token Expired:', this.isTokenExpired());
       console.groupEnd();
     }
   }
@@ -742,8 +512,5 @@ class MerchantAuthService {
 
 // Create and export singleton instance
 const merchantAuthService = new MerchantAuthService();
-
-// Initialize on import
-merchantAuthService.initialize();
 
 export default merchantAuthService;

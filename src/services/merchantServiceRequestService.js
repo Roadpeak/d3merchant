@@ -1,7 +1,7 @@
-// services/merchantServiceRequestService.js - API service for merchant service requests
+// services/merchantServiceRequestService.js - FIXED VERSION FOR STORE-BASED OFFERS
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
 // Enhanced function to get auth headers for merchants
 const getMerchantAuthHeaders = () => {
@@ -76,8 +76,7 @@ const makeMerchantAPIRequest = async (url, options = {}) => {
       // Handle specific merchant auth errors
       if (response.status === 401) {
         console.warn('🔒 Merchant authentication failed (401)');
-        merchantAuthService.logout();
-        throw new Error('Your session has expired. Please log in again.');
+        throw new Error('Authentication failed. Please log in again.');
       }
       
       if (response.status === 403) {
@@ -103,8 +102,8 @@ const makeMerchantAPIRequest = async (url, options = {}) => {
 };
 
 class MerchantServiceRequestService {
-  // Get all service requests filtered by merchant's store categories
-  async getServiceRequests(filters = {}) {
+  // ✅ FIXED: Get service requests filtered by merchant's store categories
+  async getServiceRequestsForMerchant(filters = {}) {
     try {
       const queryParams = new URLSearchParams();
       
@@ -114,37 +113,39 @@ class MerchantServiceRequestService {
         }
       });
 
-      const url = `${API_BASE_URL}/request-service?${queryParams}`;
-      return await makeMerchantAPIRequest(url, { requireAuth: false });
+      // ✅ FIXED: Use the dedicated merchant endpoint
+      const url = `${API_BASE_URL}/merchant/service-requests?${queryParams}`;
+      const response = await makeMerchantAPIRequest(url, { requireAuth: true });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch service requests for merchant');
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error fetching service requests for merchant:', error);
       throw error;
     }
   }
 
-  // Get merchant's stores
+  // ✅ FIXED: Get merchant's stores
   async getMerchantStores() {
     try {
       const url = `${API_BASE_URL}/merchant/stores`;
-      return await makeMerchantAPIRequest(url, { requireAuth: true });
+      const response = await makeMerchantAPIRequest(url, { requireAuth: true });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch merchant stores');
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error fetching merchant stores:', error);
       throw error;
     }
   }
 
-  // Get merchant's store details by ID
-  async getStoreDetails(storeId) {
-    try {
-      const url = `${API_BASE_URL}/stores/profile/${storeId}`;
-      return await makeMerchantAPIRequest(url, { requireAuth: true });
-    } catch (error) {
-      console.error('Error fetching store details:', error);
-      throw error;
-    }
-  }
-
-  // Create offer for a service request
+  // ✅ FIXED: Create STORE offer for a service request (key change here)
   async createStoreOffer(requestId, offerData) {
     try {
       if (!requestId) {
@@ -152,7 +153,7 @@ class MerchantServiceRequestService {
       }
 
       // Validate required fields
-      const requiredFields = ['quotedPrice', 'message', 'availability'];
+      const requiredFields = ['storeId', 'quotedPrice', 'message', 'availability'];
       const missingFields = requiredFields.filter(field => !offerData[field]);
       
       if (missingFields.length > 0) {
@@ -164,18 +165,19 @@ class MerchantServiceRequestService {
         throw new Error('Quoted price must be greater than 0');
       }
 
-      const url = `${API_BASE_URL}/service-requests/${requestId}/offers`;
+      // ✅ CRITICAL: Use the service request endpoint that creates STORE-BASED offers
+      const url = `${API_BASE_URL}/request-service/${requestId}/offers`;
       
-      console.log('🚀 Creating merchant offer:', {
+      console.log('🚀 Creating STORE offer:', {
         requestId,
-        quotedPrice: offerData.quotedPrice,
-        storeId: offerData.storeId
+        storeId: offerData.storeId,
+        quotedPrice: offerData.quotedPrice
       });
       
-      return await makeMerchantAPIRequest(url, {
+      const response = await makeMerchantAPIRequest(url, {
         method: 'POST',
         body: JSON.stringify({
-          storeId: offerData.storeId,
+          storeId: offerData.storeId, // ✅ CRITICAL: Store ID is required
           quotedPrice: parseFloat(offerData.quotedPrice),
           message: offerData.message,
           availability: offerData.availability,
@@ -184,13 +186,20 @@ class MerchantServiceRequestService {
         }),
         requireAuth: true
       });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create store offer');
+      }
+      
+      console.log('✅ Store offer created successfully:', response.data?.offer?.id);
+      return response;
     } catch (error) {
       console.error('Error creating store offer:', error);
       throw error;
     }
   }
 
-  // Get merchant's offers across all stores
+  // ✅ FIXED: Get merchant's offers across all stores
   async getMerchantOffers(pagination = {}) {
     try {
       const { page = 1, limit = 10, status = 'all', storeId = 'all' } = pagination;
@@ -208,25 +217,37 @@ class MerchantServiceRequestService {
       }
 
       const url = `${API_BASE_URL}/merchant/offers?${queryParams}`;
-      return await makeMerchantAPIRequest(url, { requireAuth: true });
+      const response = await makeMerchantAPIRequest(url, { requireAuth: true });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch merchant offers');
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error fetching merchant offers:', error);
       throw error;
     }
   }
 
-  // Get merchant dashboard statistics
+  // ✅ FIXED: Get merchant dashboard statistics
   async getDashboardStats() {
     try {
       const url = `${API_BASE_URL}/merchant/dashboard/stats`;
-      return await makeMerchantAPIRequest(url, { requireAuth: true });
+      const response = await makeMerchantAPIRequest(url, { requireAuth: true });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch dashboard stats');
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error fetching merchant dashboard stats:', error);
       throw error;
     }
   }
 
-  // Update offer status (withdraw, modify, etc.)
+  // ✅ FIXED: Update offer status
   async updateOfferStatus(offerId, status, reason = '') {
     try {
       if (!offerId) {
@@ -234,44 +255,133 @@ class MerchantServiceRequestService {
       }
 
       const url = `${API_BASE_URL}/merchant/offers/${offerId}`;
-      return await makeMerchantAPIRequest(url, {
+      const response = await makeMerchantAPIRequest(url, {
         method: 'PUT',
         body: JSON.stringify({ status, reason }),
         requireAuth: true
       });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update offer status');
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error updating offer status:', error);
       throw error;
     }
   }
 
-  // Get service requests specifically for merchant's store categories
-  async getServiceRequestsForMerchant(filters = {}) {
+  // ✅ NEW: Get offers for a specific service request (to check if store already offered)
+  async getRequestOffers(requestId) {
     try {
-      const queryParams = new URLSearchParams();
-      
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== 'all' && value !== '') {
-          queryParams.append(key, value);
-        }
-      });
+      if (!requestId) {
+        throw new Error('Request ID is required');
+      }
 
-      const url = `${API_BASE_URL}/merchant/service-requests?${queryParams}`;
-      return await makeMerchantAPIRequest(url, { requireAuth: true });
+      const url = `${API_BASE_URL}/request-service/${requestId}/offers`;
+      const response = await makeMerchantAPIRequest(url, { requireAuth: true });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch request offers');
+      }
+      
+      return response;
     } catch (error) {
-      console.error('Error fetching service requests for merchant:', error);
-      // Fallback to public requests if merchant-specific endpoint fails
-      return await this.getServiceRequests(filters);
+      console.error('Error fetching request offers:', error);
+      throw error;
     }
   }
 
-  // Get analytics data for merchant
-  async getAnalytics(period = '30d') {
+  // ✅ NEW: Get detailed service request information
+  async getServiceRequestDetails(requestId) {
     try {
-      const url = `${API_BASE_URL}/merchant/analytics?period=${period}`;
-      return await makeMerchantAPIRequest(url, { requireAuth: true });
+      if (!requestId) {
+        throw new Error('Request ID is required');
+      }
+
+      const url = `${API_BASE_URL}/request-service/${requestId}`;
+      const response = await makeMerchantAPIRequest(url, { requireAuth: false });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch service request details');
+      }
+      
+      return response;
     } catch (error) {
-      console.error('Error fetching merchant analytics:', error);
+      console.error('Error fetching service request details:', error);
+      throw error;
+    }
+  }
+
+  // ✅ NEW: Check if any of merchant's stores already offered on a request
+  async checkExistingOffer(requestId) {
+    try {
+      if (!requestId) {
+        throw new Error('Request ID is required');
+      }
+
+      // Get merchant's stores first
+      const storesResponse = await this.getMerchantStores();
+      if (!storesResponse.success || !storesResponse.data?.stores) {
+        return { hasOffered: false, stores: [] };
+      }
+
+      const storeIds = storesResponse.data.stores.map(store => store.id);
+      
+      // Get offers for this request
+      const offersResponse = await this.getRequestOffers(requestId);
+      if (!offersResponse.success || !offersResponse.data?.offers) {
+        return { hasOffered: false, stores: storesResponse.data.stores };
+      }
+
+      // Check if any of the merchant's stores has offered
+      const merchantOffers = offersResponse.data.offers.filter(offer => 
+        storeIds.includes(offer.storeId)
+      );
+
+      return {
+        hasOffered: merchantOffers.length > 0,
+        stores: storesResponse.data.stores,
+        existingOffers: merchantOffers
+      };
+    } catch (error) {
+      console.error('Error checking existing offer:', error);
+      return { hasOffered: false, stores: [] };
+    }
+  }
+
+  // ✅ NEW: Get store performance analytics
+  async getStoreAnalytics(storeId, period = '30d') {
+    try {
+      if (!storeId) {
+        throw new Error('Store ID is required');
+      }
+
+      const url = `${API_BASE_URL}/merchant/stores/${storeId}/analytics?period=${period}`;
+      const response = await makeMerchantAPIRequest(url, { requireAuth: true });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch store analytics');
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error fetching store analytics:', error);
+      throw error;
+    }
+  }
+
+  // ✅ NEW: Withdraw an offer
+  async withdrawOffer(offerId, reason = '') {
+    try {
+      if (!offerId) {
+        throw new Error('Offer ID is required');
+      }
+
+      return await this.updateOfferStatus(offerId, 'withdrawn', reason);
+    } catch (error) {
+      console.error('Error withdrawing offer:', error);
       throw error;
     }
   }
@@ -308,9 +418,13 @@ class MerchantServiceRequestService {
     };
   }
 
-  // Validate offer data before submission
+  // ✅ ENHANCED: Validate store offer data before submission
   validateOfferData(data) {
     const errors = [];
+    
+    if (!data.storeId) {
+      errors.push('Store selection is required');
+    }
     
     if (!data.quotedPrice || parseFloat(data.quotedPrice) <= 0) {
       errors.push('Valid quoted price is required and must be greater than 0');
@@ -331,12 +445,49 @@ class MerchantServiceRequestService {
     if (data.availability && data.availability.length > 200) {
       errors.push('Availability must be less than 200 characters');
     }
-
-    if (!data.storeId) {
-      errors.push('Store selection is required');
-    }
     
     return errors;
+  }
+
+  // ✅ NEW: Validate if offer price is within request budget
+  validateOfferPrice(quotedPrice, requestBudgetMin, requestBudgetMax) {
+    const price = parseFloat(quotedPrice);
+    const minBudget = parseFloat(requestBudgetMin) || 0;
+    const maxBudget = parseFloat(requestBudgetMax) || Infinity;
+    
+    return {
+      isValid: price >= minBudget && price <= maxBudget,
+      isWithinRange: price >= minBudget && price <= maxBudget,
+      isOverBudget: price > maxBudget,
+      isUnderBudget: price < minBudget,
+      price,
+      minBudget,
+      maxBudget
+    };
+  }
+
+  // ✅ NEW: Helper method to format currency
+  formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(parseFloat(amount) || 0);
+  }
+
+  // ✅ NEW: Helper method to calculate estimated response time
+  calculateResponseTime(requestCreatedAt) {
+    const now = new Date();
+    const created = new Date(requestCreatedAt);
+    const diffInHours = Math.abs(now - created) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Less than 1 hour';
+    } else if (diffInHours < 24) {
+      return `${Math.round(diffInHours)} hour${Math.round(diffInHours) !== 1 ? 's' : ''}`;
+    } else {
+      const days = Math.round(diffInHours / 24);
+      return `${days} day${days !== 1 ? 's' : ''}`;
+    }
   }
 }
 

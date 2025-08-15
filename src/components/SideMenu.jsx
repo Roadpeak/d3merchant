@@ -100,6 +100,13 @@ const Sidebar = ({ onClose, currentMerchant }) => {
             icon: <MessageCircle size={20} />,
             path: "/dashboard/reviews"
         },
+
+        {
+            name: "Clients",
+            icon: <UserCircle size={20} />,
+            path: "/Clients"
+        },
+
         {
             name: "Socials",
             icon: <Share2 size={20} />,

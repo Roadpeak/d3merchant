@@ -75,199 +75,28 @@ const AlertCircle = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-const Star = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-  </svg>
-);
-
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-8">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
   </div>
 );
 
-// Enhanced category mapping - more comprehensive mapping between store categories and service request categories
-const CATEGORY_MAPPING = {
-  // Store Category -> Service Request Categories (array to support multiple matches)
-  'Restaurant': ['Food & Catering'],
-  'Food & Catering': ['Food & Catering'],
-  'Retail Store': ['Home Services', 'Other'],
-  'Beauty & Salon': ['Beauty & Wellness'],
-  'Beauty & Wellness': ['Beauty & Wellness'],
-  'Automotive': ['Auto Services'],
-  'Auto Services': ['Auto Services'],
-  'Health & Fitness': ['Fitness', 'Healthcare'],
-  'Fitness': ['Fitness'],
-  'Healthcare': ['Healthcare'],
-  'Professional Services': ['Home Services', 'Legal Services', 'Financial Services'],
-  'Legal Services': ['Legal Services'],
-  'Financial Services': ['Financial Services'],
-  'Entertainment': ['Event Services', 'Photography'],
-  'Event Services': ['Event Services'],
-  'Photography': ['Photography'],
-  'Education': ['Tutoring'],
-  'Tutoring': ['Tutoring'],
-  'Home & Garden': ['Home Services', 'Landscaping'],
-  'Home Services': ['Home Services'],
-  'Landscaping': ['Landscaping'],
-  'Technology': ['Tech Support'],
-  'Tech Support': ['Tech Support'],
-  'Fashion': ['Beauty & Wellness'],
-  'Pet Services': ['Pet Services'],
-  'Moving & Storage': ['Moving & Storage'],
-  'Other': ['Other', 'Home Services']
-};
-
-// Get matching service request categories for a store category
-const getMatchingServiceCategories = (storeCategory) => {
-  if (!storeCategory) return [];
-  return CATEGORY_MAPPING[storeCategory] || ['Home Services'];
-};
-
-// Filter service requests based on store categories
-const getFilteredServiceRequests = (requests, storeCategory) => {
-  if (!storeCategory || !requests) return requests;
-  
-  const matchingCategories = getMatchingServiceCategories(storeCategory);
-  return requests.filter(request => 
-    matchingCategories.includes(request.category)
-  );
-};
-
-// Mock data - enhanced with more categories
-const MOCK_STATS = {
-  totalOffers: 25,
-  pendingOffers: 8,
-  acceptedOffers: 15,
-  rejectedOffers: 2,
-  totalEarnings: 12500,
-  activeStores: 1,
-  acceptanceRate: 60.0
-};
-
-const MOCK_REQUESTS_ALL = [
-  {
-    id: 'demo-1',
-    title: "Professional house cleaning service needed",
-    description: "Looking for a reliable and experienced cleaning service for my 3-bedroom house. Need deep cleaning including kitchen, bathrooms, living areas, and bedrooms. Must be insured and provide own supplies.",
-    category: "Home Services",
-    budget: "$100 - $150",
-    budgetMin: 100,
-    budgetMax: 150,
-    location: "Westlands, Nairobi",
-    timeline: "thisweek",
-    postedBy: "John Doe",
-    postedTime: "2 hours ago",
-    priority: "normal",
-    status: "open",
-    offers: 3,
-    verified: true,
-    requirements: ["Insurance", "References", "Licensed"],
-    merchantOffered: false,
-    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  },
-  {
-    id: 'demo-2',
-    title: "Car wash and detailing service",
-    description: "Need professional exterior and interior car cleaning and detailing service for my Toyota SUV. Including wax, vacuum, tire cleaning, and dashboard polishing.",
-    category: "Auto Services",
-    budget: "$80 - $120",
-    budgetMin: 80,
-    budgetMax: 120,
-    location: "Kilimani, Nairobi",
-    timeline: "flexible",
-    postedBy: "Mary K.",
-    postedTime: "5 hours ago",
-    priority: "normal",
-    status: "open",
-    offers: 1,
-    verified: false,
-    requirements: ["Insurance"],
-    merchantOffered: false,
-    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  },
-  {
-    id: 'demo-3',
-    title: "Bridal makeup and hair styling",
-    description: "Looking for professional hair styling and makeup services for a wedding event. Need someone experienced with bridal looks and who can travel to venue in Karen.",
-    category: "Beauty & Wellness",
-    budget: "$200 - $300",
-    budgetMin: 200,
-    budgetMax: 300,
-    location: "Karen, Nairobi",
-    timeline: "nextweek",
-    postedBy: "Sarah L.",
-    postedTime: "1 hour ago",
-    priority: "high",
-    status: "open",
-    offers: 2,
-    verified: true,
-    requirements: ["Licensed", "Portfolio", "Travel"],
-    merchantOffered: false,
-    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  },
-  {
-    id: 'demo-4',
-    title: "Personal fitness training sessions",
-    description: "Need a certified personal trainer for home fitness sessions 3 times a week. Focus on weight loss and strength training. Must provide own equipment.",
-    category: "Fitness",
-    budget: "$150 - $250",
-    budgetMin: 150,
-    budgetMax: 250,
-    location: "Kileleshwa, Nairobi",
-    timeline: "thisweek",
-    postedBy: "Mike R.",
-    postedTime: "3 hours ago",
-    priority: "normal",
-    status: "open",
-    offers: 0,
-    verified: true,
-    requirements: ["Certified", "Insurance", "Equipment"],
-    merchantOffered: false,
-    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  },
-  {
-    id: 'demo-5',
-    title: "Wedding photography and videography",
-    description: "Looking for professional photographer and videographer for wedding ceremony and reception. Need both photo and video coverage for full day event.",
-    category: "Photography",
-    budget: "$500 - $800",
-    budgetMin: 500,
-    budgetMax: 800,
-    location: "Runda, Nairobi",
-    timeline: "thismonth",
-    postedBy: "James & Lisa",
-    postedTime: "6 hours ago",
-    priority: "high",
-    status: "open",
-    offers: 5,
-    verified: true,
-    requirements: ["Portfolio", "Equipment", "Insurance"],
-    merchantOffered: false,
-    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  },
-  {
-    id: 'demo-6',
-    title: "Computer repair and maintenance",
-    description: "Need tech support for laptop repair. Screen replacement and general maintenance. Must be able to work with Dell laptops and provide warranty.",
-    category: "Tech Support",
-    budget: "$50 - $100",
-    budgetMin: 50,
-    budgetMax: 100,
-    location: "CBD, Nairobi",
-    timeline: "urgent",
-    postedBy: "Peter M.",
-    postedTime: "4 hours ago",
-    priority: "urgent",
-    status: "open",
-    offers: 1,
-    verified: false,
-    requirements: ["Certified", "Warranty"],
-    merchantOffered: false,
-    eligibleStores: [{ id: 'store-1', name: 'Your Store' }]
-  }
-];
+const InfoBox = ({ type, message, onClose }) => (
+  <div className={`border rounded-lg p-4 mb-6 ${
+    type === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
+    type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+    'bg-blue-50 border-blue-200 text-blue-700'
+  }`}>
+    <div className="flex justify-between items-start">
+      <p>{message}</p>
+      {onClose && (
+        <button onClick={onClose} className="ml-4 text-gray-500 hover:text-gray-700">
+          ×
+        </button>
+      )}
+    </div>
+  </div>
+);
 
 export default function MerchantServiceRequestDashboard() {
   // Core state
@@ -279,13 +108,27 @@ export default function MerchantServiceRequestDashboard() {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentMerchant, setCurrentMerchant] = useState(null);
-  const [merchantStore, setMerchantStore] = useState(null);
+  const [merchantStores, setMerchantStores] = useState([]);
 
   // Data state
-  const [dashboardStats, setDashboardStats] = useState(MOCK_STATS);
-  const [allServiceRequests, setAllServiceRequests] = useState([]); // All requests
-  const [filteredServiceRequests, setFilteredServiceRequests] = useState([]); // Filtered by category
+  const [dashboardStats, setDashboardStats] = useState({
+    totalOffers: 0,
+    pendingOffers: 0,
+    acceptedOffers: 0,
+    rejectedOffers: 0,
+    totalEarnings: 0,
+    activeStores: 0,
+    acceptanceRate: 0
+  });
+  const [serviceRequests, setServiceRequests] = useState([]);
   const [merchantOffers, setMerchantOffers] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNext: false,
+    hasPrev: false
+  });
 
   // Modal states
   const [showOfferForm, setShowOfferForm] = useState(false);
@@ -297,13 +140,13 @@ export default function MerchantServiceRequestDashboard() {
     budget: 'all',
     timeline: 'all',
     location: '',
-    status: 'all',
     page: 1,
     limit: 20
   });
 
   // Form states
   const [offerForm, setOfferForm] = useState({
+    storeId: '',
     quotedPrice: '',
     message: '',
     availability: '',
@@ -311,83 +154,102 @@ export default function MerchantServiceRequestDashboard() {
     includesSupplies: false
   });
 
-  // Enhanced service request loading with real API integration
+  // ✅ FIXED: Load service requests for merchants using correct endpoint
   const loadServiceRequests = async () => {
     try {
-      console.log('📊 Loading service requests...');
+      console.log('📊 Loading service requests for merchant...');
       
-      // Try to load from real API first
-      try {
-        const response = await fetch('/api/v1/request-service', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data?.requests) {
-            console.log('✅ Loaded service requests from API:', result.data.requests.length);
-            setAllServiceRequests(result.data.requests);
-            return result.data.requests;
-          }
+      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
+      
+      const response = await merchantServiceRequestService.getServiceRequestsForMerchant(filters);
+      
+      if (response && response.success) {
+        console.log('✅ Loaded service requests from API:', response.data.requests.length);
+        setServiceRequests(response.data.requests);
+        
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
         }
-      } catch (apiError) {
-        console.warn('⚠️ API request failed, using mock data:', apiError.message);
+        
+        return response.data.requests;
+      } else {
+        throw new Error(response?.message || 'Failed to load service requests');
       }
-
-      // Fallback to mock data
-      console.log('📝 Using mock service requests');
-      setAllServiceRequests(MOCK_REQUESTS_ALL);
-      return MOCK_REQUESTS_ALL;
     } catch (err) {
       console.error('💥 Error loading service requests:', err);
-      setAllServiceRequests(MOCK_REQUESTS_ALL);
-      return MOCK_REQUESTS_ALL;
+      setError(`Failed to load service requests: ${err.message}`);
+      setServiceRequests([]);
+      return [];
     }
   };
 
-  // Apply category and other filters to service requests
-  const applyFilters = (requests) => {
-    let filtered = requests;
-
-    // First filter by store category if available
-    if (merchantStore?.category) {
-      filtered = getFilteredServiceRequests(filtered, merchantStore.category);
-      console.log(`🔍 Filtered by store category "${merchantStore.category}":`, filtered.length, 'requests');
+  // ✅ FIXED: Load merchant's stores
+  const loadMerchantStores = async () => {
+    try {
+      console.log('🏪 Loading merchant stores...');
+      
+      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
+      
+      const response = await merchantServiceRequestService.getMerchantStores();
+      
+      if (response && response.success) {
+        console.log('✅ Loaded merchant stores:', response.data?.stores?.length || 0);
+        setMerchantStores(response.data?.stores || []);
+        return response.data?.stores || [];
+      } else {
+        throw new Error(response?.message || 'Failed to load merchant stores');
+      }
+    } catch (err) {
+      console.error('💥 Error loading merchant stores:', err);
+      console.warn('⚠️ Using empty store data');
+      setMerchantStores([]);
+      return [];
     }
+  };
 
-    // Apply additional filters
-    if (filters.budget !== 'all') {
-      const [min, max] = filters.budget.split('-');
-      filtered = filtered.filter(request => {
-        const budgetMin = request.budgetMin || parseInt(request.budget?.split(' - $')[0]?.replace('$', '') || 0);
-        const budgetMax = request.budgetMax || parseInt(request.budget?.split(' - $')[1]?.replace('$', '') || 999999);
-        
-        if (max === '+') {
-          return budgetMin >= parseInt(min);
-        } else {
-          return budgetMin >= parseInt(min) && budgetMax <= parseInt(max);
-        }
-      });
+  // ✅ FIXED: Load dashboard statistics
+  const loadDashboardStats = async () => {
+    try {
+      console.log('📊 Loading dashboard statistics...');
+      
+      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
+      
+      const response = await merchantServiceRequestService.getDashboardStats();
+      
+      if (response && response.success) {
+        console.log('✅ Loaded dashboard stats:', response.data);
+        setDashboardStats(response.data);
+        return response.data;
+      } else {
+        throw new Error(response?.message || 'Failed to load dashboard stats');
+      }
+    } catch (err) {
+      console.error('💥 Error loading dashboard stats:', err);
+      console.warn('⚠️ Using default dashboard stats');
     }
+  };
 
-    if (filters.timeline !== 'all') {
-      filtered = filtered.filter(request => request.timeline === filters.timeline);
+  // ✅ FIXED: Load merchant offers
+  const loadMerchantOffers = async () => {
+    try {
+      console.log('📤 Loading merchant offers...');
+      
+      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
+      
+      const response = await merchantServiceRequestService.getMerchantOffers();
+      
+      if (response && response.success) {
+        console.log('✅ Loaded merchant offers:', response.data?.offers?.length || 0);
+        setMerchantOffers(response.data?.offers || []);
+        return response.data?.offers || [];
+      } else {
+        throw new Error(response?.message || 'Failed to load merchant offers');
+      }
+    } catch (err) {
+      console.error('💥 Error loading merchant offers:', err);
+      setMerchantOffers([]);
+      return [];
     }
-
-    if (filters.location) {
-      filtered = filtered.filter(request => 
-        request.location?.toLowerCase().includes(filters.location.toLowerCase())
-      );
-    }
-
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(request => request.status === filters.status);
-    }
-
-    return filtered;
   };
 
   // Authentication check and initialization
@@ -420,10 +282,7 @@ export default function MerchantServiceRequestDashboard() {
           throw new Error('No merchant data found. Please log in again.');
         }
 
-        // Load merchant's store data
-        await loadMerchantStore(merchant.id);
-
-        // Load dashboard data
+        // Load all dashboard data
         await loadDashboardData();
         
       } catch (err) {
@@ -445,117 +304,47 @@ export default function MerchantServiceRequestDashboard() {
     }
   }, [initialized]);
 
-  // Update filtered requests when store or filters change
+  // Reload data when filters change
   useEffect(() => {
-    if (allServiceRequests.length > 0) {
-      const filtered = applyFilters(allServiceRequests);
-      setFilteredServiceRequests(filtered);
-      console.log('🔄 Applied filters, showing', filtered.length, 'requests');
+    if (initialized && isAuthenticated) {
+      loadServiceRequests();
     }
-  }, [allServiceRequests, merchantStore, filters]);
-
-  const loadMerchantStore = async (merchantId) => {
-    try {
-      console.log('🏪 Loading merchant store data...');
-      
-      // Try to load store data using merchantAuthService
-      try {
-        const storeData = await merchantAuthService.getStoreDetails(merchantId);
-        if (storeData && storeData.success) {
-          setMerchantStore(storeData.data);
-          console.log('✅ Store data loaded from API:', storeData.data);
-          return;
-        }
-      } catch (apiError) {
-        console.warn('⚠️ Failed to load store from API, using mock data:', apiError.message);
-      }
-      
-      // Mock store data with business categories
-      const mockStore = {
-        id: `store-${merchantId}`,
-        name: currentMerchant?.first_name ? `${currentMerchant.first_name}'s Store` : 'Your Store',
-        description: 'Professional service provider',
-        category: 'Beauty & Wellness', // This will determine which requests are shown
-        location: 'Nairobi, Kenya',
-        phone_number: currentMerchant?.phone_number || '',
-        primary_email: currentMerchant?.email_address || '',
-        status: 'open',
-        rating: 4.8,
-        reviewCount: 127,
-        verified: true,
-        logo_url: '',
-        website_url: '',
-        opening_time: '09:00',
-        closing_time: '18:00',
-        working_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-        cashback: '5%'
-      };
-
-      setMerchantStore(mockStore);
-      console.log('✅ Store data loaded (mock):', mockStore);
-
-    } catch (err) {
-      console.error('💥 Error loading store data:', err);
-      // Set a basic store structure if loading fails
-      const fallbackStore = {
-        id: `store-${merchantId}`,
-        name: 'Your Store',
-        description: 'Service provider',
-        category: 'Professional Services',
-        location: 'Nairobi, Kenya',
-        status: 'open',
-        rating: 0,
-        reviewCount: 0,
-        verified: false
-      };
-      setMerchantStore(fallbackStore);
-    }
-  };
+  }, [filters, initialized, isAuthenticated]);
 
   const loadDashboardData = async () => {
     try {
-      console.log('📊 Loading dashboard data...');
+      console.log('📊 Loading all dashboard data...');
       
-      // Load service requests
-      const requests = await loadServiceRequests();
-      
-      // Try to load merchant offers
-      try {
-        // This would be your API call to get merchant's offers
-        const response = await fetch('/api/v1/merchant/offers', {
-          headers: {
-            'Authorization': `Bearer ${merchantAuthService.getToken()}`
-          }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            setMerchantOffers(result.data?.offers || []);
-          }
-        } else {
-          // Fallback to mock offers
-          setMerchantOffers([]);
-        }
-      } catch (offersError) {
-        console.warn('⚠️ Failed to load offers:', offersError.message);
-        setMerchantOffers([]);
-      }
+      // Load all data in parallel
+      const [stores, requests, offers, stats] = await Promise.allSettled([
+        loadMerchantStores(),
+        loadServiceRequests(),
+        loadMerchantOffers(),
+        loadDashboardStats()
+      ]);
 
+      // Log results
+      console.log('📊 Dashboard data loaded:', {
+        stores: stores.status === 'fulfilled' ? stores.value?.length : 'failed',
+        requests: requests.status === 'fulfilled' ? requests.value?.length : 'failed',
+        offers: offers.status === 'fulfilled' ? offers.value?.length : 'failed',
+        stats: stats.status === 'fulfilled' ? 'loaded' : 'failed'
+      });
+      
     } catch (err) {
-      console.warn('⚠️ Failed to load dashboard data:', err);
+      console.error('💥 Error loading dashboard data:', err);
     }
   };
 
-  // Enhanced offer submission with real API integration
+  // ✅ FIXED: Submit STORE offer (not individual merchant offer)
   const handleOfferFormSubmit = async () => {
     setSubmitting(true);
     
     try {
-      console.log('📤 Submitting offer for request:', selectedRequest.id);
+      console.log('📤 Submitting STORE offer for request:', selectedRequest.id);
       
       // Validate required fields
-      if (!offerForm.quotedPrice || !offerForm.message || !offerForm.availability) {
+      if (!offerForm.storeId || !offerForm.quotedPrice || !offerForm.message || !offerForm.availability) {
         throw new Error('Please fill in all required fields');
       }
 
@@ -565,72 +354,68 @@ export default function MerchantServiceRequestDashboard() {
         throw new Error('Please enter a valid price');
       }
 
-      // Prepare offer data
-      const offerData = {
-        storeId: merchantStore?.id,
+      // Import service dynamically
+      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
+      
+      // Validate offer data
+      const validationErrors = merchantServiceRequestService.validateOfferData(offerForm);
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
+
+      // Get selected store details for logging
+      const selectedStore = merchantStores.find(store => store.id === offerForm.storeId);
+      console.log('📋 Submitting STORE offer data:', {
+        requestId: selectedRequest.id,
+        storeId: offerForm.storeId,
+        storeName: selectedStore?.name,
+        storeCategory: selectedStore?.category,
+        quotedPrice: price,
+        requestCategory: selectedRequest.category
+      });
+
+      // ✅ CRITICAL: Verify store category matches request category
+      if (selectedStore && selectedStore.category !== selectedRequest.category) {
+        throw new Error(`Your store category "${selectedStore.category}" does not match the request category "${selectedRequest.category}"`);
+      }
+
+      const result = await merchantServiceRequestService.createStoreOffer(selectedRequest.id, {
+        storeId: offerForm.storeId,
         quotedPrice: price,
         message: offerForm.message.trim(),
         availability: offerForm.availability.trim(),
         estimatedDuration: offerForm.estimatedDuration.trim() || null,
         includesSupplies: offerForm.includesSupplies
-      };
-
-      console.log('📋 Offer data:', offerData);
-
-      // Try to submit via the new API service
-      try {
-        const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-        
-        const result = await merchantServiceRequestService.createStoreOffer(selectedRequest.id, offerData);
-        
-        if (result && result.success) {
-          console.log('✅ Offer submitted successfully via API service');
-        } else {
-          throw new Error(result?.message || 'Failed to submit offer via service');
-        }
-      } catch (serviceError) {
-        console.warn('⚠️ API service submission failed, trying direct API:', serviceError.message);
-        
-        // Fallback to direct API call
-        try {
-          const response = await fetch(`/api/v1/service-requests/${selectedRequest.id}/offers`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${merchantAuthService.getToken()}`
-            },
-            body: JSON.stringify(offerData)
-          });
-
-          const result = await response.json();
-
-          if (response.ok && result.success) {
-            console.log('✅ Offer submitted successfully via direct API');
-          } else {
-            throw new Error(result.message || 'Failed to submit offer via direct API');
-          }
-        } catch (directApiError) {
-          console.warn('⚠️ Direct API submission also failed:', directApiError.message);
-          // Simulate successful submission for demo
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          console.log('✅ Offer submitted (simulated)');
-        }
-      }
-      
-      // Reset form and close modal
-      setShowOfferForm(false);
-      setOfferForm({
-        quotedPrice: '', message: '', availability: '',
-        estimatedDuration: '', includesSupplies: false
       });
-      setSelectedRequest(null);
       
-      // Refresh data
-      await loadDashboardData();
-      
-      alert('Offer submitted successfully! The customer will be notified.');
+      if (result && result.success) {
+        console.log('✅ Store offer submitted successfully');
+        
+        // Reset form and close modal
+        setShowOfferForm(false);
+        setOfferForm({
+          storeId: '',
+          quotedPrice: '',
+          message: '',
+          availability: '',
+          estimatedDuration: '',
+          includesSupplies: false
+        });
+        setSelectedRequest(null);
+        
+        // Refresh data
+        await Promise.all([
+          loadMerchantOffers(),
+          loadDashboardStats(),
+          loadServiceRequests()
+        ]);
+        
+        alert(`Store offer submitted successfully! Your store "${selectedStore?.name}" has offered $${price} for this service request.`);
+      } else {
+        throw new Error(result?.message || 'Failed to submit store offer');
+      }
     } catch (err) {
-      console.error('💥 Offer submission error:', err);
+      console.error('💥 Store offer submission error:', err);
       alert(`Error: ${err.message}`);
     } finally {
       setSubmitting(false);
@@ -644,6 +429,10 @@ export default function MerchantServiceRequestDashboard() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+  };
+
+  const handlePageChange = (newPage) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
   };
 
   const getTimelineLabel = (timeline) => {
@@ -680,6 +469,11 @@ export default function MerchantServiceRequestDashboard() {
     return price >= budgetMin && price <= budgetMax;
   };
 
+  // ✅ NEW: Filter stores by request category
+  const getEligibleStores = (requestCategory) => {
+    return merchantStores.filter(store => store.category === requestCategory);
+  };
+
   // Redirect to login if not authenticated
   if (!isAuthenticated && !loading) {
     return (
@@ -706,7 +500,10 @@ export default function MerchantServiceRequestDashboard() {
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner />
+        <div className="container mx-auto px-4 py-8">
+          <LoadingSpinner />
+          <p className="text-center text-gray-600 mt-4">Loading merchant dashboard...</p>
+        </div>
       </Layout>
     );
   }
@@ -716,23 +513,27 @@ export default function MerchantServiceRequestDashboard() {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            <h3 className="font-bold">Error</h3>
-            <p>{error}</p>
-            <div className="mt-4 space-x-2">
-              <button 
-                onClick={() => window.location.reload()} 
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              >
-                Retry
-              </button>
-              <button 
-                onClick={() => merchantAuthService.logout()} 
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-              >
-                Logout
-              </button>
-            </div>
+          <InfoBox 
+            type="error" 
+            message={error}
+            onClose={() => setError(null)}
+          />
+          <div className="text-center">
+            <button 
+              onClick={() => {
+                setError(null);
+                setInitialized(false);
+              }} 
+              className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 font-medium mr-4"
+            >
+              Retry
+            </button>
+            <button 
+              onClick={() => merchantAuthService.logout()} 
+              className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-medium"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </Layout>
@@ -748,9 +549,8 @@ export default function MerchantServiceRequestDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Merchant Dashboard</h1>
-                <p className="text-gray-600">Manage service requests and offers for your store</p>
+                <p className="text-gray-600">Manage service requests and offers for your stores</p>
                 
-                {/* Merchant info */}
                 {currentMerchant && (
                   <div className="mt-2 text-sm text-gray-500">
                     Welcome, {currentMerchant.first_name} {currentMerchant.last_name} ({currentMerchant.email_address})
@@ -758,17 +558,12 @@ export default function MerchantServiceRequestDashboard() {
                 )}
               </div>
               <div className="flex items-center space-x-4">
-                {merchantStore && (
+                {merchantStores.length > 0 && (
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <Store className="w-4 h-4" />
-                    <span>{merchantStore.name}</span>
-                    {merchantStore.verified && (
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                        Verified
-                      </span>
-                    )}
+                    <span>{merchantStores.length} store{merchantStores.length !== 1 ? 's' : ''}</span>
                     <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                      {merchantStore.category}
+                      {[...new Set(merchantStores.map(s => s.category))].join(', ')}
                     </span>
                   </div>
                 )}
@@ -787,8 +582,8 @@ export default function MerchantServiceRequestDashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Available Requests</p>
-                  <p className="text-2xl font-bold text-gray-900">{filteredServiceRequests.length}</p>
-                  <p className="text-xs text-gray-500">Matching your store category</p>
+                  <p className="text-2xl font-bold text-gray-900">{serviceRequests.length}</p>
+                  <p className="text-xs text-gray-500">Matching your store categories</p>
                 </div>
               </div>
             </div>
@@ -799,7 +594,7 @@ export default function MerchantServiceRequestDashboard() {
                   <AlertCircle className="h-8 w-8 text-yellow-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Your Offers</p>
+                  <p className="text-sm font-medium text-gray-600">Your Store Offers</p>
                   <p className="text-2xl font-bold text-gray-900">{merchantOffers.length}</p>
                   <p className="text-xs text-gray-500">Total sent</p>
                 </div>
@@ -833,22 +628,27 @@ export default function MerchantServiceRequestDashboard() {
             </div>
           </div>
 
-          {/* Category Info */}
-          {merchantStore && (
+          {/* Store Categories Info */}
+          {merchantStores.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-center space-x-2">
                 <Store className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-900">Your Store Category: {merchantStore.category}</span>
+                <span className="font-medium text-blue-900">
+                  Your Store Categories: {[...new Set(merchantStores.map(s => s.category))].join(', ')}
+                </span>
               </div>
               <p className="text-sm text-blue-700 mt-1">
-                Showing service requests for: {getMatchingServiceCategories(merchantStore.category).join(', ')}
+                Only showing service requests that match your store categories. Total requests: {pagination.totalCount}
               </p>
-              {filteredServiceRequests.length === 0 && allServiceRequests.length > 0 && (
-                <p className="text-sm text-blue-600 mt-2">
-                  No requests match your store category. {allServiceRequests.length} total requests available.
-                </p>
-              )}
             </div>
+          )}
+
+          {/* No Stores Warning */}
+          {merchantStores.length === 0 && (
+            <InfoBox 
+              type="warning" 
+              message="You don't have any active stores yet. Create a store to start receiving service requests that match your business categories!"
+            />
           )}
 
           {/* Tabs */}
@@ -858,13 +658,13 @@ export default function MerchantServiceRequestDashboard() {
                 onClick={() => handleTabChange('requests')}
                 className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'requests' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
               >
-                Available Requests ({filteredServiceRequests.length})
+                Available Requests ({serviceRequests.length})
               </button>
               <button
                 onClick={() => handleTabChange('offers')}
                 className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'offers' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
               >
-                My Offers ({merchantOffers.length})
+                My Store Offers ({merchantOffers.length})
               </button>
             </div>
           </div>
@@ -917,135 +717,181 @@ export default function MerchantServiceRequestDashboard() {
           {/* Content based on active tab */}
           {activeTab === 'requests' && (
             <div className="space-y-6">
-              {filteredServiceRequests.length === 0 ? (
+              {serviceRequests.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-xl mb-4">
-                    {allServiceRequests.length === 0 ? 'No service requests available' : 'No requests match your store category'}
-                  </div>
+                  <div className="text-gray-400 text-xl mb-4">No service requests available</div>
                   <p className="text-gray-600 mb-6">
-                    {allServiceRequests.length === 0 
-                      ? 'Check back later for new service requests from customers.'
-                      : `Your store specializes in "${merchantStore?.category}". Requests in matching categories will appear here.`
+                    {merchantStores.length === 0 
+                      ? 'Create stores first to start receiving service requests that match your business categories.'
+                      : 'Check back later for new service requests matching your store categories.'
                     }
                   </p>
-                  {allServiceRequests.length > 0 && (
-                    <div className="text-sm text-gray-500">
-                      Total requests available: {allServiceRequests.length}
-                    </div>
-                  )}
                 </div>
               ) : (
-                filteredServiceRequests.map((request) => (
-                  <div key={request.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-                    <div className="p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-xl font-semibold">{request.title}</h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              request.priority === 'urgent' ? 'bg-red-100 text-red-800' : 
-                              request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {request.priority}
-                            </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {request.status.toUpperCase()}
-                            </span>
-                            {request.verified && (
-                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                                ✓ Verified User
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-gray-600 mb-3">{request.description}</p>
-
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-3">
-                            <div className="flex items-center space-x-1">
-                              <MapPin className="w-4 h-4" />
-                              <span>{request.location}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <DollarSign className="w-4 h-4" />
-                              <span className="font-medium text-green-600">{request.budget}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-4 h-4" />
-                              <span>{getTimelineLabel(request.timeline)}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <User className="w-4 h-4" />
-                              <span>by {request.postedBy}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <span className="text-sm text-gray-500">{request.postedTime}</span>
-                              <div className="flex items-center space-x-2">
-                                <MessageSquare className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm font-medium text-red-600">
-                                  {request.offers} offer{request.offers !== 1 ? 's' : ''} received
+                <>
+                  {serviceRequests.map((request) => {
+                    const eligibleStores = getEligibleStores(request.category);
+                    return (
+                      <div key={request.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h3 className="text-xl font-semibold">{request.title}</h3>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  request.priority === 'urgent' ? 'bg-red-100 text-red-800' : 
+                                  request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {request.priority}
                                 </span>
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {request.status.toUpperCase()}
+                                </span>
+                                {request.verified && (
+                                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                    ✓ Verified User
+                                  </span>
+                                )}
+                                {request.merchantOffered && (
+                                  <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                                    Store Already Offered
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                                {request.category}
-                              </span>
-                            </div>
+                              <p className="text-gray-600 mb-3">{request.description}</p>
 
-                            <div className="flex space-x-2">
-                              <button 
-                                className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 font-medium"
-                                onClick={() => {
-                                  alert('View Details functionality would show full request details');
-                                }}
-                              >
-                                View Details
-                              </button>
-                              {merchantStore && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setOfferForm(prev => ({
-                                      ...prev,
-                                      quotedPrice: '' // Clear any previous price
-                                    }));
-                                    setShowOfferForm(true);
-                                  }}
-                                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
-                                  disabled={request.status !== 'open'}
-                                >
-                                  Send Offer
-                                </button>
-                              )}
+                              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-3">
+                                <div className="flex items-center space-x-1">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{request.location}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <DollarSign className="w-4 h-4" />
+                                  <span className="font-medium text-green-600">{request.budget}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{getTimelineLabel(request.timeline)}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <User className="w-4 h-4" />
+                                  <span>by {request.postedBy}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                  <span className="text-sm text-gray-500">{request.postedTime}</span>
+                                  <div className="flex items-center space-x-2">
+                                    <MessageSquare className="w-4 h-4 text-gray-400" />
+                                    <span className="text-sm font-medium text-red-600">
+                                      {request.offers} offer{request.offers !== 1 ? 's' : ''} received
+                                    </span>
+                                  </div>
+                                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                                    {request.category}
+                                  </span>
+                                </div>
+
+                                <div className="flex space-x-2">
+                                  <button 
+                                    className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 font-medium"
+                                    onClick={() => {
+                                      alert('View Details functionality would show full request details');
+                                    }}
+                                  >
+                                    View Details
+                                  </button>
+                                  {eligibleStores.length > 0 && !request.merchantOffered && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedRequest(request);
+                                        setOfferForm(prev => ({
+                                          ...prev,
+                                          storeId: eligibleStores[0]?.id || '',
+                                          quotedPrice: ''
+                                        }));
+                                        setShowOfferForm(true);
+                                      }}
+                                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+                                      disabled={request.status !== 'open'}
+                                    >
+                                      Send Store Offer
+                                    </button>
+                                  )}
+                                  {eligibleStores.length === 0 && (
+                                    <span className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
+                                      No eligible stores
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
+
+                          {request.requirements && request.requirements.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
+                              <span className="text-sm text-gray-600 mr-2">Requirements:</span>
+                              {request.requirements.map((req, index) => (
+                                <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                  {req}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* ✅ NEW: Show eligible stores for this request */}
+                          {eligibleStores.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <span className="text-sm text-gray-600 mr-2">Your eligible stores:</span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {eligibleStores.map((store) => (
+                                  <span key={store.id} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                    🏪 {store.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
+                    );
+                  })}
 
-                      {request.requirements && request.requirements.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-                          <span className="text-sm text-gray-600 mr-2">Requirements:</span>
-                          {request.requirements.map((req, index) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                              {req}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                  {/* Pagination */}
+                  {pagination.totalPages > 1 && (
+                    <div className="flex justify-center items-center space-x-4 mt-8">
+                      <button
+                        onClick={() => handlePageChange(pagination.currentPage - 1)}
+                        disabled={!pagination.hasPrev}
+                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Page {pagination.currentPage} of {pagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() => handlePageChange(pagination.currentPage + 1)}
+                        disabled={!pagination.hasNext}
+                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next
+                      </button>
                     </div>
-                  </div>
-                ))
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {/* My Offers Tab */}
+          {/* My Store Offers Tab */}
           {activeTab === 'offers' && (
             <div className="space-y-6">
               {merchantOffers.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-xl mb-4">No offers yet</div>
+                  <div className="text-gray-400 text-xl mb-4">No store offers yet</div>
                   <p className="text-gray-600 mb-6">Your store offers will appear here once you start submitting them.</p>
                   <button
                     onClick={() => handleTabChange('requests')}
@@ -1071,7 +917,7 @@ export default function MerchantServiceRequestDashboard() {
                           <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                             <div className="flex items-center space-x-1">
                               <Store className="w-4 h-4" />
-                              <span className="font-medium">{offer.storeName}</span>
+                              <span className="font-medium">🏪 {offer.storeName}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <User className="w-4 h-4" />
@@ -1086,7 +932,7 @@ export default function MerchantServiceRequestDashboard() {
                           <div className="bg-gray-50 rounded-lg p-4 mb-4">
                             <div className="flex justify-between items-start mb-2">
                               <div>
-                                <span className="text-sm text-gray-600">Your Quote:</span>
+                                <span className="text-sm text-gray-600">Store Quote:</span>
                                 <p className="text-2xl font-bold text-green-600">${offer.quotedPrice}</p>
                               </div>
                               <div className="text-right">
@@ -1099,7 +945,7 @@ export default function MerchantServiceRequestDashboard() {
                               <p className="text-sm font-medium text-gray-700">{offer.availability}</p>
                             </div>
                             <div>
-                              <span className="text-sm text-gray-600">Your Message:</span>
+                              <span className="text-sm text-gray-600">Store Message:</span>
                               <p className="text-gray-700 italic">"{offer.message}"</p>
                             </div>
                           </div>
@@ -1126,27 +972,48 @@ export default function MerchantServiceRequestDashboard() {
           )}
         </div>
 
-        {/* Enhanced Offer Form Modal */}
+        {/* ✅ ENHANCED: Store-Based Offer Form Modal */}
         {showOfferForm && selectedRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Send Offer</h2>
+                  <h2 className="text-2xl font-bold">Send Store Offer</h2>
                   <button onClick={() => setShowOfferForm(false)} className="text-gray-500 hover:text-gray-700 text-2xl">
                     ×
                   </button>
                 </div>
                 <div className="mt-2">
-                  <p className="text-gray-600">Offer for: <span className="font-medium">{selectedRequest.title}</span></p>
+                  <p className="text-gray-600">Store offer for: <span className="font-medium">{selectedRequest.title}</span></p>
                   <p className="text-sm text-gray-500">Customer Budget: <span className="font-medium text-green-600">{selectedRequest.budget}</span></p>
-                  {merchantStore && (
-                    <p className="text-sm text-gray-500">From: <span className="font-medium">{merchantStore.name}</span></p>
-                  )}
+                  <p className="text-sm text-blue-600">Category: <span className="font-medium">{selectedRequest.category}</span></p>
                 </div>
               </div>
 
               <div className="p-6 space-y-6">
+                {/* ✅ FIXED: Store Selection - Only show stores that match request category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Store *</label>
+                  <select
+                    value={offerForm.storeId}
+                    onChange={(e) => setOfferForm(prev => ({ ...prev, storeId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    required
+                  >
+                    <option value="">Choose a store...</option>
+                    {getEligibleStores(selectedRequest.category).map(store => (
+                      <option key={store.id} value={store.id}>
+                        🏪 {store.name} ({store.category})
+                      </option>
+                    ))}
+                  </select>
+                  {getEligibleStores(selectedRequest.category).length === 0 && (
+                    <p className="text-sm text-red-600 mt-1">
+                      No stores available for "{selectedRequest.category}" category. Create a store in this category first.
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Quoted Price * (USD)</label>
                   <div className="relative">
@@ -1157,7 +1024,7 @@ export default function MerchantServiceRequestDashboard() {
                       min="1"
                       value={offerForm.quotedPrice}
                       onChange={(e) => setOfferForm(prev => ({ ...prev, quotedPrice: e.target.value }))}
-                      placeholder="Enter your price quote"
+                      placeholder="Enter your store's price quote"
                       className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                       required
                     />
@@ -1180,18 +1047,19 @@ export default function MerchantServiceRequestDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Message * (Pitch your services)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Store Message * (Pitch your store's services)</label>
                   <textarea
                     rows="4"
                     value={offerForm.message}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, message: e.target.value }))}
-                    placeholder="Describe your offer, experience, and why you're the best choice for this job. Mention your qualifications, past work, and what makes you stand out..."
+                    placeholder="Describe your store's offer, experience, and why your store is the best choice for this job. Mention your store's qualifications, past work, and what makes your store stand out..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                     required
-                    minLength="20"
+                    minLength="10"
+                    maxLength="1000"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    {offerForm.message.length}/500 characters (minimum 20 required)
+                    {offerForm.message.length}/1000 characters (minimum 10 required)
                   </p>
                 </div>
 
@@ -1201,9 +1069,10 @@ export default function MerchantServiceRequestDashboard() {
                     type="text"
                     value={offerForm.availability}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, availability: e.target.value }))}
-                    placeholder="When can you start? (e.g., Tomorrow at 2 PM, This weekend, Next Monday)"
+                    placeholder="When can your store start? (e.g., Tomorrow at 2 PM, This weekend, Next Monday)"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
                     required
+                    maxLength="200"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Customer timeline: {getTimelineLabel(selectedRequest.timeline)}
@@ -1234,7 +1103,6 @@ export default function MerchantServiceRequestDashboard() {
                   </label>
                 </div>
 
-                {/* Display requirements if any */}
                 {selectedRequest.requirements && selectedRequest.requirements.length > 0 && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h4 className="text-sm font-medium text-blue-900 mb-2">Customer Requirements:</h4>
@@ -1246,7 +1114,7 @@ export default function MerchantServiceRequestDashboard() {
                       ))}
                     </div>
                     <p className="text-xs text-blue-600 mt-2">
-                      Make sure you meet these requirements before submitting your offer.
+                      Make sure your store meets these requirements before submitting the offer.
                     </p>
                   </div>
                 )}
@@ -1264,9 +1132,9 @@ export default function MerchantServiceRequestDashboard() {
                     type="button"
                     onClick={handleOfferFormSubmit}
                     className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium"
-                    disabled={submitting || !offerForm.quotedPrice || !offerForm.message || !offerForm.availability}
+                    disabled={submitting || !offerForm.storeId || !offerForm.quotedPrice || !offerForm.message || !offerForm.availability || getEligibleStores(selectedRequest.category).length === 0}
                   >
-                    {submitting ? 'Sending Offer...' : 'Send Offer'}
+                    {submitting ? 'Sending Store Offer...' : 'Send Store Offer'}
                   </button>
                 </div>
               </div>
