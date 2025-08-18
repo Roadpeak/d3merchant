@@ -1,3 +1,5 @@
+// Updated BranchManagement component - Key changes for working days
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import branchService from '../services/branchService';
@@ -15,11 +17,14 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
     manager: '',
     openingTime: '',
     closingTime: '',
-    workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], // Default working days
     description: '',
     isMainBranch: false
   });
   const [formErrors, setFormErrors] = useState({});
+
+  // FIXED: Proper working days array - capitalized as expected by backend
+  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // Load branches on component mount
   useEffect(() => {
@@ -35,12 +40,15 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
       const response = await branchService.getBranchesByStore(storeId);
       setBranches(response.branches || []);
       
+      console.log('🏢 Loaded branches:', response.branches?.length || 0);
+      console.log('🏪 Main branch working days:', response.mainBranch?.workingDays);
+      
       // Notify parent component
       if (onBranchesUpdate) {
         onBranchesUpdate(response.branches || []);
       }
     } catch (error) {
-      console.error('Error loading branches:', error);
+      console.error('💥 Error loading branches:', error);
       toast.error('Failed to load branches');
     } finally {
       setLoading(false);
@@ -64,19 +72,42 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
     }
   };
 
-  // Handle working days selection
+  // FIXED: Handle working days selection with proper validation
   const handleWorkingDaysChange = (day) => {
-    setFormData(prev => ({
-      ...prev,
-      workingDays: prev.workingDays.includes(day)
-        ? prev.workingDays.filter(d => d !== day)
-        : [...prev.workingDays, day]
-    }));
+    setFormData(prev => {
+      const currentDays = prev.workingDays || [];
+      const newDays = currentDays.includes(day)
+        ? currentDays.filter(d => d !== day)
+        : [...currentDays, day];
+      
+      console.log('📅 Working days updated:', newDays);
+      
+      return {
+        ...prev,
+        workingDays: newDays
+      };
+    });
+
+    // Clear working days error
+    if (formErrors.workingDays) {
+      setFormErrors(prev => ({
+        ...prev,
+        workingDays: ''
+      }));
+    }
   };
 
   // Validate form data
   const validateForm = () => {
     const validation = branchService.validateBranchData(formData);
+    
+    // Additional validation for working days
+    if (!formData.workingDays || formData.workingDays.length === 0) {
+      validation.errors.workingDays = 'At least one working day must be selected';
+      validation.isValid = false;
+    }
+    
+    console.log('📝 Form validation:', validation);
     setFormErrors(validation.errors);
     return validation.isValid;
   };
@@ -85,21 +116,31 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('📝 Submitting form with data:', formData);
+    
     if (!validateForm()) {
       toast.error('Please fix the form errors');
       return;
     }
+
+    // Ensure working days are properly formatted
+    const submissionData = {
+      ...formData,
+      workingDays: formData.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    };
+
+    console.log('📤 Final submission data:', submissionData);
 
     try {
       setLoading(true);
 
       if (editingBranch) {
         // Update existing branch
-        await branchService.updateBranch(editingBranch.id, formData);
+        await branchService.updateBranch(editingBranch.id, submissionData);
         toast.success('Branch updated successfully!');
       } else {
         // Create new branch
-        await branchService.createBranch(storeId, formData);
+        await branchService.createBranch(storeId, submissionData);
         toast.success('Branch added successfully!');
       }
 
@@ -108,7 +149,7 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
       await loadBranches();
 
     } catch (error) {
-      console.error('Error saving branch:', error);
+      console.error('💥 Error saving branch:', error);
       toast.error(error.message || 'Failed to save branch');
     } finally {
       setLoading(false);
@@ -125,7 +166,7 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
       manager: '',
       openingTime: '',
       closingTime: '',
-      workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], // Reset to default
       description: '',
       isMainBranch: false
     });
@@ -134,11 +175,19 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
     setEditingBranch(null);
   };
 
-  // Start editing a branch (prevent editing store-based main branch)
+  // FIXED: Start editing a branch with proper working days handling
   const startEditing = (branch) => {
     if (branch.isStoreMainBranch) {
       toast.error('Cannot edit main branch. Please update store information instead.');
       return;
+    }
+
+    console.log('✏️ Editing branch:', branch);
+
+    // Ensure working days is an array and properly formatted
+    let workingDays = branch.workingDays;
+    if (!Array.isArray(workingDays)) {
+      workingDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     }
 
     setFormData({
@@ -149,10 +198,13 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
       manager: branch.manager || '',
       openingTime: branch.openingTime || '',
       closingTime: branch.closingTime || '',
-      workingDays: branch.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      workingDays: workingDays, // Use the validated working days array
       description: branch.description || '',
       isMainBranch: false // Additional branches are never main
     });
+    
+    console.log('📅 Editing branch working days:', workingDays);
+    
     setEditingBranch(branch);
     setShowAddForm(true);
   };
@@ -175,16 +227,12 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
       toast.success('Branch deleted successfully!');
       await loadBranches();
     } catch (error) {
-      console.error('Error deleting branch:', error);
+      console.error('💥 Error deleting branch:', error);
       toast.error(error.message || 'Failed to delete branch');
     } finally {
       setLoading(false);
     }
   };
-
-  // Remove handleSetMain since store is always main branch
-
-  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -214,7 +262,7 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Branch Name */}
               <div>
@@ -352,24 +400,37 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
               <p className="text-red-500 text-sm">{formErrors.time}</p>
             )}
 
-            {/* Working Days */}
+            {/* FIXED: Working Days with better validation display */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Working Days
+                Working Days *
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
                 {weekDays.map((day) => (
-                  <label key={day} className="flex items-center">
+                  <label 
+                    key={day} 
+                    className={`flex items-center justify-center p-2 border rounded-lg cursor-pointer transition-colors ${
+                      formData.workingDays.includes(day)
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       checked={formData.workingDays.includes(day)}
                       onChange={() => handleWorkingDaysChange(day)}
-                      className="mr-2"
+                      className="sr-only"
                     />
-                    <span className="text-sm">{day}</span>
+                    <span className="text-sm font-medium">{day.substring(0, 3)}</span>
                   </label>
                 ))}
               </div>
+              {formErrors.workingDays && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.workingDays}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Selected: {formData.workingDays.length} day{formData.workingDays.length !== 1 ? 's' : ''}
+              </p>
             </div>
 
             {/* Description */}
@@ -387,13 +448,10 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
               />
             </div>
 
-            {/* Main Branch Checkbox - Remove this since store is always main */}
-            {/* Store information serves as the main branch automatically */}
-
             {/* Form Actions */}
             <div className="flex gap-3 pt-4">
               <button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={loading}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
               >
@@ -407,6 +465,7 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
                 )}
               </button>
               <button
+                type="button"
                 onClick={resetForm}
                 disabled={loading}
                 className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
@@ -414,7 +473,7 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
                 Cancel
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
@@ -490,11 +549,19 @@ const BranchManagement = ({ storeId, onBranchesUpdate }) => {
                   <div className="mt-2 text-sm text-gray-600">
                     <span className="font-medium">🕒 Hours:</span> {formattedBranch.displayHours}
                   </div>
+
+                  {/* FIXED: Display working days properly */}
+                  <div className="mt-2 text-sm text-gray-600">
+                    <span className="font-medium">📅 Working Days:</span> {
+                      (branch.workingDays && Array.isArray(branch.workingDays)) 
+                        ? branch.workingDays.join(', ')
+                        : 'Monday to Saturday'
+                    }
+                  </div>
                 </div>
                 
                 {/* Action Buttons */}
                 <div className="flex gap-2 ml-4">
-                  {/* Remove set main branch button since store is always main */}
                   {!branch.isStoreMainBranch && (
                     <button
                       onClick={() => startEditing(branch)}

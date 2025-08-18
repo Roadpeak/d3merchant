@@ -4,20 +4,11 @@ import toast from 'react-hot-toast';
 import { fetchServices, getServiceStaff } from '../../services/api_service';
 import merchantAuthService from '../../services/merchantAuthService';
 import { 
-    AlertCircle, 
-    Loader, 
-    Tag, 
-    Calendar, 
-    Percent, 
-    FileText, 
-    Users, 
-    UserCheck, 
-    Star,
-    Clock,
-    DollarSign
+    AlertCircle, Loader, Tag, Calendar, Percent, FileText, Users, UserCheck, Star,
+    Clock, DollarSign, Calculator, HelpCircle, Info, Zap, CheckCircle
 } from 'lucide-react';
 
-const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
+const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -38,15 +29,18 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
             title: editingOffer.title || '',
             description: editingOffer.description || '',
             discount: editingOffer.discount || '',
+            discount_explanation: editingOffer.discount_explanation || '',
             expiration_date: editingOffer.expiration_date ? 
                 new Date(editingOffer.expiration_date).toISOString().split('T')[0] : '',
             status: editingOffer.status || 'active',
             featured: editingOffer.featured || false,
             max_redemptions: editingOffer.max_redemptions || '',
-            terms_conditions: editingOffer.terms_conditions || ''
+            terms_conditions: editingOffer.terms_conditions || '',
+            requires_consultation: editingOffer.requires_consultation || false
         } : {
             status: 'active',
-            featured: false
+            featured: false,
+            requires_consultation: false
         }
     });
 
@@ -119,6 +113,26 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
 
     // Get selected service details
     const selectedService = services.find(service => service.id === watchedServiceId);
+    const isServiceDynamic = selectedService?.type === 'dynamic';
+    const isServiceFixed = selectedService?.type === 'fixed';
+
+    // Update offer type based on selected service
+    useEffect(() => {
+        if (selectedService) {
+            setValue('offer_type', selectedService.type);
+            
+            // Auto-populate discount explanation for dynamic services
+            if (selectedService.type === 'dynamic' && watchedDiscount) {
+                const explanation = `${watchedDiscount}% off the final quoted price that will be agreed upon after consultation`;
+                setValue('discount_explanation', explanation);
+            }
+
+            // Set consultation requirement for dynamic services
+            if (selectedService.type === 'dynamic') {
+                setValue('requires_consultation', true);
+            }
+        }
+    }, [selectedService, watchedDiscount, setValue]);
 
     // Handle form submission
     const onSubmit = async (data) => {
@@ -133,13 +147,20 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                 return;
             }
 
-            // Prepare offer data
+            // Prepare offer data with enhanced fields
             const offerData = {
                 ...data,
                 discount: parseFloat(data.discount),
                 max_redemptions: data.max_redemptions ? parseInt(data.max_redemptions) : null,
-                featured: Boolean(data.featured)
+                featured: Boolean(data.featured),
+                offer_type: selectedService?.type || 'fixed',
+                requires_consultation: Boolean(data.requires_consultation)
             };
+
+            // Auto-set discount explanation for dynamic offers
+            if (isServiceDynamic && !data.discount_explanation) {
+                offerData.discount_explanation = `${data.discount}% off the final quoted price that will be agreed upon after consultation`;
+            }
 
             console.log('✅ Final offer data:', offerData);
 
@@ -156,9 +177,9 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
         }
     };
 
-    // Calculate savings preview
+    // Calculate savings preview for fixed services
     const calculateSavings = () => {
-        if (selectedService && watchedDiscount) {
+        if (selectedService && watchedDiscount && isServiceFixed) {
             const originalPrice = parseFloat(selectedService.price) || 0;
             const discountAmount = (originalPrice * parseFloat(watchedDiscount)) / 100;
             const finalPrice = originalPrice - discountAmount;
@@ -225,7 +246,10 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                         <option value="">Choose a service for this offer</option>
                         {services.map((service) => (
                             <option key={service.id} value={service.id}>
-                                {service.name} {service.price && `- KES ${service.price}`}
+                                {service.name} 
+                                {service.type === 'fixed' && service.price && ` - KES ${service.price}`}
+                                {service.type === 'dynamic' && service.price_range && ` - ${service.price_range}`}
+                                {` (${service.type})`}
                             </option>
                         ))}
                     </select>
@@ -238,28 +262,87 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                     
                     {/* Selected Service Details */}
                     {selectedService && (
-                        <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className={`mt-3 p-4 border rounded-lg ${
+                            isServiceDynamic ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'
+                        }`}>
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                    <h4 className="text-sm font-semibold text-blue-900">{selectedService.name}</h4>
-                                    <div className="flex items-center space-x-4 mt-2 text-sm text-blue-700">
-                                        <div className="flex items-center">
-                                            <DollarSign className="w-4 h-4 mr-1" />
-                                            KES {selectedService.price || 'N/A'}
-                                        </div>
-                                        {selectedService.duration && (
-                                            <div className="flex items-center">
-                                                <Clock className="w-4 h-4 mr-1" />
-                                                {selectedService.duration} minutes
-                                            </div>
+                                    <div className="flex items-center space-x-2 mb-2">
+                                        <h4 className={`text-sm font-semibold ${
+                                            isServiceDynamic ? 'text-orange-900' : 'text-blue-900'
+                                        }`}>
+                                            {selectedService.name}
+                                        </h4>
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                            isServiceDynamic 
+                                                ? 'bg-orange-100 text-orange-800' 
+                                                : 'bg-blue-100 text-blue-800'
+                                        }`}>
+                                            {selectedService.type === 'dynamic' ? 'Dynamic Pricing' : 'Fixed Price'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className={`flex items-center space-x-4 mt-2 text-sm ${
+                                        isServiceDynamic ? 'text-orange-700' : 'text-blue-700'
+                                    }`}>
+                                        {isServiceFixed && (
+                                            <>
+                                                <div className="flex items-center">
+                                                    <DollarSign className="w-4 h-4 mr-1" />
+                                                    KES {selectedService.price || 'N/A'}
+                                                </div>
+                                                {selectedService.duration && (
+                                                    <div className="flex items-center">
+                                                        <Clock className="w-4 h-4 mr-1" />
+                                                        {selectedService.duration} minutes
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
+                                        
+                                        {isServiceDynamic && (
+                                            <>
+                                                <div className="flex items-center">
+                                                    <Calculator className="w-4 h-4 mr-1" />
+                                                    {selectedService.price_range || 'Price varies'}
+                                                </div>
+                                                {selectedService.consultation_required && (
+                                                    <div className="flex items-center">
+                                                        <Users className="w-4 h-4 mr-1" />
+                                                        Consultation required
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        
                                         <div className="flex items-center">
                                             <Tag className="w-4 h-4 mr-1" />
                                             {selectedService.category || 'General'}
                                         </div>
                                     </div>
+                                    
                                     {selectedService.description && (
-                                        <p className="text-sm text-blue-600 mt-2">{selectedService.description}</p>
+                                        <p className={`text-sm mt-2 ${
+                                            isServiceDynamic ? 'text-orange-600' : 'text-blue-600'
+                                        }`}>
+                                            {selectedService.description}
+                                        </p>
+                                    )}
+
+                                    {isServiceDynamic && selectedService.pricing_factors && (
+                                        <div className="mt-3">
+                                            <p className="text-xs text-orange-700 font-medium mb-1">Pricing factors:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {selectedService.pricing_factors.map((factor, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
+                                                    >
+                                                        {factor}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -366,8 +449,8 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                         </p>
                     )}
                     
-                    {/* Price Calculator Preview */}
-                    {savings && (
+                    {/* Price Calculator Preview for Fixed Services */}
+                    {savings && isServiceFixed && (
                         <div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                             <h4 className="text-sm font-semibold text-green-900 mb-2">💰 Price Preview</h4>
                             <div className="space-y-2 text-sm">
@@ -386,7 +469,42 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* Dynamic Service Discount Explanation */}
+                    {isServiceDynamic && watchedDiscount && (
+                        <div className="mt-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                            <h4 className="text-sm font-semibold text-orange-900 mb-2">🧮 Dynamic Discount Explanation</h4>
+                            <p className="text-sm text-orange-700">
+                                Customers will receive <strong>{watchedDiscount}% off</strong> the final quoted price that 
+                                will be determined after consultation based on their specific requirements.
+                            </p>
+                            <div className="mt-2 p-2 bg-orange-100 rounded text-xs text-orange-600">
+                                <strong>Example:</strong> If the final quoted price is KES 2,000, customer pays KES {(2000 * (100 - (watchedDiscount || 0)) / 100).toFixed(0)} 
+                                (saving KES {(2000 * (watchedDiscount || 0) / 100).toFixed(0)})
+                            </div>
+                        </div>
+                    )}
                 </div>
+
+                {/* Custom Discount Explanation for Dynamic Services */}
+                {isServiceDynamic && (
+                    <div>
+                        <label htmlFor="discount_explanation" className="block text-sm font-medium text-gray-700 mb-2">
+                            <HelpCircle className="w-4 h-4 inline mr-1" />
+                            Discount Explanation (Optional)
+                        </label>
+                        <textarea
+                            id="discount_explanation"
+                            {...register('discount_explanation')}
+                            placeholder="Customize how the discount is explained to customers..."
+                            rows="3"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            Leave empty to use default explanation. This helps customers understand how the discount applies to dynamic pricing.
+                        </p>
+                    </div>
+                )}
 
                 {/* Expiration Date */}
                 <div>
@@ -426,7 +544,10 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                             required: 'Please describe what makes this offer special',
                             minLength: { value: 10, message: 'Description must be at least 10 characters' }
                         })}
-                        placeholder="Describe what makes this offer special, what's included, any special benefits..."
+                        placeholder={isServiceDynamic 
+                            ? "Describe what makes this offer special, what consultation includes, any special benefits..."
+                            : "Describe what makes this offer special, what's included, any special benefits..."
+                        }
                         rows="4"
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none ${
                             formErrors.description ? 'border-red-400 bg-red-50' : 'border-gray-300'
@@ -460,7 +581,9 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                             />
                             <p className="text-xs text-gray-500 mt-1">Leave empty for unlimited uses</p>
                         </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                         {/* Status */}
                         <div>
                             <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
@@ -476,27 +599,48 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                                 <option value="paused">Paused - Temporarily disabled</option>
                             </select>
                         </div>
+
+                        {/* Featured Toggle */}
+                        <div className="flex items-center">
+                            <label className="flex items-start space-x-3">
+                                <input
+                                    type="checkbox"
+                                    {...register('featured')}
+                                    className="mt-1 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0"
+                                />
+                                <div>
+                                    <span className="text-sm font-medium text-gray-700 flex items-center">
+                                        <Star className="w-4 h-4 mr-1 text-yellow-500" />
+                                        Feature this offer
+                                    </span>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Featured offers appear prominently on your store page
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
-                    {/* Featured Toggle */}
-                    <div className="mt-4">
-                        <label className="flex items-start space-x-3">
-                            <input
-                                type="checkbox"
-                                {...register('featured')}
-                                className="mt-1 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0"
-                            />
-                            <div>
-                                <span className="text-sm font-medium text-gray-700 flex items-center">
-                                    <Star className="w-4 h-4 mr-1 text-yellow-500" />
-                                    Feature this offer
-                                </span>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Featured offers appear prominently on your store page and in search results
-                                </p>
+                    {/* Special settings for dynamic services */}
+                    {isServiceDynamic && (
+                        <div className="mt-4">
+                            <div className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    id="requires_consultation"
+                                    {...register('requires_consultation')}
+                                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                />
+                                <label htmlFor="requires_consultation" className="block text-sm font-medium text-gray-700">
+                                    <Users className="w-4 h-4 inline mr-1" />
+                                    Consultation required before service delivery
+                                </label>
                             </div>
-                        </label>
-                    </div>
+                            <p className="text-xs text-gray-500 mt-1 ml-7">
+                                For dynamic services, consultation is typically required to determine final pricing
+                            </p>
+                        </div>
+                    )}
 
                     {/* Terms and Conditions */}
                     <div className="mt-4">
@@ -506,7 +650,10 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                         <textarea
                             id="terms_conditions"
                             {...register('terms_conditions')}
-                            placeholder="e.g., Valid for new customers only, Cannot be combined with other offers, Advance booking required..."
+                            placeholder={isServiceDynamic 
+                                ? "e.g., Final price subject to consultation, Valid for new customers only, Cannot be combined with other offers..."
+                                : "e.g., Valid for new customers only, Cannot be combined with other offers, Advance booking required..."
+                            }
                             rows="3"
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                         />
@@ -559,9 +706,26 @@ const OfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => {
                         </div>
                     </div>
                 )}
+
+                {/* Info about dynamic offers */}
+                {isServiceDynamic && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start text-blue-700">
+                            <Info className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-medium text-blue-800">Dynamic Service Offer</p>
+                                <p className="text-sm mt-1">
+                                    This offer is for a dynamic pricing service. Customers will book and pay an access fee to secure their slot, 
+                                    then you'll consult with them to determine the final service price based on their specific requirements. 
+                                    The discount will be applied to the agreed final price.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </form>
         </div>
     );
 };
 
-export default OfferForm;
+export default EnhancedOfferForm;

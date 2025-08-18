@@ -1,4 +1,5 @@
-// services/branchService.js
+// Fixed branchService.js - Updated methods with working days handling
+
 import merchantAuthService from './merchantAuthService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
@@ -13,11 +14,40 @@ class BranchService {
     return merchantAuthService.getHeaders(true); // Include both API key and auth
   }
 
-  // Create a new branch (additional branch only)
+  // ==================== UTILITY FUNCTIONS ====================
+
+  // Convert working days to backend format (capitalized for now, backend will handle conversion)
+  formatWorkingDaysForApi(workingDays) {
+    if (!workingDays || !Array.isArray(workingDays)) {
+      return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    }
+    
+    // Ensure proper capitalization for API
+    return workingDays.map(day => {
+      if (!day) return '';
+      const dayStr = day.toString().trim();
+      return dayStr.charAt(0).toUpperCase() + dayStr.slice(1).toLowerCase();
+    }).filter(Boolean);
+  }
+
+  // Format working days from API response (they should already be capitalized)
+  formatWorkingDaysFromApi(workingDays) {
+    if (!workingDays || !Array.isArray(workingDays)) {
+      return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    }
+    
+    return workingDays.map(day => {
+      if (!day) return '';
+      const dayStr = day.toString().trim();
+      return dayStr.charAt(0).toUpperCase() + dayStr.slice(1).toLowerCase();
+    }).filter(Boolean);
+  }
+
+  // FIXED: Create a new branch (additional branch only)
   async createBranch(storeId, branchData) {
     try {
       console.log('🏢 Creating new additional branch for store:', storeId);
-      console.log('📝 Branch data:', branchData);
+      console.log('📝 Original branch data:', branchData);
 
       // Remove isMainBranch if set - additional branches can't be main
       const { isMainBranch, ...cleanBranchData } = branchData;
@@ -25,6 +55,14 @@ class BranchService {
       if (isMainBranch) {
         console.warn('⚠️ Removing isMainBranch flag - store information serves as main branch');
       }
+
+      // FIXED: Format working days properly for API
+      if (cleanBranchData.workingDays) {
+        cleanBranchData.workingDays = this.formatWorkingDaysForApi(cleanBranchData.workingDays);
+        console.log('✅ Working days formatted for API:', cleanBranchData.workingDays);
+      }
+
+      console.log('📝 Final branch data for API:', cleanBranchData);
 
       const response = await fetch(`${this.baseURL}/store/${storeId}`, {
         method: 'POST',
@@ -39,6 +77,12 @@ class BranchService {
       }
 
       console.log('✅ Additional branch created successfully:', data.branch);
+      
+      // Format working days in response
+      if (data.branch && data.branch.workingDays) {
+        data.branch.workingDays = this.formatWorkingDaysFromApi(data.branch.workingDays);
+      }
+
       return data;
 
     } catch (error) {
@@ -47,7 +91,7 @@ class BranchService {
     }
   }
 
-  // Get all branches for a store
+  // FIXED: Get all branches for a store
   async getBranchesByStore(storeId, options = {}) {
     try {
       console.log('📋 Fetching branches for store:', storeId);
@@ -69,7 +113,17 @@ class BranchService {
         throw new Error(data.message || `Failed to fetch branches: ${response.status}`);
       }
 
+      // FIXED: Format working days in all branches
+      if (data.branches && Array.isArray(data.branches)) {
+        data.branches = data.branches.map(branch => ({
+          ...branch,
+          workingDays: this.formatWorkingDaysFromApi(branch.workingDays)
+        }));
+      }
+
       console.log('✅ Branches fetched successfully:', data.branches?.length || 0, 'branches');
+      console.log('🏪 Main branch working days:', data.mainBranch?.workingDays);
+
       return data;
 
     } catch (error) {
@@ -78,7 +132,7 @@ class BranchService {
     }
   }
 
-  // Get all branches for the current merchant
+  // FIXED: Get all branches for the current merchant
   async getMerchantBranches(options = {}) {
     try {
       console.log('📋 Fetching all merchant branches');
@@ -100,6 +154,14 @@ class BranchService {
         throw new Error(data.message || `Failed to fetch merchant branches: ${response.status}`);
       }
 
+      // FIXED: Format working days in all branches
+      if (data.branches && Array.isArray(data.branches)) {
+        data.branches = data.branches.map(branch => ({
+          ...branch,
+          workingDays: this.formatWorkingDaysFromApi(branch.workingDays)
+        }));
+      }
+
       console.log('✅ Merchant branches fetched successfully:', data.totalCount || 0, 'branches');
       return data;
 
@@ -109,7 +171,7 @@ class BranchService {
     }
   }
 
-  // Get a specific branch
+  // FIXED: Get a specific branch
   async getBranch(branchId) {
     try {
       console.log('📋 Fetching branch:', branchId);
@@ -125,6 +187,11 @@ class BranchService {
         throw new Error(data.message || `Failed to fetch branch: ${response.status}`);
       }
 
+      // FIXED: Format working days in response
+      if (data.branch && data.branch.workingDays) {
+        data.branch.workingDays = this.formatWorkingDaysFromApi(data.branch.workingDays);
+      }
+
       console.log('✅ Branch fetched successfully:', data.branch);
       return data;
 
@@ -134,11 +201,11 @@ class BranchService {
     }
   }
 
-  // Update a branch
+  // FIXED: Update a branch
   async updateBranch(branchId, updateData) {
     try {
       console.log('🔄 Updating branch:', branchId);
-      console.log('📝 Update data:', updateData);
+      console.log('📝 Original update data:', updateData);
 
       // Check if trying to update store-based main branch
       if (branchId.startsWith('store-')) {
@@ -152,6 +219,14 @@ class BranchService {
         console.warn('⚠️ Removing isMainBranch flag - store information serves as main branch');
       }
 
+      // FIXED: Format working days properly for API
+      if (cleanUpdateData.workingDays) {
+        cleanUpdateData.workingDays = this.formatWorkingDaysForApi(cleanUpdateData.workingDays);
+        console.log('✅ Working days formatted for API:', cleanUpdateData.workingDays);
+      }
+
+      console.log('📝 Final update data for API:', cleanUpdateData);
+
       const response = await fetch(`${this.baseURL}/${branchId}`, {
         method: 'PUT',
         headers: this.getHeaders(),
@@ -164,6 +239,11 @@ class BranchService {
         throw new Error(data.message || `Failed to update branch: ${response.status}`);
       }
 
+      // FIXED: Format working days in response
+      if (data.branch && data.branch.workingDays) {
+        data.branch.workingDays = this.formatWorkingDaysFromApi(data.branch.workingDays);
+      }
+
       console.log('✅ Branch updated successfully:', data.branch);
       return data;
 
@@ -173,7 +253,7 @@ class BranchService {
     }
   }
 
-  // Delete a branch
+  // Delete a branch (unchanged)
   async deleteBranch(branchId) {
     try {
       console.log('🗑️ Deleting branch:', branchId);
@@ -203,10 +283,7 @@ class BranchService {
     }
   }
 
-  // Remove setMainBranch method since store is always main
-  // setMainBranch method is no longer needed
-
-  // Validate branch data before sending
+  // FIXED: Validate branch data before sending
   validateBranchData(branchData) {
     const errors = {};
 
@@ -236,13 +313,30 @@ class BranchService {
       }
     }
 
+    // FIXED: Validate working days
+    if (branchData.workingDays) {
+      if (!Array.isArray(branchData.workingDays)) {
+        errors.workingDays = 'Working days must be an array';
+      } else if (branchData.workingDays.length === 0) {
+        errors.workingDays = 'At least one working day must be selected';
+      } else {
+        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const invalidDays = branchData.workingDays.filter(day => 
+          !validDays.includes(day.charAt(0).toUpperCase() + day.slice(1).toLowerCase())
+        );
+        if (invalidDays.length > 0) {
+          errors.workingDays = `Invalid working days: ${invalidDays.join(', ')}`;
+        }
+      }
+    }
+
     return {
       isValid: Object.keys(errors).length === 0,
       errors
     };
   }
 
-  // Format branch data for display
+  // FIXED: Format branch data for display
   formatBranchForDisplay(branch) {
     return {
       ...branch,
@@ -250,11 +344,12 @@ class BranchService {
       displayPhone: this.formatPhoneNumber(branch.phone),
       displayHours: this.formatBusinessHours(branch.openingTime, branch.closingTime),
       isOpenNow: this.isCurrentlyOpen(branch),
-      statusBadge: this.getStatusBadgeColor(branch.status)
+      statusBadge: this.getStatusBadgeColor(branch.status),
+      workingDays: this.formatWorkingDaysFromApi(branch.workingDays) // Ensure proper format
     };
   }
 
-  // Helper methods
+  // Helper methods (unchanged)
   truncateText(text, maxLength) {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
@@ -281,6 +376,7 @@ class BranchService {
     return `${formatTime(openingTime)} - ${formatTime(closingTime)}`;
   }
 
+  // FIXED: Check if currently open with proper working days handling
   isCurrentlyOpen(branch) {
     if (!branch.workingDays || !branch.openingTime || !branch.closingTime) {
       return true; // Assume open if no restrictions
@@ -289,7 +385,10 @@ class BranchService {
     const now = new Date();
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     
-    if (!branch.workingDays.includes(currentDay)) {
+    // Ensure working days are properly formatted
+    const workingDays = this.formatWorkingDaysFromApi(branch.workingDays);
+    
+    if (!workingDays.includes(currentDay)) {
       return false;
     }
 

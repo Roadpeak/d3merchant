@@ -4,34 +4,44 @@ import { useNavigate } from 'react-router-dom';
 import { createService, uploadImage, getMerchantStores, fetchStaff, updateService } from '../../services/api_service';
 import merchantAuthService from '../../services/merchantAuthService';
 import branchService from '../../services/branchService';
-import { Upload, Image, AlertCircle, CheckCircle, Loader, Users, UserCheck, MapPin, Building, Clock, Info } from 'lucide-react';
+import { 
+    Upload, Image, AlertCircle, CheckCircle, Loader, Users, UserCheck, MapPin, Building, 
+    Clock, Info, X, Plus, DollarSign, Calculator, HelpCircle, Eye, Trash2
+} from 'lucide-react';
 
-const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
+const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     const [serviceData, setServiceData] = useState({
         name: '',
         price: '',
         duration: '',
-        image_url: '',
+        images: [], // Changed from image_url to images array
         category: '',
         description: '',
         type: 'fixed',
         store_id: '',
         branch_id: '',
-        dynamicFields: [],
         staffIds: [],
-        // CONCURRENT BOOKING FIELDS
+        // Dynamic service fields
+        pricing_factors: [],
+        price_range: '',
+        consultation_required: false,
+        // Booking capacity fields
         max_concurrent_bookings: 1,
         allow_overbooking: false,
         slot_interval: '',
         buffer_time: 0,
         min_advance_booking: 30,
-        max_advance_booking: 10080, // 7 days in minutes
+        max_advance_booking: 10080,
+        // SEO fields
+        tags: [],
+        featured: false
     });
     
     const [loading, setLoading] = useState(false);
     const [imageUploading, setImageUploading] = useState(false);
-    const [imageFile, setImageFile] = useState(null);
-    const [imagePreview, setImagePreview] = useState(null);
+    const [uploadingIndex, setUploadingIndex] = useState(null);
+    const [imageFiles, setImageFiles] = useState([null, null, null]); // Support for 3 images
+    const [imagePreviews, setImagePreviews] = useState([null, null, null]);
     const [errors, setErrors] = useState({});
     const [storeLoading, setStoreLoading] = useState(true);
     const [branchesLoading, setBranchesLoading] = useState(false);
@@ -52,7 +62,23 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         'Education',
         'Technology',
         'Consulting',
+        'Moving & Transportation',
+        'Cleaning Services',
+        'Repair & Maintenance',
         'Other'
+    ];
+
+    const PRICING_FACTORS = [
+        'Distance',
+        'Weight/Load',
+        'Time Duration',
+        'Complexity',
+        'Materials Required',
+        'Team Size',
+        'Equipment Needed',
+        'Location Access',
+        'Urgency',
+        'Custom Requirements'
     ];
 
     // Load merchant's store and set up form
@@ -69,7 +95,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
 
                 console.log('🏪 Loading store data for merchant:', merchant.id);
 
-                // Get merchant's stores
                 const storesResponse = await getMerchantStores();
                 const stores = storesResponse?.stores || storesResponse || [];
                 
@@ -81,16 +106,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     return;
                 }
 
-                // Use the first store
                 const storeId = stores[0].id;
                 setServiceData(prev => ({
                     ...prev,
                     store_id: storeId
                 }));
 
-                console.log('✅ Using store:', storeId);
-
-                // Load branches for the store
                 await loadStoreBranches(storeId);
 
                 // If editing, populate form
@@ -104,30 +125,36 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                         price: editingService.price?.toString() || '',
                         duration: editingService.duration?.toString() || '',
                         staffIds: editingService.staff?.map(staff => staff.id) || [],
-                        // CONCURRENT BOOKING FIELDS with defaults
+                        images: editingService.images || (editingService.image_url ? [editingService.image_url] : []),
+                        pricing_factors: editingService.pricing_factors || [],
+                        price_range: editingService.price_range || '',
+                        consultation_required: editingService.consultation_required || false,
                         max_concurrent_bookings: editingService.max_concurrent_bookings || 1,
                         allow_overbooking: editingService.allow_overbooking || false,
                         slot_interval: editingService.slot_interval?.toString() || '',
                         buffer_time: editingService.buffer_time || 0,
                         min_advance_booking: editingService.min_advance_booking || 30,
                         max_advance_booking: editingService.max_advance_booking || 10080,
+                        tags: editingService.tags || [],
+                        featured: editingService.featured || false
                     });
                     
-                    if (editingService.image_url) {
-                        setImagePreview(editingService.image_url);
-                    }
+                    // Set image previews
+                    const existingImages = editingService.images || (editingService.image_url ? [editingService.image_url] : []);
+                    const newPreviews = [null, null, null];
+                    existingImages.forEach((img, index) => {
+                        if (index < 3) newPreviews[index] = img;
+                    });
+                    setImagePreviews(newPreviews);
 
-                    // Set selected staff if editing
                     if (editingService.staff) {
                         setSelectedStaff(editingService.staff);
                     }
 
-                    // Load staff for the selected branch
                     if (editingService.branch_id) {
                         await loadBranchStaff(editingService.branch_id);
                     }
                 } else {
-                    // For new services, load staff for store initially
                     console.log('➕ Creating new service');
                     await loadStoreStaff(storeId);
                 }
@@ -155,14 +182,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             console.log('✅ Branches loaded:', branches.length);
             setAvailableBranches(branches);
 
-            // If there's only one branch (main branch), auto-select it
             if (branches.length === 1 && !editingService) {
                 const mainBranch = branches[0];
                 setServiceData(prev => ({
                     ...prev,
                     branch_id: mainBranch.id
                 }));
-                // Load staff for the main branch
                 await loadBranchStaff(mainBranch.id);
             }
 
@@ -174,7 +199,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Load staff methods
     const loadStoreStaff = async (storeId) => {
         try {
             setStaffLoading(true);
@@ -239,7 +263,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Handle branch selection change
     const handleBranchChange = async (e) => {
         const branchId = e.target.value;
         
@@ -264,7 +287,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Enhanced validation with concurrent booking fields
+    // Enhanced validation
     const validateForm = () => {
         const newErrors = {};
     
@@ -286,9 +309,13 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             newErrors.description = 'Description must be at least 10 characters';
         }
     
-        if (!serviceData.image_url && !imageFile) {
+        // Image validation
+        const hasImages = serviceData.images.length > 0;
+        const hasNewImages = imageFiles.some(file => file !== null);
+        
+        if (!hasImages && !hasNewImages) {
             if (process.env.NODE_ENV === 'production') {
-                newErrors.image = 'Please upload an image for your service';
+                newErrors.images = 'Please upload at least one image for your service';
             } else {
                 console.log('🚧 Development mode: image not required');
             }
@@ -303,27 +330,21 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 newErrors.duration = 'Please enter a valid duration';
             }
 
-            // Validate concurrent booking fields
+            // Validate concurrent booking fields for fixed services
             if (!serviceData.max_concurrent_bookings || parseInt(serviceData.max_concurrent_bookings) < 1) {
                 newErrors.max_concurrent_bookings = 'Maximum concurrent bookings must be at least 1';
             } else if (parseInt(serviceData.max_concurrent_bookings) > 50) {
                 newErrors.max_concurrent_bookings = 'Maximum concurrent bookings cannot exceed 50';
             }
 
-            if (serviceData.slot_interval && parseInt(serviceData.slot_interval) < 1) {
-                newErrors.slot_interval = 'Slot interval must be at least 1 minute';
+        } else if (serviceData.type === 'dynamic') {
+            // Validate dynamic service fields
+            if (!serviceData.price_range.trim()) {
+                newErrors.price_range = 'Please provide an estimated price range';
             }
-
-            if (serviceData.buffer_time && parseInt(serviceData.buffer_time) < 0) {
-                newErrors.buffer_time = 'Buffer time cannot be negative';
-            }
-
-            if (!serviceData.min_advance_booking || parseInt(serviceData.min_advance_booking) < 0) {
-                newErrors.min_advance_booking = 'Minimum advance booking time is required';
-            }
-
-            if (!serviceData.max_advance_booking || parseInt(serviceData.max_advance_booking) <= parseInt(serviceData.min_advance_booking)) {
-                newErrors.max_advance_booking = 'Maximum advance booking must be greater than minimum';
+            
+            if (serviceData.pricing_factors.length === 0) {
+                newErrors.pricing_factors = 'Please select at least one pricing factor';
             }
         }
     
@@ -341,13 +362,12 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         
         setServiceData((prev) => ({ ...prev, [name]: inputValue }));
         
-        // Clear error when user starts typing
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
 
-        // Auto-set slot_interval to duration if not set
-        if (name === 'duration' && value && !serviceData.slot_interval) {
+        // Auto-set slot_interval to duration if not set (for fixed services)
+        if (name === 'duration' && value && !serviceData.slot_interval && serviceData.type === 'fixed') {
             setServiceData(prev => ({ ...prev, slot_interval: value }));
         }
     };
@@ -376,7 +396,8 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    const handleImageChange = (e) => {
+    // Enhanced image handling for multiple images
+    const handleImageChange = (e, index) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -390,81 +411,112 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             return;
         }
 
-        setImageFile(file);
+        const newImageFiles = [...imageFiles];
+        newImageFiles[index] = file;
+        setImageFiles(newImageFiles);
         
         const reader = new FileReader();
         reader.onload = (e) => {
-            setImagePreview(e.target.result);
+            const newPreviews = [...imagePreviews];
+            newPreviews[index] = e.target.result;
+            setImagePreviews(newPreviews);
         };
         reader.readAsDataURL(file);
 
-        if (errors.image) {
-            setErrors(prev => ({ ...prev, image: '' }));
+        if (errors.images) {
+            setErrors(prev => ({ ...prev, images: '' }));
         }
     };
 
-    const handleImageUpload = async () => {
-        if (!imageFile) {
-            toast.error('Please select an image to upload');
-            return;
-        }
+    const handleImageUpload = async (index) => {
+        const file = imageFiles[index];
+        if (!file) return null;
     
         try {
-            setImageUploading(true);
-            console.log('📤 Uploading image...');
+            setUploadingIndex(index);
+            console.log(`📤 Uploading image ${index + 1}...`);
+            
+            const response = await uploadImage(file, 'services');
+            const imageUrl = response.fileUrl || response.url || response.data?.url;
+            
+            if (imageUrl) {
+                console.log(`✅ Image ${index + 1} uploaded:`, imageUrl);
+                
+                // Update images array
+                const newImages = [...serviceData.images];
+                newImages[index] = imageUrl;
+                
+                setServiceData((prev) => ({
+                    ...prev,
+                    images: newImages.filter(img => img) // Remove null/undefined values
+                }));
+                
+                // Clear the file after successful upload
+                const newImageFiles = [...imageFiles];
+                newImageFiles[index] = null;
+                setImageFiles(newImageFiles);
+                
+                toast.success(`Image ${index + 1} uploaded successfully`);
+                return imageUrl;
+            }
+        } catch (uploadError) {
+            console.log(`⚠️ Image ${index + 1} upload failed, trying fallback:`, uploadError.message);
             
             try {
-                const response = await uploadImage(imageFile, 'services');
-                const imageUrl = response.fileUrl || response.url || response.data?.url;
-                
-                if (imageUrl) {
-                    console.log('✅ Image uploaded:', imageUrl);
-                    setServiceData((prev) => ({
-                        ...prev,
-                        image_url: imageUrl,
-                    }));
-                    toast.success('Image uploaded successfully');
-                    
-                    if (errors.image) {
-                        setErrors(prev => ({ ...prev, image: '' }));
-                    }
-                    return;
-                }
-            } catch (uploadError) {
-                console.log('⚠️ Main upload failed, trying fallback method:', uploadError.message);
-                
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    const base64Url = e.target.result;
-                    console.log('✅ Using base64 fallback');
-                    
-                    setServiceData((prev) => ({
-                        ...prev,
-                        image_url: base64Url,
-                    }));
-                    
-                    toast.success('Image processed successfully (using fallback method)');
-                    
-                    if (errors.image) {
-                        setErrors(prev => ({ ...prev, image: '' }));
-                    }
-                };
-                reader.onerror = () => {
-                    throw new Error('Failed to process image file');
-                };
-                reader.readAsDataURL(imageFile);
-            }
-            
-        } catch (error) {
-            console.error('❌ Image upload error:', error);
-            toast.error('Failed to upload image. You can proceed without an image for now.');
-            
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🚧 Development mode: allowing service creation without image');
-                setErrors(prev => ({ ...prev, image: '' }));
+                return new Promise((resolve) => {
+                    reader.onload = (e) => {
+                        const base64Url = e.target.result;
+                        console.log(`✅ Using base64 fallback for image ${index + 1}`);
+                        
+                        const newImages = [...serviceData.images];
+                        newImages[index] = base64Url;
+                        
+                        setServiceData((prev) => ({
+                            ...prev,
+                            images: newImages.filter(img => img)
+                        }));
+                        
+                        toast.success(`Image ${index + 1} processed successfully`);
+                        resolve(base64Url);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } catch (fallbackError) {
+                console.error(`❌ Image ${index + 1} processing failed:`, fallbackError);
+                toast.error(`Failed to process image ${index + 1}`);
+                return null;
             }
         } finally {
-            setImageUploading(false);
+            setUploadingIndex(null);
+        }
+    };
+
+    const removeImage = (index) => {
+        const newImages = [...serviceData.images];
+        newImages.splice(index, 1);
+        
+        const newImageFiles = [...imageFiles];
+        newImageFiles[index] = null;
+        
+        const newPreviews = [...imagePreviews];
+        newPreviews[index] = null;
+        
+        setServiceData(prev => ({ ...prev, images: newImages }));
+        setImageFiles(newImageFiles);
+        setImagePreviews(newPreviews);
+    };
+
+    // Pricing factors handling
+    const handlePricingFactorToggle = (factor) => {
+        const newFactors = serviceData.pricing_factors.includes(factor)
+            ? serviceData.pricing_factors.filter(f => f !== factor)
+            : [...serviceData.pricing_factors, factor];
+        
+        setServiceData(prev => ({ ...prev, pricing_factors: newFactors }));
+        
+        if (errors.pricing_factors) {
+            setErrors(prev => ({ ...prev, pricing_factors: '' }));
         }
     };
 
@@ -476,13 +528,25 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
             return;
         }
 
-        // Upload image first if needed
-        if (imageFile && !serviceData.image_url) {
-            await handleImageUpload();
-            if (!serviceData.image_url) {
-                toast.error('Please upload the image first');
+        // Upload any pending images
+        const pendingUploads = [];
+        imageFiles.forEach((file, index) => {
+            if (file) {
+                pendingUploads.push(handleImageUpload(index));
+            }
+        });
+
+        if (pendingUploads.length > 0) {
+            setImageUploading(true);
+            try {
+                await Promise.all(pendingUploads);
+            } catch (error) {
+                console.error('❌ Some image uploads failed:', error);
+                toast.error('Some images failed to upload. Please try again.');
+                setImageUploading(false);
                 return;
             }
+            setImageUploading(false);
         }
 
         try {
@@ -497,7 +561,9 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 buffer_time: parseInt(serviceData.buffer_time) || 0,
                 min_advance_booking: parseInt(serviceData.min_advance_booking) || 30,
                 max_advance_booking: parseInt(serviceData.max_advance_booking) || 10080,
-                staffIds: selectedStaff.map(staff => staff.id)
+                staffIds: selectedStaff.map(staff => staff.id),
+                // Ensure images array is properly formatted
+                images: serviceData.images.filter(img => img && img.trim() !== '')
             };
 
             console.log('📋 Service payload:', servicePayload);
@@ -537,22 +603,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
         }
     };
 
-    // Calculate estimated daily slots
-    const calculateDailySlots = () => {
-        if (!serviceData.duration) return 0;
-        const duration = parseInt(serviceData.duration);
-        const slotInterval = parseInt(serviceData.slot_interval) || duration;
-        const bufferTime = parseInt(serviceData.buffer_time) || 0;
-        
-        // Assuming 10-hour workday (600 minutes)
-        const workingMinutes = 600;
-        const totalSlotTime = slotInterval + bufferTime;
-        
-        return Math.floor(workingMinutes / totalSlotTime);
-    };
-
-    const selectedBranch = availableBranches.find(branch => branch.id === serviceData.branch_id);
-
     if (storeLoading) {
         return (
             <div className="flex items-center justify-center py-8">
@@ -563,7 +613,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-h-[80vh] overflow-y-auto">
             {/* Service Name */}
             <div>
                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -615,30 +665,6 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     </select>
                 )}
                 
-                {selectedBranch && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <div className="flex items-start">
-                            <MapPin className="w-4 h-4 text-blue-500 mr-2 mt-0.5" />
-                            <div className="flex-1">
-                                <div className="flex items-center">
-                                    <h4 className="text-sm font-medium text-blue-900">{selectedBranch.name}</h4>
-                                    {selectedBranch.isMainBranch && (
-                                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                            Main Branch
-                                        </span>
-                                    )}
-                                </div>
-                                {selectedBranch.address && (
-                                    <p className="text-sm text-blue-700 mt-1">{selectedBranch.address}</p>
-                                )}
-                                {selectedBranch.phone && (
-                                    <p className="text-xs text-blue-600 mt-1">📞 {selectedBranch.phone}</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-                
                 {errors.branch_id && <p className="mt-1 text-xs text-red-600">{errors.branch_id}</p>}
             </div>
 
@@ -660,7 +686,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 <p className="mt-1 text-xs text-gray-500">
                     {serviceData.type === 'fixed' 
                         ? 'Fixed price services have set pricing and duration'
-                        : 'Dynamic services allow custom pricing based on customer requirements'
+                        : 'Dynamic services have pricing determined by various factors (distance, load, complexity, etc.)'
                     }
                 </p>
             </div>
@@ -709,7 +735,7 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                         </div>
                     </div>
 
-                    {/* CONCURRENT BOOKING SETTINGS */}
+                    {/* Booking Capacity Settings for Fixed Services */}
                     <div className="p-4 border border-gray-200 rounded-lg bg-blue-50">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <Users className="w-5 h-5 mr-2 text-blue-600" />
@@ -751,83 +777,15 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                                     onChange={handleInputChange}
                                     placeholder={serviceData.duration || "60"}
                                     min="1"
-                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                        errors.slot_interval ? 'border-red-400' : 'border-gray-300'
-                                    }`}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 />
-                                {errors.slot_interval && <p className="mt-1 text-xs text-red-600">{errors.slot_interval}</p>}
                                 <p className="mt-1 text-xs text-gray-500">
                                     Time between slots (defaults to service duration)
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label htmlFor="buffer_time" className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Buffer Time (minutes)
-                                </label>
-                                <input
-                                    id="buffer_time"
-                                    type="number"
-                                    name="buffer_time"
-                                    value={serviceData.buffer_time}
-                                    onChange={handleInputChange}
-                                    min="0"
-                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                        errors.buffer_time ? 'border-red-400' : 'border-gray-300'
-                                    }`}
-                                />
-                                {errors.buffer_time && <p className="mt-1 text-xs text-red-600">{errors.buffer_time}</p>}
-                                <p className="mt-1 text-xs text-gray-500">
-                                    Cleanup time between bookings
-                                </p>
-                            </div>
-
-                            <div>
-                                <label htmlFor="min_advance_booking" className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Min Advance (minutes) *
-                                </label>
-                                <input
-                                    id="min_advance_booking"
-                                    type="number"
-                                    name="min_advance_booking"
-                                    value={serviceData.min_advance_booking}
-                                    onChange={handleInputChange}
-                                    min="0"
-                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                        errors.min_advance_booking ? 'border-red-400' : 'border-gray-300'
-                                    }`}
-                                />
-                                {errors.min_advance_booking && <p className="mt-1 text-xs text-red-600">{errors.min_advance_booking}</p>}
-                                <p className="mt-1 text-xs text-gray-500">
-                                    {Math.ceil(serviceData.min_advance_booking / 60)} hours minimum
-                                </p>
-                            </div>
-
-                            <div>
-                                <label htmlFor="max_advance_booking" className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Max Advance (minutes) *
-                                </label>
-                                <input
-                                    id="max_advance_booking"
-                                    type="number"
-                                    name="max_advance_booking"
-                                    value={serviceData.max_advance_booking}
-                                    onChange={handleInputChange}
-                                    min={parseInt(serviceData.min_advance_booking) + 1}
-                                    className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                        errors.max_advance_booking ? 'border-red-400' : 'border-gray-300'
-                                    }`}
-                                />
-                                {errors.max_advance_booking && <p className="mt-1 text-xs text-red-600">{errors.max_advance_booking}</p>}
-                                <p className="mt-1 text-xs text-gray-500">
-                                    {Math.ceil(serviceData.max_advance_booking / (60 * 24))} days maximum
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 flex items-center">
+                        <div className="flex items-center">
                             <input
                                 type="checkbox"
                                 id="allow_overbooking"
@@ -840,25 +798,80 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                                 Allow overbooking (accept bookings beyond max concurrent)
                             </label>
                         </div>
-
-                        {/* Booking Capacity Preview */}
-                        {serviceData.duration && serviceData.max_concurrent_bookings && (
-                            <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-md">
-                                <div className="flex items-start">
-                                    <Info className="w-4 h-4 text-blue-600 mr-2 mt-0.5" />
-                                    <div className="text-sm text-blue-800">
-                                        <strong>Capacity Preview:</strong>
-                                        <ul className="mt-1 space-y-1">
-                                            <li>• {serviceData.max_concurrent_bookings} customers per {serviceData.duration}-minute slot</li>
-                                            <li>• Estimated {calculateDailySlots()} slots per day</li>
-                                            <li>• Daily capacity: up to {calculateDailySlots() * serviceData.max_concurrent_bookings} bookings</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </>
+            )}
+
+            {/* Dynamic Price Fields */}
+            {serviceData.type === 'dynamic' && (
+                <div className="space-y-4">
+                    <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
+                        <div className="flex items-start">
+                            <Calculator className="w-5 h-5 text-orange-600 mr-2 mt-0.5" />
+                            <div>
+                                <h4 className="text-sm font-medium text-orange-800">Dynamic Pricing Service</h4>
+                                <p className="text-sm text-orange-700 mt-1">
+                                    This service has flexible pricing based on specific requirements. Price will be determined through consultation.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label htmlFor="price_range" className="block text-sm font-semibold text-gray-700 mb-2">
+                            Estimated Price Range (KES) *
+                        </label>
+                        <input
+                            id="price_range"
+                            type="text"
+                            name="price_range"
+                            value={serviceData.price_range}
+                            onChange={handleInputChange}
+                            placeholder="e.g., 500 - 5000"
+                            className={`w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                errors.price_range ? 'border-red-400' : 'border-gray-300'
+                            }`}
+                        />
+                        {errors.price_range && <p className="mt-1 text-xs text-red-600">{errors.price_range}</p>}
+                        <p className="mt-1 text-xs text-gray-500">
+                            Provide an estimated range to help customers understand expected costs
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Pricing Factors * <span className="text-xs text-gray-500">(Select all that apply)</span>
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {PRICING_FACTORS.map((factor) => (
+                                <label key={factor} className="flex items-center space-x-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={serviceData.pricing_factors.includes(factor)}
+                                        onChange={() => handlePricingFactorToggle(factor)}
+                                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                    />
+                                    <span className="text-gray-700">{factor}</span>
+                                </label>
+                            ))}
+                        </div>
+                        {errors.pricing_factors && <p className="mt-1 text-xs text-red-600">{errors.pricing_factors}</p>}
+                    </div>
+
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id="consultation_required"
+                            name="consultation_required"
+                            checked={serviceData.consultation_required}
+                            onChange={handleInputChange}
+                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                        />
+                        <label htmlFor="consultation_required" className="ml-2 block text-sm text-gray-700">
+                            Consultation required before service delivery
+                        </label>
+                    </div>
+                </div>
             )}
 
             {/* Category */}
@@ -902,6 +915,84 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 ></textarea>
                 {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description}</p>}
                 <p className="mt-1 text-xs text-gray-500">{serviceData.description.length}/500 characters</p>
+            </div>
+
+            {/* Multiple Images Upload */}
+            <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Service Images * <span className="text-xs text-gray-500">(Up to 3 images)</span>
+                </label>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[0, 1, 2].map((index) => (
+                        <div key={index} className="relative">
+                            {imagePreviews[index] || serviceData.images[index] ? (
+                                <div className="relative group">
+                                    <img
+                                        src={imagePreviews[index] || serviceData.images[index]}
+                                        alt={`Service image ${index + 1}`}
+                                        className="w-full h-40 object-cover rounded-lg border-2 border-gray-200"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-2">
+                                        {imageFiles[index] && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleImageUpload(index)}
+                                                disabled={uploadingIndex === index}
+                                                className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full disabled:opacity-50"
+                                            >
+                                                {uploadingIndex === index ? (
+                                                    <Loader className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Upload className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(index)}
+                                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    {serviceData.images[index] && (
+                                        <div className="absolute top-2 right-2">
+                                            <CheckCircle className="w-5 h-5 text-green-500 bg-white rounded-full" />
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className={`border-2 border-dashed rounded-lg h-40 flex flex-col items-center justify-center transition-colors ${
+                                    errors.images ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-primary bg-gray-50'
+                                }`}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleImageChange(e, index)}
+                                        className="hidden"
+                                        id={`image-upload-${index}`}
+                                    />
+                                    
+                                    <label htmlFor={`image-upload-${index}`} className="cursor-pointer flex flex-col items-center">
+                                        <Image className="w-8 h-8 text-gray-400 mb-2" />
+                                        <span className="text-sm font-medium text-gray-700">
+                                            Upload Image {index + 1}
+                                        </span>
+                                        <span className="text-xs text-gray-500 mt-1">
+                                            {index === 0 ? '(Primary)' : '(Optional)'}
+                                        </span>
+                                    </label>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {errors.images && <p className="mt-1 text-xs text-red-600">{errors.images}</p>}
+                <p className="mt-1 text-xs text-gray-500">
+                    First image will be used as the primary image. Supported formats: PNG, JPG (max 5MB each)
+                </p>
             </div>
 
             {/* Staff Selection */}
@@ -992,90 +1083,24 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                 {errors.staff && <p className="mt-1 text-xs text-red-600">{errors.staff}</p>}
             </div>
 
-            {/* Image Upload */}
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Service Image *
-                </label>
+            {/* Additional Settings */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Additional Settings</h3>
                 
-                {imagePreview && (
-                    <div className="mb-4">
-                        <img
-                            src={imagePreview}
-                            alt="Service preview"
-                            className="w-full h-40 object-cover rounded-lg border-2 border-gray-200"
-                        />
-                        {serviceData.image_url && (
-                            <div className="mt-2 flex items-center text-green-600 text-sm">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Image uploaded successfully
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    errors.image ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-primary bg-gray-50'
-                }`}>
+                <div className="flex items-center">
                     <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="hidden"
-                        id="image-upload"
+                        type="checkbox"
+                        id="featured"
+                        name="featured"
+                        checked={serviceData.featured}
+                        onChange={handleInputChange}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                     />
-                    
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                        <div className="flex flex-col items-center">
-                            <Image className="w-8 h-8 text-gray-400 mb-2" />
-                            <span className="text-sm font-medium text-gray-700">
-                                Click to upload image
-                            </span>
-                            <span className="text-xs text-gray-500 mt-1">
-                                PNG, JPG up to 5MB
-                            </span>
-                        </div>
+                    <label htmlFor="featured" className="ml-2 block text-sm text-gray-700">
+                        Feature this service (appears prominently in listings)
                     </label>
                 </div>
-
-                {imageFile && !serviceData.image_url && (
-                    <button
-                        type="button"
-                        onClick={handleImageUpload}
-                        disabled={imageUploading}
-                        className="mt-3 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                        {imageUploading ? (
-                            <>
-                                <Loader className="w-4 h-4 animate-spin mr-2" />
-                                Uploading...
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Upload Image
-                            </>
-                        )}
-                    </button>
-                )}
-
-                {errors.image && <p className="mt-1 text-xs text-red-600">{errors.image}</p>}
             </div>
-
-            {/* Dynamic Service Notice */}
-            {serviceData.type === 'dynamic' && !editingService && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5" />
-                        <div>
-                            <h4 className="text-sm font-medium text-blue-800">Dynamic Service Setup</h4>
-                            <p className="text-sm text-blue-700 mt-1">
-                                After creating this service, you'll be redirected to set up a custom form for pricing calculations.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Submit Button */}
             <div className="flex gap-3 pt-4 border-t">
@@ -1093,10 +1118,10 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
                     disabled={loading || imageUploading}
                     className="flex-1 py-2 px-4 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                    {loading ? (
+                    {loading || imageUploading ? (
                         <>
                             <Loader className="w-4 h-4 animate-spin mr-2" />
-                            {editingService ? 'Updating...' : 'Creating...'}
+                            {imageUploading ? 'Uploading Images...' : (editingService ? 'Updating...' : 'Creating...')}
                         </>
                     ) : (
                         editingService ? 'Update Service' : 'Create Service'
@@ -1107,4 +1132,4 @@ const ServiceForm = ({ onClose, onServiceAdded, editingService = null }) => {
     );
 };
 
-export default ServiceForm;
+export default EnhancedServiceForm;

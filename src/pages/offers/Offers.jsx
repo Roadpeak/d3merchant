@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import Layout from '../../elements/Layout';
 import Modal from '../../elements/Modal';
-import OfferForm from './OfferForm';
+import EnhancedOfferForm from './OfferForm';
 import { createOffer, fetchOffers, updateOffer, deleteOffer, getMerchantStores } from '../../services/api_service';
-import { Edit, Trash2, Eye, Calendar, Percent, Tag, Users, AlertCircle, Loader, Store, Plus } from 'lucide-react';
+import { 
+    Edit, Trash2, Eye, Calendar, Percent, Tag, Users, AlertCircle, Loader, Store, Plus,
+    Calculator, DollarSign, Clock, Zap, Star, HelpCircle, CheckCircle, TrendingUp, Filter
+} from 'lucide-react';
 
-const OfferPage = () => {
+const EnhancedOfferPage = () => {
     const [offers, setOffers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setModalOpen] = useState(false);
@@ -14,6 +17,7 @@ const OfferPage = () => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [hasStore, setHasStore] = useState(true);
     const [storeError, setStoreError] = useState(null);
+    const [filter, setFilter] = useState('all'); // all, fixed, dynamic, active, expired
 
     useEffect(() => {
         checkStoreAndLoadOffers();
@@ -24,7 +28,6 @@ const OfferPage = () => {
             setLoading(true);
             setStoreError(null);
             
-            // First check if merchant has any stores
             console.log('🔍 Checking merchant stores...');
             
             try {
@@ -41,7 +44,6 @@ const OfferPage = () => {
                 console.log('✅ Found stores:', stores.length);
                 setHasStore(true);
                 
-                // Now try to load offers
                 await loadOffers();
                 
             } catch (storeCheckError) {
@@ -76,7 +78,6 @@ const OfferPage = () => {
         } catch (error) {
             console.error('❌ Failed to fetch offers:', error);
             setOffers([]);
-            // Don't show error toast here since we handle it gracefully
         }
     };
 
@@ -89,7 +90,7 @@ const OfferPage = () => {
             loadOffers();
         } catch (error) {
             console.error('❌ Failed to create offer:', error);
-            throw error; // Let OfferForm handle the error display
+            throw error;
         }
     };
 
@@ -135,7 +136,21 @@ const OfferPage = () => {
         setEditingOffer(null);
     };
 
-    const getStatusBadge = (status) => {
+    // Filter offers based on current filter
+    const filteredOffers = offers.filter(offer => {
+        if (filter === 'all') return true;
+        if (filter === 'fixed') return offer.offer_type === 'fixed' || !offer.offer_type;
+        if (filter === 'dynamic') return offer.offer_type === 'dynamic';
+        if (filter === 'active') return offer.status === 'active' && !isOfferExpired(offer.expiration_date);
+        if (filter === 'expired') return isOfferExpired(offer.expiration_date);
+        if (filter === 'featured') return offer.featured;
+        return true;
+    });
+
+    const getStatusBadge = (status, expiration_date) => {
+        const expired = isOfferExpired(expiration_date);
+        const effectiveStatus = expired ? 'expired' : status;
+        
         const statusClasses = {
             active: 'bg-green-100 text-green-800',
             inactive: 'bg-gray-100 text-gray-800',
@@ -144,8 +159,32 @@ const OfferPage = () => {
         };
         
         return (
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClasses[status] || statusClasses.inactive}`}>
-                {status}
+            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClasses[effectiveStatus] || statusClasses.inactive}`}>
+                {effectiveStatus}
+            </span>
+        );
+    };
+
+    const getOfferTypeBadge = (offer) => {
+        const isDynamic = offer.offer_type === 'dynamic';
+        
+        return (
+            <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center ${
+                isDynamic 
+                    ? 'bg-orange-100 text-orange-800' 
+                    : 'bg-blue-100 text-blue-800'
+            }`}>
+                {isDynamic ? (
+                    <>
+                        <Calculator className="w-3 h-3 mr-1" />
+                        Dynamic
+                    </>
+                ) : (
+                    <>
+                        <DollarSign className="w-3 h-3 mr-1" />
+                        Fixed
+                    </>
+                )}
             </span>
         );
     };
@@ -161,6 +200,19 @@ const OfferPage = () => {
             day: 'numeric'
         });
     };
+
+    const calculateStats = () => {
+        const total = offers.length;
+        const active = offers.filter(offer => offer.status === 'active' && !isOfferExpired(offer.expiration_date)).length;
+        const expired = offers.filter(offer => isOfferExpired(offer.expiration_date)).length;
+        const dynamic = offers.filter(offer => offer.offer_type === 'dynamic').length;
+        const fixed = offers.filter(offer => offer.offer_type === 'fixed' || !offer.offer_type).length;
+        const avgDiscount = offers.length > 0 ? Math.round(offers.reduce((sum, offer) => sum + (parseFloat(offer.discount) || 0), 0) / offers.length) : 0;
+
+        return { total, active, expired, dynamic, fixed, avgDiscount };
+    };
+
+    const stats = calculateStats();
 
     // Loading state
     if (loading) {
@@ -183,8 +235,8 @@ const OfferPage = () => {
                         <Store className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">No Store Found</h3>
                         <p className="text-gray-600 mb-6">
-                            You need to create a store before you can manage offers. 
-                            Offers are linked to services, which belong to stores.
+                            You need to create a store and services before you can manage offers. 
+                            Offers are created from existing services.
                         </p>
                         {storeError && (
                             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -218,20 +270,22 @@ const OfferPage = () => {
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-primary text-white py-2 px-6 text-sm font-semibold rounded-md shadow-md hover:bg-primary-dark transition duration-300"
+                    className="bg-primary text-white py-2 px-6 text-sm font-semibold rounded-md shadow-md hover:bg-primary-dark transition duration-300 flex items-center gap-2"
                 >
+                    <Plus className="w-4 h-4" />
                     Create Offer
                 </button>
             }
         >
             <div className="space-y-6">
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Enhanced Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Total Offers</p>
-                                <p className="text-2xl font-bold text-gray-900">{offers.length}</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                                <p className="text-xs text-gray-500">Fixed: {stats.fixed} • Dynamic: {stats.dynamic}</p>
                             </div>
                             <Tag className="w-8 h-8 text-blue-500" />
                         </div>
@@ -241,21 +295,19 @@ const OfferPage = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Active Offers</p>
-                                <p className="text-2xl font-bold text-green-600">
-                                    {offers.filter(offer => offer.status === 'active' && !isOfferExpired(offer.expiration_date)).length}
-                                </p>
+                                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                                <p className="text-xs text-gray-500">Available for booking</p>
                             </div>
-                            <Eye className="w-8 h-8 text-green-500" />
+                            <CheckCircle className="w-8 h-8 text-green-500" />
                         </div>
                     </div>
 
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Expired Offers</p>
-                                <p className="text-2xl font-bold text-red-600">
-                                    {offers.filter(offer => isOfferExpired(offer.expiration_date)).length}
-                                </p>
+                                <p className="text-sm text-gray-600">Expired</p>
+                                <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
+                                <p className="text-xs text-gray-500">Past expiration date</p>
                             </div>
                             <Calendar className="w-8 h-8 text-red-500" />
                         </div>
@@ -265,12 +317,47 @@ const OfferPage = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Avg. Discount</p>
-                                <p className="text-2xl font-bold text-purple-600">
-                                    {offers.length > 0 ? Math.round(offers.reduce((sum, offer) => sum + (parseFloat(offer.discount) || 0), 0) / offers.length) : 0}%
-                                </p>
+                                <p className="text-2xl font-bold text-purple-600">{stats.avgDiscount}%</p>
+                                <p className="text-xs text-gray-500">Across all offers</p>
                             </div>
-                            <Percent className="w-8 h-8 text-purple-500" />
+                            <TrendingUp className="w-8 h-8 text-purple-500" />
                         </div>
+                    </div>
+                </div>
+
+                {/* Filter Section */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <Filter className="w-5 h-5 mr-2" />
+                            Filter Offers
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                            Showing {filteredOffers.length} of {offers.length} offers
+                        </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { key: 'all', label: 'All Offers', count: stats.total },
+                            { key: 'active', label: 'Active', count: stats.active },
+                            { key: 'fixed', label: 'Fixed Price', count: stats.fixed },
+                            { key: 'dynamic', label: 'Dynamic Price', count: stats.dynamic },
+                            { key: 'expired', label: 'Expired', count: stats.expired },
+                            { key: 'featured', label: 'Featured', count: offers.filter(o => o.featured).length }
+                        ].map(({ key, label, count }) => (
+                            <button
+                                key={key}
+                                onClick={() => setFilter(key)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    filter === key
+                                        ? 'bg-primary text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                {label} ({count})
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -294,7 +381,7 @@ const OfferPage = () => {
                                         Offer Details
                                     </th>
                                     <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Service
+                                        Service & Type
                                     </th>
                                     <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Discount
@@ -311,10 +398,11 @@ const OfferPage = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {offers?.length > 0 ? (
-                                    offers.map((offer) => {
+                                {filteredOffers?.length > 0 ? (
+                                    filteredOffers.map((offer) => {
                                         const expired = isOfferExpired(offer.expiration_date);
                                         const effectiveStatus = expired ? 'expired' : offer.status;
+                                        const isDynamic = offer.offer_type === 'dynamic';
                                         
                                         return (
                                             <tr key={offer.id} className="hover:bg-gray-50">
@@ -325,26 +413,51 @@ const OfferPage = () => {
                                                                 {offer.title || offer.service?.name || 'Special Offer'}
                                                             </h3>
                                                             {offer.featured && (
-                                                                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                                                                    Featured
-                                                                </span>
+                                                                <Star className="ml-2 w-4 h-4 text-yellow-500 fill-current" />
                                                             )}
                                                         </div>
                                                         <p className="text-sm text-gray-500 mt-1">
                                                             {offer.description?.substring(0, 60)}
                                                             {offer.description?.length > 60 && '...'}
                                                         </p>
+                                                        {isDynamic && offer.discount_explanation && (
+                                                            <p className="text-xs text-orange-600 mt-1 italic">
+                                                                {offer.discount_explanation.substring(0, 80)}...
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            {offer.service?.name || 'Unknown Service'}
-                                                        </p>
-                                                        <p className="text-sm text-gray-500">
-                                                            KES {offer.service?.price || 'N/A'}
-                                                            {offer.service?.duration && ` • ${offer.service.duration}min`}
-                                                        </p>
+                                                    <div className="space-y-2">
+                                                        <div>
+                                                            <p className="text-sm font-medium text-gray-900">
+                                                                {offer.service?.name || 'Unknown Service'}
+                                                            </p>
+                                                            <div className="flex items-center space-x-2 mt-1">
+                                                                {getOfferTypeBadge(offer)}
+                                                                {offer.requires_consultation && (
+                                                                    <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+                                                                        <Users className="w-3 h-3 mr-1" />
+                                                                        Consultation
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {offer.service && (
+                                                            <div className="text-xs text-gray-500">
+                                                                {isDynamic ? (
+                                                                    <span>{offer.service.price_range || 'Price varies'}</span>
+                                                                ) : (
+                                                                    <>
+                                                                        <span>KES {offer.service.price || 'N/A'}</span>
+                                                                        {offer.service.duration && (
+                                                                            <span> • {offer.service.duration}min</span>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -352,9 +465,14 @@ const OfferPage = () => {
                                                         <p className="text-sm font-bold text-green-600">
                                                             {offer.discount}% OFF
                                                         </p>
-                                                        {offer.service?.price && (
+                                                        {!isDynamic && offer.service?.price && (
                                                             <p className="text-xs text-gray-500">
                                                                 Save KES {((offer.service.price * offer.discount) / 100).toFixed(2)}
+                                                            </p>
+                                                        )}
+                                                        {isDynamic && (
+                                                            <p className="text-xs text-orange-600">
+                                                                Off final quote
                                                             </p>
                                                         )}
                                                     </div>
@@ -371,7 +489,7 @@ const OfferPage = () => {
                                                     )}
                                                 </td>
                                                 <td className="py-4 px-6">
-                                                    {getStatusBadge(effectiveStatus)}
+                                                    {getStatusBadge(offer.status, offer.expiration_date)}
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div className="flex gap-2">
@@ -399,8 +517,15 @@ const OfferPage = () => {
                                         <td colSpan="6" className="py-8 px-6 text-center">
                                             <div className="flex flex-col items-center">
                                                 <Tag className="w-12 h-12 text-gray-300 mb-4" />
-                                                <h3 className="text-lg font-medium text-gray-900 mb-2">No offers yet</h3>
-                                                <p className="text-gray-500 mb-4">Create your first offer to attract more customers</p>
+                                                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                    {filter === 'all' ? 'No offers yet' : `No ${filter} offers found`}
+                                                </h3>
+                                                <p className="text-gray-500 mb-4">
+                                                    {filter === 'all' 
+                                                        ? 'Create your first offer to attract more customers'
+                                                        : `Try selecting a different filter or create new offers`
+                                                    }
+                                                </p>
                                                 <button
                                                     onClick={() => setModalOpen(true)}
                                                     className="bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark transition-colors"
@@ -422,9 +547,9 @@ const OfferPage = () => {
                 isOpen={isModalOpen} 
                 onClose={closeModal} 
                 title={editingOffer ? 'Edit Offer' : 'Create Offer'}
-                size="lg"
+                size="xl"
             >
-                <OfferForm 
+                <EnhancedOfferForm 
                     onClose={closeModal} 
                     onOfferCreated={editingOffer ? handleUpdateOffer : handleCreateOffer}
                     editingOffer={editingOffer}
@@ -445,7 +570,7 @@ const OfferPage = () => {
                         </div>
                         <p className="text-gray-600 mb-6">
                             This will permanently delete the offer "{deleteConfirm.title || deleteConfirm.service?.name}". 
-                            This action cannot be undone.
+                            This action cannot be undone and will affect any existing bookings.
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button
@@ -468,4 +593,4 @@ const OfferPage = () => {
     );
 };
 
-export default OfferPage;
+export default EnhancedOfferPage;
