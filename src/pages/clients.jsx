@@ -17,13 +17,16 @@ import {
     Loader2,
     CheckSquare,
     Square,
-    ArrowUpDown
+    ArrowUpDown,
+    AlertCircle,
+    RefreshCw
 } from 'lucide-react';
 
 const ClientsPage = () => {
     const [followers, setFollowers] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('followers');
     const [sortBy, setSortBy] = useState('name');
@@ -35,8 +38,9 @@ const ClientsPage = () => {
     const [bulkEmailSubject, setBulkEmailSubject] = useState('');
     const [bulkEmailMessage, setBulkEmailMessage] = useState('');
     const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-    // API Configuration - Fixed environment variable access
+    // API Configuration
     const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
 
     const getAuthToken = () => {
@@ -72,107 +76,192 @@ const ClientsPage = () => {
         return response.json();
     };
 
-    // Mock data for demonstration
-    useEffect(() => {
-        // Simulate API calls
-        const loadData = async () => {
-            try {
-                setLoading(true);
-
-                // Mock followers data
-                const mockFollowers = [
-                    {
-                        id: 1,
-                        name: 'John Doe',
-                        email: 'john.doe@email.com',
-                        phone: '+1234567890',
-                        avatar: null,
-                        followedSince: '2024-01-15',
-                        isVip: false,
-                        lastActive: '2024-03-15'
-                    },
-                    {
-                        id: 2,
-                        name: 'Jane Smith',
-                        email: 'jane.smith@email.com',
-                        phone: '+1234567891',
-                        avatar: null,
-                        followedSince: '2024-02-20',
-                        isVip: true,
-                        lastActive: '2024-03-14'
-                    },
-                    {
-                        id: 3,
-                        name: 'Mike Johnson',
-                        email: 'mike.johnson@email.com',
-                        phone: '+1234567892',
-                        avatar: null,
-                        followedSince: '2024-03-01',
-                        isVip: false,
-                        lastActive: '2024-03-13'
-                    }
-                ];
-
-                // Mock customers data
-                const mockCustomers = [
-                    {
-                        id: 1,
-                        name: 'Sarah Wilson',
-                        email: 'sarah.wilson@email.com',
-                        phone: '+1234567893',
-                        avatar: null,
-                        bookingType: 'service',
-                        lastBookingDate: '2024-03-10',
-                        totalBookings: 5,
-                        totalSpent: '$450.00',
-                        isVip: true,
-                        bookingDetails: 'Hair Styling Service'
-                    },
-                    {
-                        id: 2,
-                        name: 'David Brown',
-                        email: 'david.brown@email.com',
-                        phone: '+1234567894',
-                        avatar: null,
-                        bookingType: 'offer',
-                        lastBookingDate: '2024-03-08',
-                        totalBookings: 2,
-                        totalSpent: '$120.00',
-                        isVip: false,
-                        bookingDetails: 'Special Discount Offer'
-                    },
-                    {
-                        id: 3,
-                        name: 'Emma Davis',
-                        email: 'emma.davis@email.com',
-                        phone: '+1234567895',
-                        avatar: null,
-                        bookingType: 'service',
-                        lastBookingDate: '2024-03-12',
-                        totalBookings: 8,
-                        totalSpent: '$680.00',
-                        isVip: true,
-                        bookingDetails: 'Massage Therapy'
-                    }
-                ];
-
-                setFollowers(mockFollowers);
-                setCustomers(mockCustomers);
-            } catch (error) {
-                console.error('Failed to load data:', error);
-            } finally {
-                setLoading(false);
+    // Get merchant's store ID
+    const getMerchantStoreId = async () => {
+        try {
+            const response = await apiCall('/stores/merchant/my-stores');
+            const stores = response?.stores || [];
+            
+            if (stores.length > 0) {
+                return stores[0].id;
             }
-        };
+            
+            throw new Error('No store found for this merchant');
+        } catch (error) {
+            console.error('Error getting merchant store ID:', error);
+            throw error;
+        }
+    };
 
+    // Fetch followers for the merchant's store
+    const fetchStoreFollowers = async (storeId) => {
+        try {
+            console.log('📋 Fetching followers for store:', storeId);
+            
+            const response = await apiCall(`/stores/${storeId}/followers`);
+            
+            if (response.success && response.followers) {
+                // Transform followers data to match expected format
+                return response.followers.map(follower => ({
+                    id: follower.id,
+                    name: `${follower.first_name || follower.firstName || ''} ${follower.last_name || follower.lastName || ''}`.trim() || 'Unknown User',
+                    email: follower.email || follower.email_address || 'No email provided',
+                    phone: follower.phone || follower.phone_number || 'No phone provided',
+                    avatar: follower.avatar || null,
+                    followedSince: follower.Follow?.createdAt || follower.followedAt || new Date().toISOString(),
+                    isVip: follower.isVip || false,
+                    lastActive: follower.lastActiveAt || follower.updatedAt || new Date().toISOString()
+                }));
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('Error fetching followers:', error);
+            throw error;
+        }
+    };
+
+    // Fetch customers who have completed bookings
+    const fetchStoreCustomers = async (storeId) => {
+        try {
+            console.log('👥 Fetching customers for store:', storeId);
+            
+            const response = await apiCall('/bookings');
+            
+            if (response.success && response.bookings) {
+                // Group bookings by user and calculate customer metrics
+                const customerMap = new Map();
+                
+                response.bookings.forEach(booking => {
+                    const userId = booking.userId || booking.user_id;
+                    const user = booking.User || booking.user;
+                    
+                    if (!user || !userId) return;
+                    
+                    const userName = `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim() || 'Unknown Customer';
+                    const userEmail = user.email || user.email_address || 'No email provided';
+                    const userPhone = user.phone || user.phone_number || 'No phone provided';
+                    
+                    if (!customerMap.has(userId)) {
+                        customerMap.set(userId, {
+                            id: userId,
+                            name: userName,
+                            email: userEmail,
+                            phone: userPhone,
+                            avatar: user.avatar || null,
+                            bookings: [],
+                            totalBookings: 0,
+                            totalSpent: 0,
+                            lastBookingDate: null,
+                            isVip: false,
+                            bookingTypes: new Set()
+                        });
+                    }
+                    
+                    const customer = customerMap.get(userId);
+                    customer.bookings.push(booking);
+                    customer.totalBookings += 1;
+                    
+                    // Calculate spent amount (this might need adjustment based on your data structure)
+                    const bookingAmount = booking.amount || booking.accessFee || 0;
+                    customer.totalSpent += parseFloat(bookingAmount) || 0;
+                    
+                    // Track booking types
+                    const bookingType = booking.bookingType || (booking.offerId ? 'offer' : 'service');
+                    customer.bookingTypes.add(bookingType);
+                    
+                    // Update last booking date
+                    const bookingDate = new Date(booking.createdAt || booking.created_at);
+                    if (!customer.lastBookingDate || bookingDate > new Date(customer.lastBookingDate)) {
+                        customer.lastBookingDate = bookingDate.toISOString();
+                    }
+                    
+                    // Determine VIP status (customers with 3+ bookings or spent $200+)
+                    if (customer.totalBookings >= 3 || customer.totalSpent >= 200) {
+                        customer.isVip = true;
+                    }
+                });
+                
+                // Convert map to array and format
+                return Array.from(customerMap.values()).map(customer => ({
+                    ...customer,
+                    totalSpent: `$${customer.totalSpent.toFixed(2)}`,
+                    bookingType: customer.bookingTypes.has('offer') ? 'offer' : 'service',
+                    bookingDetails: customer.bookingTypes.has('offer') ? 'Offer Bookings' : 'Service Bookings',
+                    lastBookingDate: customer.lastBookingDate
+                }));
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+            throw error;
+        }
+    };
+
+    // Load all data
+    const loadData = async (showRefreshing = false) => {
+        try {
+            if (showRefreshing) {
+                setRefreshing(true);
+            } else {
+                setLoading(true);
+            }
+            setError(null);
+
+            // Get merchant's store ID
+            const storeId = await getMerchantStoreId();
+            console.log('🏪 Using store ID:', storeId);
+
+            // Fetch followers and customers in parallel
+            const [followersData, customersData] = await Promise.allSettled([
+                fetchStoreFollowers(storeId),
+                fetchStoreCustomers(storeId)
+            ]);
+
+            // Handle followers result
+            if (followersData.status === 'fulfilled') {
+                setFollowers(followersData.value);
+                console.log('✅ Loaded followers:', followersData.value.length);
+            } else {
+                console.error('❌ Failed to load followers:', followersData.reason);
+                setFollowers([]);
+            }
+
+            // Handle customers result
+            if (customersData.status === 'fulfilled') {
+                setCustomers(customersData.value);
+                console.log('✅ Loaded customers:', customersData.value.length);
+            } else {
+                console.error('❌ Failed to load customers:', customersData.reason);
+                setCustomers([]);
+            }
+
+        } catch (error) {
+            console.error('Failed to load client data:', error);
+            setError(error.message || 'Failed to load client data');
+            setFollowers([]);
+            setCustomers([]);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    // Load data on component mount
+    useEffect(() => {
         loadData();
     }, []);
 
+    // Refresh data
+    const handleRefresh = () => {
+        loadData(true);
+    };
+
     // Handle individual contact actions
     const handleSendMessage = (person) => {
-        // This would integrate with your chat interface
         console.log('Navigate to chat with:', person.name);
-        // You could emit an event or use routing to navigate to chat
+        // TODO: Integrate with your chat interface
     };
 
     const handleSendEmail = (person) => {
@@ -315,7 +404,7 @@ const ClientsPage = () => {
                 ? followers.filter(f => selectedFollowers.has(f.id))
                 : customers.filter(c => selectedCustomers.has(c.id));
 
-            // Here you would make an API call to send bulk emails
+            // TODO: Replace with actual API call for bulk email
             console.log('Sending bulk email to:', recipients.length, 'recipients');
             console.log('Subject:', bulkEmailSubject);
             console.log('Message:', bulkEmailMessage);
@@ -367,7 +456,10 @@ const ClientsPage = () => {
         return (
             <Layout>
                 <div className="flex items-center justify-center h-96">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <div className="text-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                        <p className="text-gray-600">Loading your clients...</p>
+                    </div>
                 </div>
             </Layout>
         );
@@ -378,9 +470,38 @@ const ClientsPage = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 {/* Header */}
                 <div className="mb-6">
-                    <h1 className="text-2xl font-semibold text-gray-900 mb-2">Clients</h1>
-                    <p className="text-gray-600">Manage your followers and customers</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Clients</h1>
+                            <p className="text-gray-600">Manage your followers and customers</p>
+                        </div>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                            <span>Refresh</span>
+                        </button>
+                    </div>
                 </div>
+
+                {/* Error State */}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center space-x-2 text-red-700">
+                            <AlertCircle className="w-5 h-5" />
+                            <span className="font-medium">Error loading client data</span>
+                        </div>
+                        <p className="text-red-600 mt-1">{error}</p>
+                        <button
+                            onClick={handleRefresh}
+                            className="mt-2 text-red-600 hover:text-red-700 underline"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                )}
 
                 {/* Tabs */}
                 <div className="border-b border-gray-200 mb-6">
@@ -510,7 +631,14 @@ const ClientsPage = () => {
                         filteredFollowers.length === 0 ? (
                             <div className="text-center py-12">
                                 <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-500">No followers found</p>
+                                <p className="text-gray-500">
+                                    {followers.length === 0 ? 'No followers yet' : 'No followers found'}
+                                </p>
+                                {followers.length === 0 && (
+                                    <p className="text-gray-400 text-sm mt-2">
+                                        Share your store to gain followers!
+                                    </p>
+                                )}
                             </div>
                         ) : (
                             filteredFollowers.map((follower) => (
@@ -558,7 +686,14 @@ const ClientsPage = () => {
                         filteredCustomers.length === 0 ? (
                             <div className="text-center py-12">
                                 <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-500">No customers found</p>
+                                <p className="text-gray-500">
+                                    {customers.length === 0 ? 'No customers yet' : 'No customers found'}
+                                </p>
+                                {customers.length === 0 && (
+                                    <p className="text-gray-400 text-sm mt-2">
+                                        Enable bookings to start getting customers!
+                                    </p>
+                                )}
                             </div>
                         ) : (
                             filteredCustomers.map((customer) => (
@@ -602,7 +737,7 @@ const ClientsPage = () => {
                                             <p className="text-sm text-gray-600">{customer.email}</p>
                                             <p className="text-sm text-gray-500">{customer.phone}</p>
                                             <div className="flex items-center space-x-4 text-xs text-gray-400">
-                                                <span>Last booking: {new Date(customer.lastBookingDate).toLocaleDateString()}</span>
+                                                <span>Last booking: {customer.lastBookingDate ? new Date(customer.lastBookingDate).toLocaleDateString() : 'N/A'}</span>
                                                 <span>{customer.totalBookings} bookings</span>
                                                 <span>{customer.totalSpent} total</span>
                                             </div>
