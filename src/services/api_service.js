@@ -53,23 +53,23 @@ const getMerchantStoreId = async () => {
             throw new Error('Merchant information not found. Please log in again.');
         }
 
-        console.log('🔍 Getting stores for merchant:', merchant.id);
+        console.log('Getting stores for merchant:', merchant.id);
 
         // Try to get stores for this merchant
         const storesResponse = await getMerchantStores();
         const stores = storesResponse?.stores || storesResponse || [];
 
-        console.log('🏪 Found stores:', stores.length);
+        console.log('Found stores:', stores.length);
 
         if (stores && stores.length > 0) {
-            console.log('✅ Using store:', stores[0].name, '(' + stores[0].id + ')');
+            console.log('Using store:', stores[0].name, '(' + stores[0].id + ')');
             return stores[0].id;
         }
 
         // If no stores found, throw a more specific error
         throw new Error('No store found for this merchant');
     } catch (error) {
-        console.error('❌ Error getting merchant store ID:', error);
+        console.error('Error getting merchant store ID:', error);
         throw error;
     }
 };
@@ -159,6 +159,8 @@ export const createStore = async (storeData) => {
             merchant_id: merchant.id
         };
 
+        console.log('DEBUG: Creating store with data:', storeDataWithMerchant);
+
         const response = await axiosInstance.post('/stores', storeDataWithMerchant, {
             headers: getAuthHeaders()
         });
@@ -175,30 +177,70 @@ export const getMerchantStores = async () => {
             throw new Error('Merchant information not found');
         }
 
-        console.log('🏪 Fetching stores for merchant:', merchant.id);
+        console.log('Fetching stores for merchant:', merchant.id);
 
         // Use the correct endpoint that matches your store routes
         const response = await axiosInstance.get('/stores/merchant/my-stores', {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Stores fetched successfully:', response.data);
+        console.log('Stores fetched successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('💥 Error fetching merchant stores:', error);
+        console.error('Error fetching merchant stores:', error);
         handleApiError(error, 'fetching merchant stores');
         throw error;
     }
 };
+
 // Update store
 export const updateStore = async (storeId, storeData) => {
     try {
+        console.log('DEBUG: Updating store:', storeId, 'with data:', storeData);
+
         const response = await axiosInstance.put(`/stores/${storeId}`, storeData, {
             headers: getAuthHeaders()
         });
+
+        console.log('DEBUG: Store update response:', response.data);
         return response.data;
     } catch (error) {
+        console.error('DEBUG: Store update failed:', error);
         handleApiError(error, 'updating store');
+    }
+};
+
+// NEW: Get store profile with logo info
+export const getStoreProfile = async (storeId) => {
+    try {
+        console.log('DEBUG: Fetching store profile:', storeId);
+
+        const response = await axiosInstance.get(`/stores/profile/${storeId}`, {
+            headers: getAuthHeaders()
+        });
+
+        console.log('DEBUG: Store profile response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('DEBUG: Get store profile failed:', error);
+        handleApiError(error, 'fetching store profile');
+    }
+};
+
+// NEW: Update store profile including logo
+export const updateStoreProfile = async (storeId, profileData) => {
+    try {
+        console.log('DEBUG: Updating store profile:', storeId, 'with data:', profileData);
+
+        const response = await axiosInstance.put(`/stores/profile/${storeId}`, profileData, {
+            headers: getAuthHeaders()
+        });
+
+        console.log('DEBUG: Store profile update response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('DEBUG: Store profile update failed:', error);
+        handleApiError(error, 'updating store profile');
     }
 };
 
@@ -207,14 +249,14 @@ export const updateStore = async (storeId, storeData) => {
 // Fetch all services for current merchant - FIXED VERSION
 export const fetchServices = async () => {
     try {
-        console.log('🔍 Starting fetchServices...');
+        console.log('Starting fetchServices...');
 
         const merchant = merchantAuthService.getCurrentMerchant();
         if (!merchant) {
             throw new Error('Merchant information not found. Please log in again.');
         }
 
-        console.log('👤 Merchant found:', merchant.id);
+        console.log('Merchant found:', merchant.id);
 
         // Try multiple endpoints to fetch services
         let services = [];
@@ -222,20 +264,20 @@ export const fetchServices = async () => {
         try {
             // Option 1: Try to get services by store ID
             const storeId = await getMerchantStoreId();
-            console.log('🏪 Store ID found:', storeId);
+            console.log('Store ID found:', storeId);
 
-            const response = await axiosInstance.get(`/services/store/${storeId}`, {
+            const response = await axiosInstance.get(`/api/v1/services/store/${storeId}`, {
                 headers: getAuthHeaders()
             });
             services = response.data?.services || response.data || [];
-            console.log('✅ Services from store endpoint:', services);
+            console.log('Services from store endpoint:', services);
 
         } catch (storeError) {
-            console.log('⚠️ Store-based service fetch failed, trying direct approach:', storeError.message);
+            console.log('Store-based service fetch failed, trying direct approach:', storeError.message);
 
             try {
                 // Option 2: Try to get all services and filter by merchant
-                const response = await axiosInstance.get('/services', {
+                const response = await axiosInstance.get('/api/v1/services', {
                     headers: getAuthHeaders()
                 });
                 const allServices = response.data?.services || response.data || [];
@@ -250,10 +292,10 @@ export const fetchServices = async () => {
                     services = allServices;
                 }
 
-                console.log('✅ Services from general endpoint:', services);
+                console.log('Services from general endpoint:', services);
 
             } catch (generalError) {
-                console.log('⚠️ General service fetch failed:', generalError.message);
+                console.log('General service fetch failed:', generalError.message);
                 throw new Error('Unable to fetch services. Please ensure you have created a store first.');
             }
         }
@@ -264,7 +306,7 @@ export const fetchServices = async () => {
         };
 
     } catch (error) {
-        console.error('❌ fetchServices error:', error);
+        console.error('fetchServices error:', error);
         handleApiError(error, 'fetching services');
     }
 };
@@ -272,7 +314,7 @@ export const fetchServices = async () => {
 // Fetch service by ID
 export const fetchServiceById = async (serviceId) => {
     try {
-        const response = await axiosInstance.get(`/services/${serviceId}`, {
+        const response = await axiosInstance.get(`/api/v1/services/${serviceId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -290,7 +332,7 @@ export const createService = async (serviceData) => {
             serviceData.store_id = storeId;
         }
 
-        const response = await axiosInstance.post('/services', serviceData, {
+        const response = await axiosInstance.post('/api/v1/services', serviceData, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -302,7 +344,7 @@ export const createService = async (serviceData) => {
 // Update service
 export const updateService = async (serviceId, serviceData) => {
     try {
-        const response = await axiosInstance.put(`/services/${serviceId}`, serviceData, {
+        const response = await axiosInstance.put(`/api/v1/services/${serviceId}`, serviceData, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -314,7 +356,7 @@ export const updateService = async (serviceId, serviceData) => {
 // Delete service
 export const deleteService = async (serviceId) => {
     try {
-        const response = await axiosInstance.delete(`/services/${serviceId}`, {
+        const response = await axiosInstance.delete(`/api/v1/services/${serviceId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -323,19 +365,19 @@ export const deleteService = async (serviceId) => {
     }
 };
 
-// ===== OFFERS FUNCTIONS (FIXED) =====
+// ===== OFFERS FUNCTIONS =====
 
 // Fetch all offers for current merchant - ENHANCED VERSION
 export const fetchOffers = async () => {
     try {
-        console.log('🔍 Starting fetchOffers...');
+        console.log('Starting fetchOffers...');
 
         const merchant = merchantAuthService.getCurrentMerchant();
         if (!merchant) {
             throw new Error('Merchant information not found. Please log in again.');
         }
 
-        console.log('👤 Merchant found:', merchant.id);
+        console.log('Merchant found:', merchant.id);
 
         // Get merchant's stores first
         let storeId;
@@ -344,7 +386,7 @@ export const fetchOffers = async () => {
             const stores = storesResponse?.stores || storesResponse || [];
 
             if (stores.length === 0) {
-                console.log('⚠️ No stores found for merchant');
+                console.log('No stores found for merchant');
                 return {
                     offers: [],
                     message: 'No store found. Please create a store first.'
@@ -352,10 +394,10 @@ export const fetchOffers = async () => {
             }
 
             storeId = stores[0].id; // Use first store
-            console.log('🏪 Using store ID:', storeId);
+            console.log('Using store ID:', storeId);
 
         } catch (storeError) {
-            console.error('❌ Store check failed:', storeError);
+            console.error('Store check failed:', storeError);
             return {
                 offers: [],
                 error: 'Unable to get store information',
@@ -365,15 +407,15 @@ export const fetchOffers = async () => {
 
         // Now fetch offers using the correct endpoint with store_id parameter
         try {
-            console.log('📋 Fetching offers for store:', storeId);
+            console.log('Fetching offers for store:', storeId);
 
             // Option 1: Use the store-specific endpoint
-            const response = await axiosInstance.get(`/offers/store/${storeId}`, {
+            const response = await axiosInstance.get(`/api/v1/offers/store/${storeId}`, {
                 headers: getAuthHeaders()
             });
 
             const offers = response.data?.offers || [];
-            console.log('✅ Offers fetched successfully:', offers.length);
+            console.log('Offers fetched successfully:', offers.length);
 
             return {
                 offers: Array.isArray(offers) ? offers : [],
@@ -381,16 +423,16 @@ export const fetchOffers = async () => {
             };
 
         } catch (offerError) {
-            console.log('⚠️ Store-specific offer fetch failed, trying general endpoint...');
+            console.log('Store-specific offer fetch failed, trying general endpoint...');
 
             // Option 2: Use general endpoint with store_id parameter
             try {
-                const response = await axiosInstance.get(`/offers?store_id=${storeId}`, {
+                const response = await axiosInstance.get(`/api/v1/offers?store_id=${storeId}`, {
                     headers: getAuthHeaders()
                 });
 
                 const offers = response.data?.offers || [];
-                console.log('✅ Offers from general endpoint:', offers.length);
+                console.log('Offers from general endpoint:', offers.length);
 
                 return {
                     offers: Array.isArray(offers) ? offers : [],
@@ -398,7 +440,7 @@ export const fetchOffers = async () => {
                 };
 
             } catch (generalError) {
-                console.error('❌ General offer fetch also failed:', generalError);
+                console.error('General offer fetch also failed:', generalError);
 
                 return {
                     offers: [],
@@ -409,7 +451,7 @@ export const fetchOffers = async () => {
         }
 
     } catch (error) {
-        console.error('❌ fetchOffers error:', error);
+        console.error('fetchOffers error:', error);
 
         return {
             offers: [],
@@ -422,7 +464,7 @@ export const fetchOffers = async () => {
 // Create a new offer - ENHANCED VERSION
 export const createOffer = async (offerData) => {
     try {
-        console.log('📝 Creating offer:', offerData);
+        console.log('Creating offer:', offerData);
 
         // Validate required fields
         if (!offerData.service_id || !offerData.discount || !offerData.expiration_date) {
@@ -435,14 +477,14 @@ export const createOffer = async (offerData) => {
             throw new Error('Expiration date must be in the future');
         }
 
-        const response = await axiosInstance.post('/offers', offerData, {
+        const response = await axiosInstance.post('/api/v1/offers', offerData, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Offer created successfully:', response.data);
+        console.log('Offer created successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('❌ Create offer error:', error);
+        console.error('Create offer error:', error);
         handleApiError(error, 'creating offer');
     }
 };
@@ -450,16 +492,16 @@ export const createOffer = async (offerData) => {
 // Update an existing offer
 export const updateOffer = async (offerId, offerData) => {
     try {
-        console.log('🔄 Updating offer:', offerId, offerData);
+        console.log('Updating offer:', offerId, offerData);
 
-        const response = await axiosInstance.put(`/offers/${offerId}`, offerData, {
+        const response = await axiosInstance.put(`/api/v1/offers/${offerId}`, offerData, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Offer updated successfully:', response.data);
+        console.log('Offer updated successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('❌ Update offer error:', error);
+        console.error('Update offer error:', error);
         handleApiError(error, 'updating offer');
     }
 };
@@ -467,16 +509,16 @@ export const updateOffer = async (offerId, offerData) => {
 // Delete an offer
 export const deleteOffer = async (offerId) => {
     try {
-        console.log('🗑️ Deleting offer:', offerId);
+        console.log('Deleting offer:', offerId);
 
-        const response = await axiosInstance.delete(`/offers/${offerId}`, {
+        const response = await axiosInstance.delete(`/api/v1/offers/${offerId}`, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Offer deleted successfully');
+        console.log('Offer deleted successfully');
         return response.data;
     } catch (error) {
-        console.error('❌ Delete offer error:', error);
+        console.error('Delete offer error:', error);
         handleApiError(error, 'deleting offer');
     }
 };
@@ -487,7 +529,7 @@ export const deleteOffer = async (offerId) => {
 export const fetchBookings = async () => {
     try {
         const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/bookings/store/${storeId}`, {
+        const response = await axiosInstance.get(`/api/v1/bookings/store/${storeId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -499,7 +541,7 @@ export const fetchBookings = async () => {
 // Fetch single booking
 export const fetchSingleBooking = async (bookingId) => {
     try {
-        const response = await axiosInstance.get(`/bookings/${bookingId}`, {
+        const response = await axiosInstance.get(`/api/v1/bookings/${bookingId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -511,7 +553,7 @@ export const fetchSingleBooking = async (bookingId) => {
 // Update booking status
 export const updateBookingStatus = async (bookingId, status) => {
     try {
-        const response = await axiosInstance.put(`/bookings/${bookingId}/status`, { status }, {
+        const response = await axiosInstance.put(`/api/v1/bookings/${bookingId}/status`, { status }, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -520,32 +562,39 @@ export const updateBookingStatus = async (bookingId, status) => {
     }
 };
 
-// ===== FILE UPLOAD (FIXED) =====
+// ===== FILE UPLOAD (FIXED AND ENHANCED) =====
 
-// Upload an image with better error handling and endpoint detection
+// Upload an image with fixed endpoint and better error handling
 export const uploadImage = async (file, folder = 'general') => {
     try {
         if (!file) {
             throw new Error('No file provided');
         }
 
+        console.log('DEBUG: Starting image upload');
+        console.log('DEBUG: File details:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+        });
+
         // Validate file type
         if (!file.type.startsWith('image/')) {
             throw new Error('File must be an image');
         }
 
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            throw new Error('File size must be less than 5MB');
+        // Validate file size (max 10MB for store logos)
+        if (file.size > 10 * 1024 * 1024) {
+            throw new Error('File size must be less than 10MB');
         }
 
         const formData = new FormData();
-        formData.append('file', file); // Your server expects 'file' field
+        formData.append('file', file);
         formData.append('folder', folder);
 
-        console.log('📤 Uploading image:', file.name, 'Size:', file.size);
+        console.log('DEBUG: Attempting upload to /upload/files/upload-image');
 
-        // Use the correct endpoint path from your server routes
+        // FIXED: Use the correct endpoint that matches your app.js mounting
         const response = await axiosInstance.post('/upload/files/upload-image', formData, {
             headers: {
                 ...getAuthHeaders(),
@@ -553,28 +602,41 @@ export const uploadImage = async (file, folder = 'general') => {
             },
         });
 
-        console.log('✅ Upload response:', response.data);
+        console.log('DEBUG: Upload response:', response.data);
 
-        // Your server returns { message, url }
-        return {
-            fileUrl: response.data.url,
-            url: response.data.url,
-            data: { url: response.data.url }
-        };
+        // Handle the response format from your updated upload routes
+        const result = response.data;
+        if (result.success && result.url) {
+            return {
+                success: true,
+                fileUrl: result.url,
+                url: result.url,
+                filename: result.filename,
+                originalname: result.originalname
+            };
+        } else {
+            throw new Error(result.message || 'Upload failed');
+        }
+
     } catch (error) {
-        console.error('❌ Upload error:', error);
+        console.error('DEBUG: Upload failed:', error);
 
-        // If the main upload fails, provide a fallback
-        if (error.response?.status === 404) {
-            console.log('⚠️ Upload endpoint not found, using base64 fallback');
+        // If the main upload fails, provide a fallback only in development
+        if (error.response?.status === 404 && process.env.NODE_ENV === 'development') {
+            console.log('DEBUG: Upload endpoint not found, using base64 fallback');
 
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
+                    const base64Url = e.target.result;
+                    console.log('DEBUG: Generated base64 URL length:', base64Url.length);
                     resolve({
-                        fileUrl: e.target.result,
-                        url: e.target.result,
-                        data: { url: e.target.result }
+                        success: true,
+                        fileUrl: base64Url,
+                        url: base64Url,
+                        filename: file.name,
+                        originalname: file.name,
+                        isBase64: true
                     });
                 };
                 reader.onerror = () => reject(new Error('Failed to read file'));
@@ -583,6 +645,92 @@ export const uploadImage = async (file, folder = 'general') => {
         }
 
         handleApiError(error, 'uploading image');
+    }
+};
+
+// NEW: Store logo specific upload function
+export const uploadStoreLogo = async (file) => {
+    try {
+        if (!file) {
+            throw new Error('No logo file provided');
+        }
+
+        console.log('DEBUG: Starting store logo upload');
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            throw new Error('Logo must be an image file');
+        }
+
+        // Validate file size (max 5MB for logos)
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('Logo file size must be less than 5MB');
+        }
+
+        const formData = new FormData();
+        formData.append('logo', file);
+
+        console.log('DEBUG: Uploading logo to /upload/store-logo');
+
+        // FIXED: Remove the duplicate /api/v1 since axiosInstance already has baseURL set
+        const response = await axiosInstance.post('/upload/store-logo', formData, {
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+
+        console.log('DEBUG: Logo upload response:', response.data);
+
+        const result = response.data;
+        if (result.success && (result.logoUrl || result.url)) {
+            return {
+                success: true,
+                logoUrl: result.logoUrl || result.url,
+                fileUrl: result.logoUrl || result.url,
+                url: result.logoUrl || result.url,
+                filename: result.filename,
+                originalname: result.originalname
+            };
+        } else {
+            throw new Error(result.message || 'Logo upload failed');
+        }
+
+    } catch (error) {
+        console.error('DEBUG: Logo upload failed:', error);
+        handleApiError(error, 'uploading store logo');
+    }
+};
+
+// NEW: Update store logo function
+export const updateStoreLogo = async (storeId, logoFile) => {
+    try {
+        console.log('DEBUG: Updating store logo for store:', storeId);
+
+        // First upload the logo
+        const uploadResult = await uploadStoreLogo(logoFile);
+        
+        if (!uploadResult.success || !uploadResult.logoUrl) {
+            throw new Error('Failed to upload logo');
+        }
+
+        console.log('DEBUG: Logo uploaded, now updating store record');
+
+        // Then update the store record with the new logo URL
+        const updateResult = await updateStore(storeId, {
+            logo_url: uploadResult.logoUrl
+        });
+
+        return {
+            success: true,
+            logoUrl: uploadResult.logoUrl,
+            store: updateResult.store,
+            message: 'Store logo updated successfully'
+        };
+
+    } catch (error) {
+        console.error('DEBUG: Store logo update failed:', error);
+        handleApiError(error, 'updating store logo');
     }
 };
 
@@ -607,19 +755,19 @@ export const uploadImageSimple = async (file, folder = 'services') => {
             reader.readAsDataURL(file);
         });
     } catch (error) {
-        console.error('❌ Simple upload error:', error);
+        console.error('Simple upload error:', error);
         throw error;
     }
 };
 
-// ===== STAFF MANAGEMENT (UPDATED) =====
+// ===== STAFF MANAGEMENT =====
 
 // Fetch all staff with optional filtering parameters
 export const fetchStaff = async (params = {}) => {
     try {
-        console.log('🔍 Fetching staff with params:', params);
+        console.log('Fetching staff with params:', params);
 
-        let endpoint = '/staff';
+        let endpoint = '/api/v1/staff';
         const queryParams = new URLSearchParams();
 
         // Add query parameters
@@ -635,13 +783,13 @@ export const fetchStaff = async (params = {}) => {
             endpoint += `?${queryString}`;
         }
 
-        console.log('🔗 Staff API endpoint:', endpoint);
+        console.log('Staff API endpoint:', endpoint);
 
         const response = await axiosInstance.get(endpoint, {
             headers: getAuthHeaders()
         });
 
-        console.log('📊 Staff API response:', response.data);
+        console.log('Staff API response:', response.data);
 
         // Handle different response formats
         const data = response.data;
@@ -651,53 +799,15 @@ export const fetchStaff = async (params = {}) => {
         return { staff: Array.isArray(data) ? data : [] };
 
     } catch (error) {
-        console.error('❌ Error fetching staff:', error);
+        console.error('Error fetching staff:', error);
         handleApiError(error, 'fetching staff');
     }
 };
 
-// Fetch staff for a specific store (convenience function)
-export const fetchStaffByStore = async (storeId) => {
-    try {
-        console.log('🏪 Fetching staff for store:', storeId);
-
-        const response = await axiosInstance.get(`/staff/store/${storeId}`, {
-            headers: getAuthHeaders()
-        });
-
-        console.log('✅ Store staff response:', response.data);
-
-        // Handle different response formats from the backend
-        const staffData = response.data?.staff || response.data || [];
-        return { staff: Array.isArray(staffData) ? staffData : [] };
-    } catch (error) {
-        console.error('❌ Error fetching store staff:', error);
-        handleApiError(error, 'fetching store staff');
-    }
-};
-
-// Get all staff (for admin views)
-export const getAllStaff = async () => {
-    try {
-        const response = await axiosInstance.get('/staff', {
-            headers: getAuthHeaders()
-        });
-
-        const data = response.data;
-        // Handle paginated response
-        if (data.staff) {
-            return data.staff;
-        }
-        return Array.isArray(data) ? data : [];
-    } catch (error) {
-        handleApiError(error, 'fetching all staff');
-    }
-};
-
-// Create staff member (updated with better validation)
+// Create staff member
 export const createStaff = async (staffData) => {
     try {
-        console.log('👤 Creating staff with data:', staffData);
+        console.log('Creating staff with data:', staffData);
 
         // Validate required fields
         if (!staffData.name || !staffData.email) {
@@ -711,16 +821,16 @@ export const createStaff = async (staffData) => {
             payload.storeId = storeId;
         }
 
-        console.log('📤 Sending staff payload:', payload);
+        console.log('Sending staff payload:', payload);
 
-        const response = await axiosInstance.post('/staff', payload, {
+        const response = await axiosInstance.post('/api/v1/staff', payload, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Staff creation response:', response.data);
+        console.log('Staff creation response:', response.data);
         return response.data;
     } catch (error) {
-        console.error('❌ Create staff error:', error);
+        console.error('Create staff error:', error);
         handleApiError(error, 'creating staff');
     }
 };
@@ -728,16 +838,16 @@ export const createStaff = async (staffData) => {
 // Update staff member
 export const updateStaff = async (staffId, staffData) => {
     try {
-        console.log('🔄 Updating staff:', staffId, 'with data:', staffData);
+        console.log('Updating staff:', staffId, 'with data:', staffData);
 
-        const response = await axiosInstance.put(`/staff/${staffId}`, staffData, {
+        const response = await axiosInstance.put(`/api/v1/staff/${staffId}`, staffData, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Staff update response:', response.data);
+        console.log('Staff update response:', response.data);
         return response.data;
     } catch (error) {
-        console.error('❌ Update staff error:', error);
+        console.error('Update staff error:', error);
         handleApiError(error, 'updating staff');
     }
 };
@@ -745,147 +855,12 @@ export const updateStaff = async (staffId, staffData) => {
 // Delete staff member
 export const deleteStaff = async (staffId) => {
     try {
-        const response = await axiosInstance.delete(`/staff/${staffId}`, {
+        const response = await axiosInstance.delete(`/api/v1/staff/${staffId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
     } catch (error) {
         handleApiError(error, 'deleting staff');
-    }
-};
-
-// Get staff by ID
-export const getStaffById = async (staffId) => {
-    try {
-        const response = await axiosInstance.get(`/staff/${staffId}`, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'fetching staff member');
-    }
-};
-
-// Assign staff to service
-export const assignStaffToService = async (staffId, serviceId) => {
-    try {
-        const response = await axiosInstance.post('/staff/assign-service',
-            { staffId, serviceId },
-            { headers: getAuthHeaders() }
-        );
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'assigning staff to service');
-    }
-};
-
-// Unassign staff from service
-export const unassignStaffFromService = async (staffId, serviceId) => {
-    try {
-        const response = await axiosInstance.post('/staff/unassign-service',
-            { staffId, serviceId },
-            { headers: getAuthHeaders() }
-        );
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'unassigning staff from service');
-    }
-};
-
-// Get services assigned to a staff member
-export const getStaffServices = async (staffId) => {
-    try {
-        const response = await axiosInstance.get(`/staff/${staffId}/services`, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'fetching staff services');
-    }
-};
-
-// Get bookings for a staff member
-export const getStaffBookings = async (staffId, params = {}) => {
-    try {
-        const queryParams = new URLSearchParams();
-
-        if (params.status) queryParams.append('status', params.status);
-        if (params.startDate) queryParams.append('startDate', params.startDate);
-        if (params.endDate) queryParams.append('endDate', params.endDate);
-        if (params.limit) queryParams.append('limit', params.limit);
-        if (params.page) queryParams.append('page', params.page);
-
-        const url = `/staff/${staffId}/bookings${queryParams.toString() ? `?${queryParams}` : ''}`;
-
-        const response = await axiosInstance.get(url, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'fetching staff bookings');
-    }
-};
-
-// Get staff members assigned to a service
-export const getServiceStaff = async (serviceId) => {
-    try {
-        const response = await axiosInstance.get(`/staff/service/${serviceId}`, {
-            headers: getAuthHeaders()
-        });
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'fetching service staff');
-    }
-};
-
-// Bulk assign staff to multiple services
-export const bulkAssignStaff = async (staffId, serviceIds) => {
-    try {
-        const promises = serviceIds.map(serviceId =>
-            assignStaffToService(staffId, serviceId)
-        );
-        const results = await Promise.allSettled(promises);
-
-        const successful = results.filter(r => r.status === 'fulfilled').length;
-        const failed = results.filter(r => r.status === 'rejected').length;
-
-        return {
-            success: true,
-            message: `Assigned ${successful} services successfully. ${failed} assignments failed.`,
-            successful,
-            failed,
-            details: results
-        };
-    } catch (error) {
-        handleApiError(error, 'bulk assigning staff');
-    }
-};
-
-// Update staff status (convenience function)
-export const updateStaffStatus = async (staffId, status) => {
-    try {
-        return await updateStaff(staffId, { status });
-    } catch (error) {
-        handleApiError(error, 'updating staff status');
-    }
-};
-
-// Get staff statistics
-export const getStaffStats = async () => {
-    try {
-        const storeId = await getMerchantStoreId();
-        const staff = await fetchStaff(storeId);
-
-        const stats = {
-            total: staff.length,
-            active: staff.filter(s => s.status === 'active').length,
-            suspended: staff.filter(s => s.status === 'suspended').length,
-            inactive: staff.filter(s => s.status === 'inactive').length
-        };
-
-        return stats;
-    } catch (error) {
-        handleApiError(error, 'calculating staff statistics');
     }
 };
 
@@ -895,7 +870,7 @@ export const getStaffStats = async () => {
 export const fetchSocials = async () => {
     try {
         const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/socials/${storeId}`, {
+        const response = await axiosInstance.get(`/api/v1/socials/${storeId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -907,7 +882,7 @@ export const fetchSocials = async () => {
 // Create a new social media link
 export const createSocial = async (socialData) => {
     try {
-        const response = await axiosInstance.post('/socials', socialData, {
+        const response = await axiosInstance.post('/api/v1/socials', socialData, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -919,7 +894,7 @@ export const createSocial = async (socialData) => {
 // Update an existing social media link
 export const updateSocial = async (socialId, socialData) => {
     try {
-        const response = await axiosInstance.put(`/socials/${socialId}`, socialData, {
+        const response = await axiosInstance.put(`/api/v1/socials/${socialId}`, socialData, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -931,7 +906,7 @@ export const updateSocial = async (socialId, socialData) => {
 // Delete a social media link
 export const deleteSocial = async (socialId) => {
     try {
-        const response = await axiosInstance.delete(`/socials/${socialId}`, {
+        const response = await axiosInstance.delete(`/api/v1/socials/${socialId}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -946,7 +921,7 @@ export const deleteSocial = async (socialId) => {
 export const fetchReviews = async () => {
     try {
         const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/stores/${storeId}/reviews`, {
+        const response = await axiosInstance.get(`/api/v1/stores/${storeId}/reviews`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -958,7 +933,7 @@ export const fetchReviews = async () => {
 // Respond to a review
 export const respondToReview = async (reviewId, response) => {
     try {
-        const responseData = await axiosInstance.post(`/reviews/${reviewId}/respond`,
+        const responseData = await axiosInstance.post(`/api/v1/reviews/${reviewId}/respond`,
             { response },
             { headers: getAuthHeaders() }
         );
@@ -974,7 +949,7 @@ export const respondToReview = async (reviewId, response) => {
 export const getAnalytics = async (timeRange = '7d') => {
     try {
         const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/analytics/store/${storeId}?range=${timeRange}`, {
+        const response = await axiosInstance.get(`/api/v1/analytics/store/${storeId}?range=${timeRange}`, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -988,7 +963,7 @@ export const getAnalytics = async (timeRange = '7d') => {
 // Create form
 export const createForm = async (formData) => {
     try {
-        const response = await axiosInstance.post('/forms', formData, {
+        const response = await axiosInstance.post('/api/v1/forms', formData, {
             headers: getAuthHeaders()
         });
         return response.data;
@@ -1034,43 +1009,18 @@ export const getDashboardData = async () => {
     }
 };
 
-// Refresh auth token if needed
-export const refreshAuthToken = async () => {
-    try {
-        const currentToken = merchantAuthService.getToken();
-        if (!currentToken) {
-            throw new Error('No token to refresh');
-        }
-
-        const response = await axiosInstance.post('/auth/refresh', {}, {
-            headers: { Authorization: `Bearer ${currentToken}` }
-        });
-
-        // Update stored auth data with new token
-        const authData = merchantAuthService.getAuthData();
-        if (authData) {
-            authData.token = response.data.access_token;
-            merchantAuthService.storeAuthData(authData);
-        }
-
-        return response.data;
-    } catch (error) {
-        handleApiError(error, 'refreshing token');
-    }
-};
-
 // ===== CLIENT MANAGEMENT SERVICES =====
 
 // Fetch store followers
 export const fetchStoreFollowers = async (storeId) => {
     try {
-        console.log('📋 Fetching followers for store:', storeId);
+        console.log('Fetching followers for store:', storeId);
 
-        const response = await axiosInstance.get(`/follow/store/${storeId}/followers`, {
+        const response = await axiosInstance.get(`/api/v1/follow/store/${storeId}/followers`, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Store followers response:', response.data);
+        console.log('Store followers response:', response.data);
 
         // Handle different response formats from the backend
         const followersData = response.data?.followers || response.data?.data || response.data || [];
@@ -1079,7 +1029,7 @@ export const fetchStoreFollowers = async (storeId) => {
             followers: Array.isArray(followersData) ? followersData : []
         };
     } catch (error) {
-        console.error('❌ Error fetching store followers:', error);
+        console.error('Error fetching store followers:', error);
         handleApiError(error, 'fetching store followers');
     }
 };
@@ -1097,9 +1047,9 @@ export const fetchMyStoreFollowers = async () => {
 // Enhanced booking fetching with customer details
 export const fetchBookingsWithCustomers = async () => {
     try {
-        console.log('👥 Fetching bookings with customer details');
+        console.log('Fetching bookings with customer details');
 
-        const response = await axiosInstance.get('/bookings', {
+        const response = await axiosInstance.get('/api/v1/bookings', {
             headers: getAuthHeaders(),
             params: {
                 include: 'user,service,offer',
@@ -1107,7 +1057,7 @@ export const fetchBookingsWithCustomers = async () => {
             }
         });
 
-        console.log('✅ Bookings with customers response:', response.data);
+        console.log('Bookings with customers response:', response.data);
 
         const bookingsData = response.data?.bookings || response.data?.data || response.data || [];
         return {
@@ -1115,7 +1065,7 @@ export const fetchBookingsWithCustomers = async () => {
             bookings: Array.isArray(bookingsData) ? bookingsData : []
         };
     } catch (error) {
-        console.error('❌ Error fetching bookings with customers:', error);
+        console.error('Error fetching bookings with customers:', error);
         handleApiError(error, 'fetching bookings with customers');
     }
 };
@@ -1123,16 +1073,16 @@ export const fetchBookingsWithCustomers = async () => {
 // Get customer analytics for the merchant's store
 export const getCustomerAnalytics = async () => {
     try {
-        console.log('📊 Fetching customer analytics');
+        console.log('Fetching customer analytics');
 
         const storeId = await getMerchantStoreId();
-        const response = await axiosInstance.get(`/analytics/customers/${storeId}`, {
+        const response = await axiosInstance.get(`/api/v1/analytics/customers/${storeId}`, {
             headers: getAuthHeaders()
         });
 
         return response.data;
     } catch (error) {
-        console.error('❌ Error fetching customer analytics:', error);
+        console.error('Error fetching customer analytics:', error);
         // Return empty analytics if endpoint doesn't exist
         return {
             success: true,
@@ -1149,9 +1099,9 @@ export const getCustomerAnalytics = async () => {
 // Send bulk email to clients
 export const sendBulkEmail = async (recipients, subject, message, emailType = 'marketing') => {
     try {
-        console.log('📧 Sending bulk email to:', recipients.length, 'recipients');
+        console.log('Sending bulk email to:', recipients.length, 'recipients');
 
-        const response = await axiosInstance.post('/communications/bulk-email', {
+        const response = await axiosInstance.post('/api/v1/communications/bulk-email', {
             recipients,
             subject,
             message,
@@ -1161,10 +1111,10 @@ export const sendBulkEmail = async (recipients, subject, message, emailType = 'm
             headers: getAuthHeaders()
         });
 
-        console.log('✅ Bulk email sent successfully');
+        console.log('Bulk email sent successfully');
         return response.data;
     } catch (error) {
-        console.error('❌ Error sending bulk email:', error);
+        console.error('Error sending bulk email:', error);
         handleApiError(error, 'sending bulk email');
     }
 };
@@ -1172,14 +1122,14 @@ export const sendBulkEmail = async (recipients, subject, message, emailType = 'm
 // Get client communication history
 export const getClientCommunications = async (clientId, clientType = 'user') => {
     try {
-        const response = await axiosInstance.get(`/communications/client/${clientId}`, {
+        const response = await axiosInstance.get(`/api/v1/communications/client/${clientId}`, {
             headers: getAuthHeaders(),
             params: { clientType }
         });
 
         return response.data;
     } catch (error) {
-        console.error('❌ Error fetching client communications:', error);
+        console.error('Error fetching client communications:', error);
         handleApiError(error, 'fetching client communications');
     }
 };
@@ -1187,19 +1137,19 @@ export const getClientCommunications = async (clientId, clientType = 'user') => 
 // Update client VIP status
 export const updateClientVipStatus = async (clientId, isVip, reason = '') => {
     try {
-        console.log('⭐ Updating VIP status for client:', clientId, 'to:', isVip);
+        console.log('Updating VIP status for client:', clientId, 'to:', isVip);
 
-        const response = await axiosInstance.put(`/clients/${clientId}/vip-status`, {
+        const response = await axiosInstance.put(`/api/v1/clients/${clientId}/vip-status`, {
             isVip,
             reason
         }, {
             headers: getAuthHeaders()
         });
 
-        console.log('✅ VIP status updated successfully');
+        console.log('VIP status updated successfully');
         return response.data;
     } catch (error) {
-        console.error('❌ Error updating VIP status:', error);
+        console.error('Error updating VIP status:', error);
         handleApiError(error, 'updating VIP status');
     }
 };
@@ -1207,7 +1157,7 @@ export const updateClientVipStatus = async (clientId, isVip, reason = '') => {
 // Add client notes
 export const addClientNote = async (clientId, note, noteType = 'general') => {
     try {
-        const response = await axiosInstance.post(`/clients/${clientId}/notes`, {
+        const response = await axiosInstance.post(`/api/v1/clients/${clientId}/notes`, {
             note,
             noteType,
             addedBy: 'merchant'
@@ -1224,7 +1174,7 @@ export const addClientNote = async (clientId, note, noteType = 'general') => {
 // Get client notes
 export const getClientNotes = async (clientId) => {
     try {
-        const response = await axiosInstance.get(`/clients/${clientId}/notes`, {
+        const response = await axiosInstance.get(`/api/v1/clients/${clientId}/notes`, {
             headers: getAuthHeaders()
         });
 
@@ -1237,9 +1187,9 @@ export const getClientNotes = async (clientId) => {
 // Block/unblock client
 export const updateClientBlockStatus = async (clientId, isBlocked, reason = '') => {
     try {
-        console.log('🚫 Updating block status for client:', clientId, 'to:', isBlocked);
+        console.log('Updating block status for client:', clientId, 'to:', isBlocked);
 
-        const response = await axiosInstance.put(`/clients/${clientId}/block-status`, {
+        const response = await axiosInstance.put(`/api/v1/clients/${clientId}/block-status`, {
             isBlocked,
             reason
         }, {
@@ -1255,9 +1205,9 @@ export const updateClientBlockStatus = async (clientId, isBlocked, reason = '') 
 // Export client data
 export const exportClientData = async (filters = {}, format = 'csv') => {
     try {
-        console.log('📤 Exporting client data with filters:', filters);
+        console.log('Exporting client data with filters:', filters);
 
-        const response = await axiosInstance.post('/clients/export', {
+        const response = await axiosInstance.post('/api/v1/clients/export', {
             filters,
             format,
             includeFollowers: true,
@@ -1283,6 +1233,184 @@ export const exportClientData = async (filters = {}, format = 'csv') => {
     }
 };
 
+// Refresh auth token if needed
+export const refreshAuthToken = async () => {
+    try {
+        const currentToken = merchantAuthService.getToken();
+        if (!currentToken) {
+            throw new Error('No token to refresh');
+        }
+
+        const response = await axiosInstance.post('/api/v1/auth/refresh', {}, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+
+        // Update stored auth data with new token
+        const authData = merchantAuthService.getAuthData();
+        if (authData) {
+            authData.token = response.data.access_token;
+            merchantAuthService.storeAuthData(authData);
+        }
+
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'refreshing token');
+    }
+};
+
+// Get all staff (for admin views)
+export const getAllStaff = async () => {
+    try {
+        const response = await axiosInstance.get('/api/v1/staff', {
+            headers: getAuthHeaders()
+        });
+
+        const data = response.data;
+        // Handle paginated response
+        if (data.staff) {
+            return data.staff;
+        }
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        handleApiError(error, 'fetching all staff');
+    }
+};
+
+// Get staff by ID
+export const getStaffById = async (staffId) => {
+    try {
+        const response = await axiosInstance.get(`/api/v1/staff/${staffId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching staff member');
+    }
+};
+
+// Assign staff to service
+export const assignStaffToService = async (staffId, serviceId) => {
+    try {
+        const response = await axiosInstance.post('/api/v1/staff/assign-service',
+            { staffId, serviceId },
+            { headers: getAuthHeaders() }
+        );
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'assigning staff to service');
+    }
+};
+
+// Unassign staff from service
+export const unassignStaffFromService = async (staffId, serviceId) => {
+    try {
+        const response = await axiosInstance.post('/api/v1/staff/unassign-service',
+            { staffId, serviceId },
+            { headers: getAuthHeaders() }
+        );
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'unassigning staff from service');
+    }
+};
+
+// Get services assigned to a staff member
+export const getStaffServices = async (staffId) => {
+    try {
+        const response = await axiosInstance.get(`/api/v1/staff/${staffId}/services`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching staff services');
+    }
+};
+
+// Get bookings for a staff member
+export const getStaffBookings = async (staffId, params = {}) => {
+    try {
+        const queryParams = new URLSearchParams();
+
+        if (params.status) queryParams.append('status', params.status);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.limit) queryParams.append('limit', params.limit);
+        if (params.page) queryParams.append('page', params.page);
+
+        const url = `/api/v1/staff/${staffId}/bookings${queryParams.toString() ? `?${queryParams}` : ''}`;
+
+        const response = await axiosInstance.get(url, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching staff bookings');
+    }
+};
+
+// Get staff members assigned to a service
+export const getServiceStaff = async (serviceId) => {
+    try {
+        const response = await axiosInstance.get(`/api/v1/staff/service/${serviceId}`, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'fetching service staff');
+    }
+};
+
+// Bulk assign staff to multiple services
+export const bulkAssignStaff = async (staffId, serviceIds) => {
+    try {
+        const promises = serviceIds.map(serviceId =>
+            assignStaffToService(staffId, serviceId)
+        );
+        const results = await Promise.allSettled(promises);
+
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+
+        return {
+            success: true,
+            message: `Assigned ${successful} services successfully. ${failed} assignments failed.`,
+            successful,
+            failed,
+            details: results
+        };
+    } catch (error) {
+        handleApiError(error, 'bulk assigning staff');
+    }
+};
+
+// Update staff status (convenience function)
+export const updateStaffStatus = async (staffId, status) => {
+    try {
+        return await updateStaff(staffId, { status });
+    } catch (error) {
+        handleApiError(error, 'updating staff status');
+    }
+};
+
+// Get staff statistics
+export const getStaffStats = async () => {
+    try {
+        const storeId = await getMerchantStoreId();
+        const staff = await fetchStaff({ storeId });
+
+        const staffArray = staff.staff || [];
+        const stats = {
+            total: staffArray.length,
+            active: staffArray.filter(s => s.status === 'active').length,
+            suspended: staffArray.filter(s => s.status === 'suspended').length,
+            inactive: staffArray.filter(s => s.status === 'inactive').length
+        };
+
+        return stats;
+    } catch (error) {
+        handleApiError(error, 'calculating staff statistics');
+    }
+};
 
 // ===== DEFAULT EXPORT =====
 
@@ -1299,6 +1427,8 @@ export default {
     createStore,
     getMerchantStores,
     updateStore,
+    getStoreProfile,
+    updateStoreProfile,
 
     // Services
     fetchServices,
@@ -1321,7 +1451,6 @@ export default {
     // Staff - Updated and Expanded
     fetchStaff,
     getAllStaff,
-    // addStaff,
     createStaff,
     updateStaff,
     deleteStaff,
@@ -1348,8 +1477,11 @@ export default {
     // Analytics
     getAnalytics,
 
-    // Files
+    // Files and Logo Upload
     uploadImage,
+    uploadStoreLogo,
+    updateStoreLogo,
+    uploadImageSimple,
 
     // Forms
     createForm,
@@ -1361,7 +1493,7 @@ export default {
     testConnection,
     refreshAuthToken,
 
- // Client Management - NEW
+    // Client Management
     fetchStoreFollowers,
     fetchMyStoreFollowers,
     fetchBookingsWithCustomers,
@@ -1373,5 +1505,4 @@ export default {
     getClientNotes,
     updateClientBlockStatus,
     exportClientData,
-
 };

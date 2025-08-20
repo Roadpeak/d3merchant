@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
 import BranchManagement from '../../components/BranchManagement';
+import { uploadStoreLogo, updateStoreProfile } from '../../services/api_service';
 
 const AccountPage = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -12,6 +13,13 @@ const AccountPage = () => {
     const [branches, setBranches] = useState([]);
     const [editingProfile, setEditingProfile] = useState(false);
     const [editingStore, setEditingStore] = useState(false);
+    
+    // Logo upload states
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(null);
+    const [logoUploading, setLogoUploading] = useState(false);
+    const [editingLogo, setEditingLogo] = useState(false);
+    
     const [profileData, setProfileData] = useState({
         firstName: '',
         lastName: '',
@@ -21,6 +29,7 @@ const AccountPage = () => {
         taxId: '',
         website: ''
     });
+    
     const [storeData, setStoreData] = useState({
         name: '',
         location: '',
@@ -30,7 +39,8 @@ const AccountPage = () => {
         openingTime: '',
         closingTime: '',
         workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        websiteUrl: ''
+        websiteUrl: '',
+        logoUrl: ''
     });
 
     // Get merchant info and store details
@@ -68,7 +78,7 @@ const AccountPage = () => {
                 website: merchantProfile.store?.website_url || ''
             });
 
-            // Set store data (this serves as main branch info)
+            // Set store data including logo
             if (merchantProfile.store) {
                 setStoreData({
                     name: merchantProfile.store.name || '',
@@ -79,8 +89,18 @@ const AccountPage = () => {
                     openingTime: merchantProfile.store.opening_time || '',
                     closingTime: merchantProfile.store.closing_time || '',
                     workingDays: merchantProfile.store.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-                    websiteUrl: merchantProfile.store.website_url || ''
+                    websiteUrl: merchantProfile.store.website_url || '',
+                    logoUrl: merchantProfile.store.logo_url || merchantProfile.store.logo || ''
                 });
+
+
+                
+                
+                
+                // Set logo preview if exists
+                if (merchantProfile.store.logo_url || merchantProfile.store.logo) {
+                    setLogoPreview(merchantProfile.store.logo_url || merchantProfile.store.logo);
+                }
             }
             
         } catch (error) {
@@ -96,6 +116,131 @@ const AccountPage = () => {
             toast.error('Failed to load profile information');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Handle logo file selection
+    const handleLogoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                toast.error('Please select a valid image file');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image size should be less than 5MB');
+                return;
+            }
+            
+            setLogoFile(file);
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setLogoPreview(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Handle logo upload and store update
+    const handleLogoUpload = async () => {
+        if (!logoFile) {
+            toast.error('Please select a logo to upload');
+            return;
+        }
+        
+        if (!merchantInfo?.store?.id) {
+            toast.error('Store information not found');
+            return;
+        }
+        
+        try {
+            setLogoUploading(true);
+            
+            console.log('DEBUG: Starting logo upload for store:', merchantInfo.store.id);
+            
+            // Upload the logo
+            const uploadResult = await uploadStoreLogo(logoFile);
+            
+            if (!uploadResult.success || !uploadResult.logoUrl) {
+                throw new Error('Failed to upload logo');
+            }
+            
+            console.log('DEBUG: Logo uploaded successfully:', uploadResult.logoUrl);
+            
+            // Update store with new logo URL
+            const updateResult = await updateStoreProfile(merchantInfo.store.id, {
+                logo_url: uploadResult.logoUrl
+            });
+            
+            if (updateResult && updateResult.success !== false) {
+                // Update local state
+                setStoreData(prev => ({
+                    ...prev,
+                    logoUrl: uploadResult.logoUrl
+                }));
+                
+                // Refresh merchant info
+                await getMerchantInfo();
+                
+                setEditingLogo(false);
+                setLogoFile(null);
+                toast.success('Store logo updated successfully!');
+            } else {
+                throw new Error(updateResult?.message || 'Failed to update store logo');
+            }
+            
+        } catch (error) {
+            console.error('Error updating store logo:', error);
+            toast.error(error.message || 'Failed to update store logo');
+        } finally {
+            setLogoUploading(false);
+        }
+    };
+
+    // Handle logo removal
+    const handleLogoRemove = async () => {
+        if (!merchantInfo?.store?.id) {
+            toast.error('Store information not found');
+            return;
+        }
+        
+        try {
+            setLogoUploading(true);
+            
+            // Update store to remove logo
+            const updateResult = await updateStoreProfile(merchantInfo.store.id, {
+                logo_url: null
+            });
+            
+            if (updateResult && updateResult.success !== false) {
+                // Update local state
+                setStoreData(prev => ({
+                    ...prev,
+                    logoUrl: ''
+                }));
+                
+                setLogoPreview(null);
+                setLogoFile(null);
+                setEditingLogo(false);
+                
+                // Refresh merchant info
+                await getMerchantInfo();
+                
+                toast.success('Store logo removed successfully!');
+            } else {
+                throw new Error(updateResult?.message || 'Failed to remove store logo');
+            }
+            
+        } catch (error) {
+            console.error('Error removing store logo:', error);
+            toast.error(error.message || 'Failed to remove store logo');
+        } finally {
+            setLogoUploading(false);
         }
     };
 
@@ -432,6 +577,119 @@ const AccountPage = () => {
 
                                     {merchantInfo && !loading && !error && (
                                         <>
+                                            {/* Store Logo Section */}
+                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                                <div className="flex items-center justify-between mb-6">
+                                                    <div>
+                                                        <h3 className="text-xl font-semibold text-gray-900">Store Logo</h3>
+                                                        <p className="text-sm text-gray-600 mt-1">Upload or update your store logo</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setEditingLogo(!editingLogo)}
+                                                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        disabled={logoUploading}
+                                                    >
+                                                        {editingLogo ? 'Cancel' : 'Edit Logo'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex items-center gap-6">
+                                                    {/* Logo Display */}
+                                                    <div className="flex-shrink-0">
+                                                        <div className="w-24 h-24 rounded-lg border-2 border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                                                            {logoPreview || storeData.logoUrl ? (
+                                                                <img 
+                                                                    src={logoPreview || storeData.logoUrl} 
+                                                                    alt="Store logo" 
+                                                                    className="w-full h-full object-cover"
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.nextSibling.style.display = 'flex';
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div className="text-gray-400 text-center">
+                                                                    <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    <span className="text-xs">No Logo</span>
+                                                                </div>
+                                                            )}
+                                                            {/* Fallback for broken images */}
+                                                            {(logoPreview || storeData.logoUrl) && (
+                                                                <div className="text-gray-400 text-center hidden">
+                                                                    <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    <span className="text-xs">Failed to Load</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Logo Upload Controls */}
+                                                    <div className="flex-1">
+                                                        {editingLogo ? (
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                        Select Logo Image
+                                                                    </label>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={handleLogoChange}
+                                                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                                        disabled={logoUploading}
+                                                                    />
+                                                                    <p className="text-xs text-gray-500 mt-1">
+                                                                        PNG, JPG, GIF up to 5MB
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="flex gap-3">
+                                                                    {logoFile && (
+                                                                        <button
+                                                                            onClick={handleLogoUpload}
+                                                                            disabled={logoUploading}
+                                                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                                                        >
+                                                                            {logoUploading ? (
+                                                                                <>
+                                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                                                    Uploading...
+                                                                                </>
+                                                                            ) : (
+                                                                                'Upload Logo'
+                                                                            )}
+                                                                        </button>
+                                                                    )}
+
+                                                                    {(storeData.logoUrl || logoPreview) && (
+                                                                        <button
+                                                                            onClick={handleLogoRemove}
+                                                                            disabled={logoUploading}
+                                                                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                                                        >
+                                                                            Remove Logo
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <p className="text-gray-700">
+                                                                    {storeData.logoUrl ? 'Logo is set and visible on your store page' : 'No logo uploaded yet'}
+                                                                </p>
+                                                                <p className="text-sm text-gray-500 mt-1">
+                                                                    A professional logo helps customers recognize your brand
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             {/* Store Information (Main Branch) */}
                                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                                 <div className="flex items-center justify-between mb-6">
@@ -624,7 +882,8 @@ const AccountPage = () => {
                                                                         openingTime: merchantInfo.store.opening_time || '',
                                                                         closingTime: merchantInfo.store.closing_time || '',
                                                                         workingDays: merchantInfo.store.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-                                                                        websiteUrl: merchantInfo.store.website_url || ''
+                                                                        websiteUrl: merchantInfo.store.website_url || '',
+                                                                        logoUrl: merchantInfo.store.logo_url || merchantInfo.store.logo || ''
                                                                     });
                                                                 }
                                                             }}

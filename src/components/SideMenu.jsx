@@ -68,11 +68,11 @@ const Sidebar = ({ onClose, currentMerchant }) => {
             icon: <HandHeart size={20} />,
             path: "/dashboard/offers"
         },
-        {
-            name: "Analytics",
-            icon: <TrendingUp size={20} />,
-            path: "/dashboard/analytics"
-        },
+        // {
+        //     name: "Analytics",
+        //     icon: <TrendingUp size={20} />,
+        //     path: "/dashboard/analytics"
+        // },
         {
             name: "Calendar",
             icon: <Calendar size={20} />,
