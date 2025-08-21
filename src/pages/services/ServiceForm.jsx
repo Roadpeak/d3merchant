@@ -93,12 +93,12 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
                     return;
                 }
 
-                console.log('🏪 Loading store data for merchant:', merchant.id);
+                console.log('Loading store data for merchant:', merchant.id);
 
                 const storesResponse = await getMerchantStores();
                 const stores = storesResponse?.stores || storesResponse || [];
                 
-                console.log('📋 Available stores:', stores);
+                console.log('Available stores:', stores);
                 
                 if (stores.length === 0) {
                     toast.error('Please create a store first before adding services');
@@ -116,7 +116,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
 
                 // If editing, populate form
                 if (editingService) {
-                    console.log('✏️ Editing service:', editingService);
+                    console.log('Editing service:', editingService);
                     
                     setServiceData({
                         ...editingService,
@@ -155,12 +155,12 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
                         await loadBranchStaff(editingService.branch_id);
                     }
                 } else {
-                    console.log('➕ Creating new service');
+                    console.log('Creating new service');
                     await loadStoreStaff(storeId);
                 }
 
             } catch (error) {
-                console.error('❌ Error loading store data:', error);
+                console.error('Error loading store data:', error);
                 toast.error('Failed to load store information');
             } finally {
                 setStoreLoading(false);
@@ -174,12 +174,12 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     const loadStoreBranches = async (storeId) => {
         try {
             setBranchesLoading(true);
-            console.log('🏢 Loading branches for store:', storeId);
+            console.log('Loading branches for store:', storeId);
             
             const response = await branchService.getBranchesByStore(storeId);
             const branches = response?.branches || [];
             
-            console.log('✅ Branches loaded:', branches.length);
+            console.log('Branches loaded:', branches.length);
             setAvailableBranches(branches);
 
             if (branches.length === 1 && !editingService) {
@@ -192,7 +192,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
             }
 
         } catch (error) {
-            console.error('❌ Error loading branches:', error);
+            console.error('Error loading branches:', error);
             toast.error('Failed to load store branches');
         } finally {
             setBranchesLoading(false);
@@ -202,7 +202,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     const loadStoreStaff = async (storeId) => {
         try {
             setStaffLoading(true);
-            console.log('👥 Loading staff for store:', storeId);
+            console.log('Loading staff for store:', storeId);
             
             const staffResponse = await fetchStaff({
                 storeId: storeId,
@@ -210,11 +210,11 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
             });
             
             const staff = staffResponse?.staff || [];
-            console.log('📋 Staff loaded for store:', staff.length);
+            console.log('Staff loaded for store:', staff.length);
             
             setAvailableStaff(staff);
         } catch (error) {
-            console.error('❌ Error loading staff:', error);
+            console.error('Error loading staff:', error);
             toast.error('Failed to load staff members');
             setAvailableStaff([]);
         } finally {
@@ -225,11 +225,11 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     const loadBranchStaff = async (branchId) => {
         try {
             setStaffLoading(true);
-            console.log('👥 Loading staff for branch:', branchId);
+            console.log('Loading staff for branch:', branchId);
 
             if (branchId.startsWith('store-')) {
                 const storeId = branchId.replace('store-', '');
-                console.log('🏢 Loading staff for main branch of store:', storeId);
+                console.log('Loading staff for main branch of store:', storeId);
                 await loadStoreStaff(storeId);
                 return;
             }
@@ -242,7 +242,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
                     status: 'active'
                 });
             } catch (branchError) {
-                console.log('⚠️ Branch-specific staff fetch failed, falling back to store staff');
+                console.log('Branch-specific staff fetch failed, falling back to store staff');
                 staffResponse = await fetchStaff({
                     storeId: serviceData.store_id,
                     status: 'active'
@@ -250,12 +250,12 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
             }
             
             const staff = staffResponse?.staff || [];
-            console.log('📋 Staff loaded for branch:', staff.length);
+            console.log('Staff loaded for branch:', staff.length);
             
             setAvailableStaff(staff);
 
         } catch (error) {
-            console.error('❌ Error loading branch staff:', error);
+            console.error('Error loading branch staff:', error);
             toast.error('Failed to load staff for selected branch');
             setAvailableStaff([]);
         } finally {
@@ -266,7 +266,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     const handleBranchChange = async (e) => {
         const branchId = e.target.value;
         
-        console.log('🔄 Branch changed to:', branchId);
+        console.log('Branch changed to:', branchId);
         
         setServiceData(prev => ({
             ...prev,
@@ -317,7 +317,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
             if (process.env.NODE_ENV === 'production') {
                 newErrors.images = 'Please upload at least one image for your service';
             } else {
-                console.log('🚧 Development mode: image not required');
+                console.log('Development mode: image not required');
             }
         }
     
@@ -375,7 +375,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     const handleStaffSelection = (staff) => {
         const isSelected = selectedStaff.some(s => s.id === staff.id);
         
-        console.log('👤 Staff selection changed:', staff.name, 'Selected:', !isSelected);
+        console.log('Staff selection changed:', staff.name, 'Selected:', !isSelected);
         
         if (isSelected) {
             setSelectedStaff(prev => prev.filter(s => s.id !== staff.id));
@@ -434,22 +434,24 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     
         try {
             setUploadingIndex(index);
-            console.log(`📤 Uploading image ${index + 1}...`);
+            console.log(`Uploading image ${index + 1}...`);
             
             const response = await uploadImage(file, 'services');
             const imageUrl = response.fileUrl || response.url || response.data?.url;
             
             if (imageUrl) {
-                console.log(`✅ Image ${index + 1} uploaded:`, imageUrl);
+                console.log(`Image ${index + 1} uploaded:`, imageUrl);
                 
-                // Update images array
-                const newImages = [...serviceData.images];
-                newImages[index] = imageUrl;
-                
-                setServiceData((prev) => ({
-                    ...prev,
-                    images: newImages.filter(img => img) // Remove null/undefined values
-                }));
+                // Update serviceData for display purposes (but don't rely on it for submission)
+                setServiceData((prev) => {
+                    const newImages = [...prev.images];
+                    newImages[index] = imageUrl;
+                    console.log('Updated serviceData.images:', newImages);
+                    return {
+                        ...prev,
+                        images: newImages.filter(img => img)
+                    };
+                });
                 
                 // Clear the file after successful upload
                 const newImageFiles = [...imageFiles];
@@ -457,36 +459,12 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
                 setImageFiles(newImageFiles);
                 
                 toast.success(`Image ${index + 1} uploaded successfully`);
-                return imageUrl;
+                return imageUrl; // Return the URL for collection
             }
         } catch (uploadError) {
-            console.log(`⚠️ Image ${index + 1} upload failed, trying fallback:`, uploadError.message);
-            
-            try {
-                const reader = new FileReader();
-                return new Promise((resolve) => {
-                    reader.onload = (e) => {
-                        const base64Url = e.target.result;
-                        console.log(`✅ Using base64 fallback for image ${index + 1}`);
-                        
-                        const newImages = [...serviceData.images];
-                        newImages[index] = base64Url;
-                        
-                        setServiceData((prev) => ({
-                            ...prev,
-                            images: newImages.filter(img => img)
-                        }));
-                        
-                        toast.success(`Image ${index + 1} processed successfully`);
-                        resolve(base64Url);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            } catch (fallbackError) {
-                console.error(`❌ Image ${index + 1} processing failed:`, fallbackError);
-                toast.error(`Failed to process image ${index + 1}`);
-                return null;
-            }
+            console.log(`Image ${index + 1} upload failed:`, uploadError.message);
+            toast.error(`Failed to upload image ${index + 1}`);
+            return null;
         } finally {
             setUploadingIndex(null);
         }
@@ -521,18 +499,27 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     };
 
     const handleSubmit = async () => {
-        console.log('📤 Submitting service form...');
+        console.log('Submitting service form...');
 
         if (!validateForm()) {
             toast.error('Please fix the errors before submitting');
             return;
         }
 
-        // Upload any pending images
+        // Upload any pending images and collect URLs directly
+        const uploadedImageUrls = [];
         const pendingUploads = [];
+        
         imageFiles.forEach((file, index) => {
             if (file) {
-                pendingUploads.push(handleImageUpload(index));
+                pendingUploads.push(
+                    handleImageUpload(index).then(url => {
+                        if (url) {
+                            uploadedImageUrls[index] = url;
+                        }
+                        return url;
+                    })
+                );
             }
         });
 
@@ -541,7 +528,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
             try {
                 await Promise.all(pendingUploads);
             } catch (error) {
-                console.error('❌ Some image uploads failed:', error);
+                console.error('Some image uploads failed:', error);
                 toast.error('Some images failed to upload. Please try again.');
                 setImageUploading(false);
                 return;
@@ -551,6 +538,16 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
 
         try {
             setLoading(true);
+
+            // FIXED: Combine existing images with newly uploaded ones
+            const existingImages = serviceData.images.filter(img => img && img.trim() !== '');
+            const newlyUploadedImages = uploadedImageUrls.filter(img => img && img.trim() !== '');
+            const finalImages = [...existingImages, ...newlyUploadedImages];
+            
+            console.log('Existing images:', existingImages);
+            console.log('Newly uploaded images:', newlyUploadedImages);
+            console.log('Final images to send:', finalImages);
+            console.log('Images count:', finalImages.length);
 
             const servicePayload = {
                 ...serviceData,
@@ -562,24 +559,29 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
                 min_advance_booking: parseInt(serviceData.min_advance_booking) || 30,
                 max_advance_booking: parseInt(serviceData.max_advance_booking) || 10080,
                 staffIds: selectedStaff.map(staff => staff.id),
-                // Ensure images array is properly formatted
-                images: serviceData.images.filter(img => img && img.trim() !== '')
+                // FIXED: Use the collected image URLs
+                images: finalImages,
+                image_url: finalImages.length > 0 ? finalImages[0] : null
             };
 
-            console.log('📋 Service payload:', servicePayload);
+            console.log('Service payload with images:', {
+                ...servicePayload,
+                images: `Array(${finalImages.length})`,
+                image_url: servicePayload.image_url
+            });
 
             let response;
             if (editingService) {
-                console.log('🔄 Updating service:', editingService.id);
+                console.log('Updating service:', editingService.id);
                 response = await updateService(editingService.id, servicePayload);
                 toast.success('Service updated successfully');
             } else {
-                console.log('➕ Creating new service');
+                console.log('Creating new service');
                 response = await createService(servicePayload);
                 toast.success('Service created successfully');
             }
 
-            console.log('✅ Service operation successful:', response);
+            console.log('Service operation successful:', response);
 
             if (serviceData.type === 'dynamic' && !editingService) {
                 const serviceId = response.newService?.id || response.service?.id;
@@ -596,7 +598,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
             onServiceAdded();
 
         } catch (error) {
-            console.error('❌ Service submission error:', error);
+            console.error('Service submission error:', error);
             toast.error(error.message || 'Failed to save service. Please try again.');
         } finally {
             setLoading(false);

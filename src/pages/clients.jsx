@@ -22,6 +22,15 @@ import {
     RefreshCw
 } from 'lucide-react';
 
+// Import your existing API services
+import {
+    fetchMyStoreFollowers,
+    fetchBookingsWithCustomers,
+    sendBulkEmail,
+    getMerchantStores
+} from '../services/api_service';
+import merchantAuthService from '../services/merchantAuthService';
+
 const ClientsPage = () => {
     const [followers, setFollowers] = useState([]);
     const [customers, setCustomers] = useState([]);
@@ -39,167 +48,132 @@ const ClientsPage = () => {
     const [bulkEmailMessage, setBulkEmailMessage] = useState('');
     const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [authStatus, setAuthStatus] = useState(null);
 
-    // API Configuration
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
+    // Check authentication status on mount
+    useEffect(() => {
+        const checkAuth = () => {
+            const status = merchantAuthService.checkAuthenticationStatus();
+            setAuthStatus(status);
 
-    const getAuthToken = () => {
-        if (typeof window !== 'undefined' && window.localStorage) {
-            return localStorage.getItem('authToken');
+            if (!status.isAuthenticated) {
+                setError('Please log in to view your clients');
+                setLoading(false);
+                return false;
+            }
+
+            // Check if logout is needed
+            if (merchantAuthService.shouldLogout()) {
+                console.log('Logout required due to authentication error');
+                merchantAuthService.logout();
+                return false;
+            }
+
+            return true;
+        };
+
+        if (checkAuth()) {
+            loadData();
         }
-        return null;
+    }, []);
+
+    // Enhanced error handling for auth issues
+    const handleAuthError = (error) => {
+        console.error('Authentication error:', error);
+
+        if (error.message.includes('session has expired') ||
+            error.message.includes('Authentication required') ||
+            error.message.includes('Please log in again')) {
+
+            setError('Your session has expired. Please log in again.');
+
+            // Trigger logout after a delay
+            setTimeout(() => {
+                merchantAuthService.logout();
+            }, 2000);
+        } else {
+            setError(error.message || 'Failed to load client data');
+        }
     };
 
-    const getStoreName = () => {
-        if (typeof window !== 'undefined' && window.localStorage) {
-            return localStorage.getItem('storeName') || 'Your Store';
-        }
-        return 'Your Store';
+    // Process followers data
+    const processFollowersData = (followersData) => {
+        if (!Array.isArray(followersData)) return [];
+
+        return followersData.map(follower => ({
+            id: follower.id,
+            name: `${follower.first_name || follower.firstName || ''} ${follower.last_name || follower.lastName || ''}`.trim() || 'Unknown User',
+            email: follower.email || follower.email_address || 'No email provided',
+            phone: follower.phone || follower.phone_number || 'No phone provided',
+            avatar: follower.avatar || null,
+            followedSince: follower.Follow?.createdAt || follower.followedAt || new Date().toISOString(),
+            isVip: follower.isVip || false,
+            lastActive: follower.lastActiveAt || follower.updatedAt || new Date().toISOString()
+        }));
     };
 
-    // API call helper
-    const apiCall = async (endpoint, options = {}) => {
-        const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : '',
-                ...options.headers,
-            },
-            ...options,
+    // Process customers data from bookings
+    const processCustomersData = (bookingsData) => {
+        if (!Array.isArray(bookingsData)) return [];
+
+        const customerMap = new Map();
+
+        bookingsData.forEach(booking => {
+            const userId = booking.userId || booking.user_id;
+            const user = booking.User || booking.user;
+
+            if (!user || !userId) return;
+
+            const userName = `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim() || 'Unknown Customer';
+            const userEmail = user.email || user.email_address || 'No email provided';
+            const userPhone = user.phone || user.phone_number || 'No phone provided';
+
+            if (!customerMap.has(userId)) {
+                customerMap.set(userId, {
+                    id: userId,
+                    name: userName,
+                    email: userEmail,
+                    phone: userPhone,
+                    avatar: user.avatar || null,
+                    bookings: [],
+                    totalBookings: 0,
+                    totalSpent: 0,
+                    lastBookingDate: null,
+                    isVip: false,
+                    bookingTypes: new Set()
+                });
+            }
+
+            const customer = customerMap.get(userId);
+            customer.bookings.push(booking);
+            customer.totalBookings += 1;
+
+            const bookingAmount = booking.amount || booking.accessFee || 0;
+            customer.totalSpent += parseFloat(bookingAmount) || 0;
+
+            const bookingType = booking.bookingType || (booking.offerId ? 'offer' : 'service');
+            customer.bookingTypes.add(bookingType);
+
+            const bookingDate = new Date(booking.createdAt || booking.created_at);
+            if (!customer.lastBookingDate || bookingDate > new Date(customer.lastBookingDate)) {
+                customer.lastBookingDate = bookingDate.toISOString();
+            }
+
+            if (customer.totalBookings >= 3 || customer.totalSpent >= 200) {
+                customer.isVip = true;
+            }
         });
 
-        if (!response.ok) {
-            throw new Error(`API call failed: ${response.statusText}`);
-        }
-
-        return response.json();
+        return Array.from(customerMap.values()).map(customer => ({
+            ...customer,
+            totalSpent: `$${customer.totalSpent.toFixed(2)}`,
+            bookingType: customer.bookingTypes.has('offer') ? 'offer' : 'service',
+            bookingDetails: customer.bookingTypes.has('offer') ? 'Offer Bookings' : 'Service Bookings',
+            lastBookingDate: customer.lastBookingDate
+        }));
     };
 
-    // Get merchant's store ID
-    const getMerchantStoreId = async () => {
-        try {
-            const response = await apiCall('/stores/merchant/my-stores');
-            const stores = response?.stores || [];
-            
-            if (stores.length > 0) {
-                return stores[0].id;
-            }
-            
-            throw new Error('No store found for this merchant');
-        } catch (error) {
-            console.error('Error getting merchant store ID:', error);
-            throw error;
-        }
-    };
-
-    // Fetch followers for the merchant's store
-    const fetchStoreFollowers = async (storeId) => {
-        try {
-            console.log('📋 Fetching followers for store:', storeId);
-            
-            const response = await apiCall(`/stores/${storeId}/followers`);
-            
-            if (response.success && response.followers) {
-                // Transform followers data to match expected format
-                return response.followers.map(follower => ({
-                    id: follower.id,
-                    name: `${follower.first_name || follower.firstName || ''} ${follower.last_name || follower.lastName || ''}`.trim() || 'Unknown User',
-                    email: follower.email || follower.email_address || 'No email provided',
-                    phone: follower.phone || follower.phone_number || 'No phone provided',
-                    avatar: follower.avatar || null,
-                    followedSince: follower.Follow?.createdAt || follower.followedAt || new Date().toISOString(),
-                    isVip: follower.isVip || false,
-                    lastActive: follower.lastActiveAt || follower.updatedAt || new Date().toISOString()
-                }));
-            }
-            
-            return [];
-        } catch (error) {
-            console.error('Error fetching followers:', error);
-            throw error;
-        }
-    };
-
-    // Fetch customers who have completed bookings
-    const fetchStoreCustomers = async (storeId) => {
-        try {
-            console.log('👥 Fetching customers for store:', storeId);
-            
-            const response = await apiCall('/bookings');
-            
-            if (response.success && response.bookings) {
-                // Group bookings by user and calculate customer metrics
-                const customerMap = new Map();
-                
-                response.bookings.forEach(booking => {
-                    const userId = booking.userId || booking.user_id;
-                    const user = booking.User || booking.user;
-                    
-                    if (!user || !userId) return;
-                    
-                    const userName = `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim() || 'Unknown Customer';
-                    const userEmail = user.email || user.email_address || 'No email provided';
-                    const userPhone = user.phone || user.phone_number || 'No phone provided';
-                    
-                    if (!customerMap.has(userId)) {
-                        customerMap.set(userId, {
-                            id: userId,
-                            name: userName,
-                            email: userEmail,
-                            phone: userPhone,
-                            avatar: user.avatar || null,
-                            bookings: [],
-                            totalBookings: 0,
-                            totalSpent: 0,
-                            lastBookingDate: null,
-                            isVip: false,
-                            bookingTypes: new Set()
-                        });
-                    }
-                    
-                    const customer = customerMap.get(userId);
-                    customer.bookings.push(booking);
-                    customer.totalBookings += 1;
-                    
-                    // Calculate spent amount (this might need adjustment based on your data structure)
-                    const bookingAmount = booking.amount || booking.accessFee || 0;
-                    customer.totalSpent += parseFloat(bookingAmount) || 0;
-                    
-                    // Track booking types
-                    const bookingType = booking.bookingType || (booking.offerId ? 'offer' : 'service');
-                    customer.bookingTypes.add(bookingType);
-                    
-                    // Update last booking date
-                    const bookingDate = new Date(booking.createdAt || booking.created_at);
-                    if (!customer.lastBookingDate || bookingDate > new Date(customer.lastBookingDate)) {
-                        customer.lastBookingDate = bookingDate.toISOString();
-                    }
-                    
-                    // Determine VIP status (customers with 3+ bookings or spent $200+)
-                    if (customer.totalBookings >= 3 || customer.totalSpent >= 200) {
-                        customer.isVip = true;
-                    }
-                });
-                
-                // Convert map to array and format
-                return Array.from(customerMap.values()).map(customer => ({
-                    ...customer,
-                    totalSpent: `$${customer.totalSpent.toFixed(2)}`,
-                    bookingType: customer.bookingTypes.has('offer') ? 'offer' : 'service',
-                    bookingDetails: customer.bookingTypes.has('offer') ? 'Offer Bookings' : 'Service Bookings',
-                    lastBookingDate: customer.lastBookingDate
-                }));
-            }
-            
-            return [];
-        } catch (error) {
-            console.error('Error fetching customers:', error);
-            throw error;
-        }
-    };
-
-    // Load all data
+    // Load all data using existing API services
     const loadData = async (showRefreshing = false) => {
         try {
             if (showRefreshing) {
@@ -209,63 +183,86 @@ const ClientsPage = () => {
             }
             setError(null);
 
-            // Get merchant's store ID
-            const storeId = await getMerchantStoreId();
-            console.log('🏪 Using store ID:', storeId);
+            // Check auth status before making requests
+            const authCheck = merchantAuthService.checkAuthenticationStatus();
+            if (!authCheck.isAuthenticated) {
+                throw new Error('Authentication required. Please log in again.');
+            }
 
-            // Fetch followers and customers in parallel
-            const [followersData, customersData] = await Promise.allSettled([
-                fetchStoreFollowers(storeId),
-                fetchStoreCustomers(storeId)
+            console.log('Loading client data...');
+
+            // Fetch followers and customers in parallel using your existing API services
+            const [followersResult, customersResult] = await Promise.allSettled([
+                fetchMyStoreFollowers(),
+                fetchBookingsWithCustomers()
             ]);
 
             // Handle followers result
-            if (followersData.status === 'fulfilled') {
-                setFollowers(followersData.value);
-                console.log('✅ Loaded followers:', followersData.value.length);
+            if (followersResult.status === 'fulfilled' && followersResult.value?.success) {
+                const followersData = followersResult.value.followers || [];
+                setFollowers(processFollowersData(followersData));
+                console.log('✅ Loaded followers:', followersData.length);
             } else {
-                console.error('❌ Failed to load followers:', followersData.reason);
+                console.error('❌ Failed to load followers:', followersResult.reason);
                 setFollowers([]);
+
+                // Check if it's an auth error
+                if (followersResult.reason?.message?.includes('Authentication') ||
+                    followersResult.reason?.message?.includes('session has expired')) {
+                    handleAuthError(followersResult.reason);
+                    return;
+                }
             }
 
             // Handle customers result
-            if (customersData.status === 'fulfilled') {
-                setCustomers(customersData.value);
-                console.log('✅ Loaded customers:', customersData.value.length);
+            if (customersResult.status === 'fulfilled' && customersResult.value?.success) {
+                const bookingsData = customersResult.value.bookings || [];
+                setCustomers(processCustomersData(bookingsData));
+                console.log('✅ Loaded customers:', bookingsData.length);
             } else {
-                console.error('❌ Failed to load customers:', customersData.reason);
+                console.error('❌ Failed to load customers:', customersResult.reason);
                 setCustomers([]);
+
+                // Check if it's an auth error
+                if (customersResult.reason?.message?.includes('Authentication') ||
+                    customersResult.reason?.message?.includes('session has expired')) {
+                    handleAuthError(customersResult.reason);
+                    return;
+                }
             }
 
         } catch (error) {
             console.error('Failed to load client data:', error);
-            setError(error.message || 'Failed to load client data');
-            setFollowers([]);
-            setCustomers([]);
+            handleAuthError(error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    // Load data on component mount
-    useEffect(() => {
-        loadData();
-    }, []);
+    // Debug function to check current auth status
+    const debugAuth = () => {
+        console.group('🔍 Authentication Debug');
+        console.log('Auth Service Status:', merchantAuthService.getStatus());
+        console.log('Current Merchant:', merchantAuthService.getCurrentMerchant());
+        console.log('Token Available:', !!merchantAuthService.getToken());
+        console.log('Is Authenticated:', merchantAuthService.isAuthenticated());
+        console.groupEnd();
+    };
 
     // Refresh data
     const handleRefresh = () => {
+        debugAuth(); // Debug auth status on refresh
         loadData(true);
     };
 
     // Handle individual contact actions
     const handleSendMessage = (person) => {
         console.log('Navigate to chat with:', person.name);
-        // TODO: Integrate with your chat interface
     };
 
     const handleSendEmail = (person) => {
-        const subject = `Message from ${getStoreName()}`;
+        const subject = `Message from ${merchantAuthService.getCurrentMerchant()?.first_name || 'Your Store'}`;
         const mailtoLink = `mailto:${person.email}?subject=${encodeURIComponent(subject)}`;
         window.open(mailtoLink, '_blank');
     };
@@ -390,7 +387,7 @@ const ClientsPage = () => {
         }
     };
 
-    // Bulk email handler
+    // Enhanced bulk email handler using your API service
     const handleBulkEmail = async () => {
         if (!bulkEmailSubject.trim() || !bulkEmailMessage.trim()) {
             alert('Please fill in both subject and message fields');
@@ -404,13 +401,17 @@ const ClientsPage = () => {
                 ? followers.filter(f => selectedFollowers.has(f.id))
                 : customers.filter(c => selectedCustomers.has(c.id));
 
-            // TODO: Replace with actual API call for bulk email
-            console.log('Sending bulk email to:', recipients.length, 'recipients');
-            console.log('Subject:', bulkEmailSubject);
-            console.log('Message:', bulkEmailMessage);
-
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Use your existing API service
+            await sendBulkEmail(
+                recipients.map(r => ({
+                    id: r.id,
+                    email: r.email,
+                    name: r.name
+                })),
+                bulkEmailSubject,
+                bulkEmailMessage,
+                'client_communication'
+            );
 
             alert(`Bulk email sent to ${recipients.length} recipients!`);
             setShowBulkEmail(false);
@@ -420,7 +421,12 @@ const ClientsPage = () => {
             setSelectedCustomers(new Set());
         } catch (error) {
             console.error('Failed to send bulk email:', error);
-            alert('Failed to send bulk email. Please try again.');
+
+            if (error.message.includes('Authentication') || error.message.includes('session has expired')) {
+                handleAuthError(error);
+            } else {
+                alert('Failed to send bulk email. Please try again.');
+            }
         } finally {
             setSendingBulkEmail(false);
         }
@@ -452,13 +458,36 @@ const ClientsPage = () => {
         </div>
     );
 
+    // Show login prompt if not authenticated
+    if (authStatus && !authStatus.isAuthenticated) {
+        return (
+            <Layout>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="text-center py-12">
+                        <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentication Required</h3>
+                        <p className="text-gray-600 mb-4">Please log in to view your clients</p>
+                        <button
+                            onClick={() => merchantAuthService.logout()}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            Go to Login
+                        </button>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
     if (loading) {
         return (
             <Layout>
-                <div className="flex items-center justify-center h-96">
-                    <div className="text-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-                        <p className="text-gray-600">Loading your clients...</p>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-center h-96">
+                        <div className="text-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                            <p className="text-gray-600">Loading your clients...</p>
+                        </div>
                     </div>
                 </div>
             </Layout>
@@ -474,15 +503,29 @@ const ClientsPage = () => {
                         <div>
                             <h1 className="text-2xl font-semibold text-gray-900 mb-2">Clients</h1>
                             <p className="text-gray-600">Manage your followers and customers</p>
+                            {authStatus && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Logged in as: {authStatus.merchant?.first_name || 'Unknown'}
+                                </p>
+                            )}
                         </div>
-                        <button
-                            onClick={handleRefresh}
-                            disabled={refreshing}
-                            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                            <span>Refresh</span>
-                        </button>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={debugAuth}
+                                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs rounded transition-colors"
+                                title="Debug Authentication"
+                            >
+                                Debug Auth
+                            </button>
+                            <button
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                                <span>Refresh</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -494,12 +537,22 @@ const ClientsPage = () => {
                             <span className="font-medium">Error loading client data</span>
                         </div>
                         <p className="text-red-600 mt-1">{error}</p>
-                        <button
-                            onClick={handleRefresh}
-                            className="mt-2 text-red-600 hover:text-red-700 underline"
-                        >
-                            Try again
-                        </button>
+                        <div className="mt-2 space-x-2">
+                            <button
+                                onClick={handleRefresh}
+                                className="text-red-600 hover:text-red-700 underline text-sm"
+                            >
+                                Try again
+                            </button>
+                            {error.includes('session has expired') && (
+                                <button
+                                    onClick={() => merchantAuthService.logout()}
+                                    className="text-red-600 hover:text-red-700 underline text-sm"
+                                >
+                                    Go to login
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -509,8 +562,8 @@ const ClientsPage = () => {
                         <button
                             onClick={() => setActiveTab('followers')}
                             className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'followers'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             <div className="flex items-center space-x-2">
@@ -521,8 +574,8 @@ const ClientsPage = () => {
                         <button
                             onClick={() => setActiveTab('customers')}
                             className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'customers'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             <div className="flex items-center space-x-2">
@@ -728,8 +781,8 @@ const ClientsPage = () => {
                                             <div className="flex items-center space-x-2">
                                                 <h3 className="font-semibold text-gray-900">{customer.name}</h3>
                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${customer.bookingType === 'service'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-green-100 text-green-800'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-green-100 text-green-800'
                                                     }`}>
                                                     {customer.bookingType === 'service' ? 'Service' : 'Offer'}
                                                 </span>
@@ -803,6 +856,7 @@ const ClientsPage = () => {
                         </div>
                     </div>
                 )}
+
             </div>
         </Layout>
     );
