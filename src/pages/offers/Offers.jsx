@@ -17,7 +17,7 @@ const EnhancedOfferPage = () => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [hasStore, setHasStore] = useState(true);
     const [storeError, setStoreError] = useState(null);
-    const [filter, setFilter] = useState('all'); // all, fixed, dynamic, active, expired
+    const [filter, setFilter] = useState('all');
 
     useEffect(() => {
         checkStoreAndLoadOffers();
@@ -136,14 +136,66 @@ const EnhancedOfferPage = () => {
         setEditingOffer(null);
     };
 
-    // Filter offers based on current filter
+    const isOfferExpired = (expirationDate) => {
+        return new Date(expirationDate) < new Date();
+    };
+
+    // FIXED: Enhanced filtering function that properly handles expired offers and missing fields
     const filteredOffers = offers.filter(offer => {
-        if (filter === 'all') return true;
-        if (filter === 'fixed') return offer.offer_type === 'fixed' || !offer.offer_type;
-        if (filter === 'dynamic') return offer.offer_type === 'dynamic';
-        if (filter === 'active') return offer.status === 'active' && !isOfferExpired(offer.expiration_date);
-        if (filter === 'expired') return isOfferExpired(offer.expiration_date);
-        if (filter === 'featured') return offer.featured;
+        // Debug: Log first offer structure to understand available fields
+        if (offers.length > 0 && offers.indexOf(offer) === 0) {
+            console.log('📋 First offer structure for debugging:', {
+                id: offer.id,
+                status: offer.status,
+                featured: offer.featured,
+                offer_type: offer.offer_type,
+                requires_consultation: offer.requires_consultation,
+                service: offer.service ? {
+                    type: offer.service.type,
+                    category: offer.service.category
+                } : null,
+                availableKeys: Object.keys(offer)
+            });
+        }
+
+        const expired = isOfferExpired(offer.expiration_date);
+        
+        // Default 'all' filter excludes expired offers (customer-facing behavior)
+        if (filter === 'all') {
+            return !expired; // Only show non-expired offers
+        }
+        
+        // Fixed price offers - check multiple possible fields
+        if (filter === 'fixed') {
+            const isFixed = offer.offer_type === 'fixed' || 
+                           offer.service?.type === 'fixed' ||
+                           (!offer.offer_type && !offer.requires_consultation); // Default to fixed if no type specified
+            return isFixed && !expired; // Exclude expired
+        }
+        
+        // Dynamic price offers
+        if (filter === 'dynamic') {
+            const isDynamic = offer.offer_type === 'dynamic' || 
+                             offer.service?.type === 'dynamic' ||
+                             offer.requires_consultation === true;
+            return isDynamic && !expired; // Exclude expired
+        }
+        
+        // Active offers (non-expired and status is active)
+        if (filter === 'active') {
+            return offer.status === 'active' && !expired;
+        }
+        
+        // Expired offers only
+        if (filter === 'expired') {
+            return expired;
+        }
+        
+        // Featured offers (non-expired)
+        if (filter === 'featured') {
+            return offer.featured === true && !expired;
+        }
+        
         return true;
     });
 
@@ -165,8 +217,11 @@ const EnhancedOfferPage = () => {
         );
     };
 
+    // FIXED: Enhanced offer type badge function
     const getOfferTypeBadge = (offer) => {
-        const isDynamic = offer.offer_type === 'dynamic';
+        const isDynamic = offer.offer_type === 'dynamic' || 
+                         offer.service?.type === 'dynamic' ||
+                         offer.requires_consultation === true;
         
         return (
             <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center ${
@@ -189,10 +244,6 @@ const EnhancedOfferPage = () => {
         );
     };
 
-    const isOfferExpired = (expirationDate) => {
-        return new Date(expirationDate) < new Date();
-    };
-
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -201,15 +252,47 @@ const EnhancedOfferPage = () => {
         });
     };
 
+    // FIXED: Enhanced stats calculation that properly handles missing fields
     const calculateStats = () => {
         const total = offers.length;
-        const active = offers.filter(offer => offer.status === 'active' && !isOfferExpired(offer.expiration_date)).length;
+        const nonExpired = offers.filter(offer => !isOfferExpired(offer.expiration_date));
+        const active = offers.filter(offer => 
+            offer.status === 'active' && !isOfferExpired(offer.expiration_date)
+        ).length;
         const expired = offers.filter(offer => isOfferExpired(offer.expiration_date)).length;
-        const dynamic = offers.filter(offer => offer.offer_type === 'dynamic').length;
-        const fixed = offers.filter(offer => offer.offer_type === 'fixed' || !offer.offer_type).length;
-        const avgDiscount = offers.length > 0 ? Math.round(offers.reduce((sum, offer) => sum + (parseFloat(offer.discount) || 0), 0) / offers.length) : 0;
+        
+        // Better logic for determining offer types
+        const dynamic = offers.filter(offer => {
+            const isDynamic = offer.offer_type === 'dynamic' || 
+                             offer.service?.type === 'dynamic' ||
+                             offer.requires_consultation === true;
+            return isDynamic && !isOfferExpired(offer.expiration_date);
+        }).length;
+        
+        const fixed = offers.filter(offer => {
+            const isFixed = offer.offer_type === 'fixed' || 
+                           offer.service?.type === 'fixed' ||
+                           (!offer.offer_type && !offer.requires_consultation);
+            return isFixed && !isOfferExpired(offer.expiration_date);
+        }).length;
+        
+        const featured = offers.filter(offer => 
+            offer.featured === true && !isOfferExpired(offer.expiration_date)
+        ).length;
+        
+        const avgDiscount = nonExpired.length > 0 
+            ? Math.round(nonExpired.reduce((sum, offer) => sum + (parseFloat(offer.discount) || 0), 0) / nonExpired.length) 
+            : 0;
 
-        return { total, active, expired, dynamic, fixed, avgDiscount };
+        return { 
+            total: nonExpired.length, // Total non-expired offers
+            active, 
+            expired, 
+            dynamic, 
+            fixed, 
+            featured,
+            avgDiscount 
+        };
     };
 
     const stats = calculateStats();
@@ -283,7 +366,7 @@ const EnhancedOfferPage = () => {
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Total Offers</p>
+                                <p className="text-sm text-gray-600">Active Offers</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                                 <p className="text-xs text-gray-500">Fixed: {stats.fixed} • Dynamic: {stats.dynamic}</p>
                             </div>
@@ -294,9 +377,9 @@ const EnhancedOfferPage = () => {
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Active Offers</p>
+                                <p className="text-sm text-gray-600">Available Now</p>
                                 <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                                <p className="text-xs text-gray-500">Available for booking</p>
+                                <p className="text-xs text-gray-500">Ready for booking</p>
                             </div>
                             <CheckCircle className="w-8 h-8 text-green-500" />
                         </div>
@@ -318,7 +401,7 @@ const EnhancedOfferPage = () => {
                             <div>
                                 <p className="text-sm text-gray-600">Avg. Discount</p>
                                 <p className="text-2xl font-bold text-purple-600">{stats.avgDiscount}%</p>
-                                <p className="text-xs text-gray-500">Across all offers</p>
+                                <p className="text-xs text-gray-500">Across active offers</p>
                             </div>
                             <TrendingUp className="w-8 h-8 text-purple-500" />
                         </div>
@@ -339,12 +422,12 @@ const EnhancedOfferPage = () => {
                     
                     <div className="flex flex-wrap gap-2">
                         {[
-                            { key: 'all', label: 'All Offers', count: stats.total },
-                            { key: 'active', label: 'Active', count: stats.active },
+                            { key: 'all', label: 'Active Offers', count: stats.total },
+                            { key: 'active', label: 'Available Now', count: stats.active },
                             { key: 'fixed', label: 'Fixed Price', count: stats.fixed },
                             { key: 'dynamic', label: 'Dynamic Price', count: stats.dynamic },
-                            { key: 'expired', label: 'Expired', count: stats.expired },
-                            { key: 'featured', label: 'Featured', count: offers.filter(o => o.featured).length }
+                            { key: 'featured', label: 'Featured', count: stats.featured },
+                            { key: 'expired', label: 'Expired', count: stats.expired }
                         ].map(({ key, label, count }) => (
                             <button
                                 key={key}
@@ -402,7 +485,9 @@ const EnhancedOfferPage = () => {
                                     filteredOffers.map((offer) => {
                                         const expired = isOfferExpired(offer.expiration_date);
                                         const effectiveStatus = expired ? 'expired' : offer.status;
-                                        const isDynamic = offer.offer_type === 'dynamic';
+                                        const isDynamic = offer.offer_type === 'dynamic' || 
+                                                         offer.service?.type === 'dynamic' ||
+                                                         offer.requires_consultation === true;
                                         
                                         return (
                                             <tr key={offer.id} className="hover:bg-gray-50">
@@ -518,7 +603,7 @@ const EnhancedOfferPage = () => {
                                             <div className="flex flex-col items-center">
                                                 <Tag className="w-12 h-12 text-gray-300 mb-4" />
                                                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                                    {filter === 'all' ? 'No offers yet' : `No ${filter} offers found`}
+                                                    {filter === 'all' ? 'No active offers yet' : `No ${filter} offers found`}
                                                 </h3>
                                                 <p className="text-gray-500 mb-4">
                                                     {filter === 'all' 
