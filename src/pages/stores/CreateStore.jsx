@@ -31,16 +31,19 @@ const CreateStore = () => {
         opening_time: '09:00',
         closing_time: '18:00',
         working_days: [],
-        status: 'open', // Use valid ENUM value from your model
+        status: 'open',
         category: '',
-        cashback: '5%',
     });
     
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    
+    // Category search states
+    const [categorySearch, setCategorySearch] = useState('');
+    const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+    const [filteredCategories, setFilteredCategories] = useState([]);
     
     const navigate = useNavigate();
 
@@ -55,18 +58,49 @@ const CreateStore = () => {
     ];
 
     const CATEGORIES = [
-        'Restaurant',
-        'Retail Store',
-        'Beauty & Salon',
-        'Automotive',
-        'Health & Fitness',
-        'Professional Services',
-        'Entertainment',
-        'Education',
-        'Home & Garden',
-        'Technology',
-        'Fashion',
-        'Other'
+        'Beauty & Wellness',
+        'Barber & Salon',
+        'Spa',
+        'Recreation',
+        'Fitness & Sports',
+        'Events & Entertainment',
+        'Cleaning Services',
+        'Laundry',
+        'Domestic Services',
+        'Photography & Videography',
+        'Tailoring & Fashion',
+        'Legal Services',
+        'Accounting & Tax Services',
+        'Business Consulting & Advisory',
+        'Marketing, Advertising & Branding',
+        'IT & Software Development',
+        'Creative & Media',
+        'Hospitals & Clinics',
+        'Dental Services',
+        'Counseling & Mental Health Services',
+        'Tutors',
+        'E-learning & Online Coaching',
+        'Taxi & Ride-hailing',
+        'Vehicle Rentals & Leasing',
+        'Courier & Delivery Services',
+        'Moving & Relocation Services',
+        'Hotels, Lodges & Guest Houses',
+        'Restaurants, Cafés & Catering',
+        'Tour & Travel Agencies',
+        'Adventure & Safari Guides',
+        'Event Venues & Conferencing',
+        'Freight & Logistics Companies',
+        'Car Repairs & Maintenance',
+        'Real Estate Agents & Property Managers',
+        'Construction & Renovation',
+        'Plumbing, Electrical, Carpentry & Handymen',
+        'Interior Design & Landscaping',
+        'Security Services',
+        'Agro-vet Services',
+        'Farm Equipment & Machinery Rentals',
+        'Irrigation & Greenhouse Installation',
+        'Veterinary Services',
+        'Produce Transport & Storage'
     ];
 
     // Check authentication on component mount
@@ -91,6 +125,23 @@ const CreateStore = () => {
 
         checkAuth();
     }, [navigate]);
+
+    // Filter categories based on search
+    useEffect(() => {
+        if (categorySearch.trim() === '') {
+            setFilteredCategories(CATEGORIES);
+        } else {
+            const filtered = CATEGORIES.filter(category =>
+                category.toLowerCase().includes(categorySearch.toLowerCase())
+            );
+            setFilteredCategories(filtered);
+        }
+    }, [categorySearch]);
+
+    // Initialize filtered categories
+    useEffect(() => {
+        setFilteredCategories(CATEGORIES);
+    }, []);
 
     // Handle input changes
     const handleChange = (e) => {
@@ -123,6 +174,35 @@ const CreateStore = () => {
         }
     };
 
+    // Handle category search and selection
+    const handleCategorySearch = (e) => {
+        setCategorySearch(e.target.value);
+        setShowCategoryDropdown(true);
+    };
+
+    const handleCategorySelect = (category) => {
+        setFormData(prev => ({ ...prev, category }));
+        setCategorySearch(category);
+        setShowCategoryDropdown(false);
+        
+        // Clear category error
+        if (errors.category) {
+            setErrors(prev => ({ ...prev, category: '' }));
+        }
+    };
+
+    const handleCategoryInputFocus = () => {
+        setShowCategoryDropdown(true);
+        if (!categorySearch) {
+            setCategorySearch('');
+        }
+    };
+
+    const handleCategoryInputBlur = () => {
+        // Delay hiding to allow for category selection
+        setTimeout(() => setShowCategoryDropdown(false), 150);
+    };
+
     const handleLogoChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -146,30 +226,6 @@ const CreateStore = () => {
                 setLogoPreview(e.target.result);
             };
             reader.readAsDataURL(file);
-        }
-    };
-
-    const handleLogoUpload = async () => {
-        if (!logoFile) {
-            toast.error('Please select a logo to upload');
-            return;
-        }
-        
-        try {
-            setIsUploading(true);
-            const result = await uploadImage(logoFile, 'stores');
-            
-            setFormData((prevData) => ({
-                ...prevData,
-                logo_url: result.fileUrl || result.url,
-            }));
-            
-            toast.success('Logo uploaded successfully!');
-        } catch (error) {
-            console.error('Logo upload error:', error);
-            toast.error(error.message || 'Failed to upload logo. Please try again.');
-        } finally {
-            setIsUploading(false);
         }
     };
 
@@ -249,7 +305,7 @@ const CreateStore = () => {
         }
     };
 
-    // Handle form submission
+    // Handle form submission with automatic logo upload
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -260,8 +316,30 @@ const CreateStore = () => {
         try {
             setIsSubmitting(true);
 
-            // Use your original createStore function from api_service
-            const result = await createStore(formData);
+            // Prepare store data
+            let storeData = { ...formData };
+
+            // Upload logo first if a file is selected
+            if (logoFile) {
+                try {
+                    console.log('Uploading logo before creating store...');
+                    const uploadResult = await uploadImage(logoFile, 'stores');
+                    
+                    if (uploadResult.success && (uploadResult.fileUrl || uploadResult.url)) {
+                        storeData.logo_url = uploadResult.fileUrl || uploadResult.url;
+                        console.log('Logo uploaded successfully:', storeData.logo_url);
+                    } else {
+                        throw new Error('Logo upload failed');
+                    }
+                } catch (logoError) {
+                    console.error('Logo upload error:', logoError);
+                    toast.error('Failed to upload logo. Creating store without logo.');
+                    // Continue with store creation even if logo upload fails
+                }
+            }
+
+            // Create the store with logo URL if available
+            const result = await createStore(storeData);
 
             toast.success('Store created successfully! Welcome to Discoun3!');
             
@@ -297,7 +375,7 @@ const CreateStore = () => {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        placeholder='e.g. "John'
+                        placeholder={`e.g. "John's Electronics Store"`}
                         className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                             errors.name ? 'border-red-400' : 'border-gray-300'
                         }`}
@@ -305,46 +383,46 @@ const CreateStore = () => {
                     {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                 </div>
 
-                {/* Category */}
-                <div>
+                {/* Category - Searchable Dropdown */}
+                <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Business Category *
                     </label>
-                    <select
-                        name="category"
-                        value={formData.category}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                            errors.category ? 'border-red-400' : 'border-gray-300'
-                        }`}
-                    >
-                        <option value="">Select a category</option>
-                        {CATEGORIES.map(category => (
-                            <option key={category} value={category}>{category}</option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={categorySearch || formData.category}
+                            onChange={handleCategorySearch}
+                            onFocus={handleCategoryInputFocus}
+                            onBlur={handleCategoryInputBlur}
+                            placeholder="Search or select a category..."
+                            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                                errors.category ? 'border-red-400' : 'border-gray-300'
+                            }`}
+                        />
+                        
+                        {/* Dropdown */}
+                        {showCategoryDropdown && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                {filteredCategories.length > 0 ? (
+                                    filteredCategories.map((category) => (
+                                        <div
+                                            key={category}
+                                            onClick={() => handleCategorySelect(category)}
+                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                                        >
+                                            {category}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-2 text-gray-500 text-sm">
+                                        No categories found
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
-                </div>
-
-                {/* Cashback */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Default Cashback Percentage
-                    </label>
-                    <select
-                        name="cashback"
-                        value={formData.cashback}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    >
-                        <option value="1%">1%</option>
-                        <option value="2%">2%</option>
-                        <option value="3%">3%</option>
-                        <option value="5%">5%</option>
-                        <option value="10%">10%</option>
-                        <option value="15%">15%</option>
-                        <option value="20%">20%</option>
-                    </select>
                 </div>
 
                 {/* Location */}
@@ -453,7 +531,7 @@ const CreateStore = () => {
                     </div>
                     
                     <label className="cursor-pointer">
-                        <span className="text-lg font-medium text-gray-700">Store Logo</span>
+                        <span className="text-lg font-medium text-gray-700">Store Logo (Optional)</span>
                         <p className="text-sm text-gray-500 mb-4">Upload your store logo (max 5MB)</p>
                         <input
                             type="file"
@@ -463,35 +541,14 @@ const CreateStore = () => {
                         />
                         <span className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                             <Upload className="w-4 h-4 mr-2" />
-                            Choose File
+                            {logoFile ? 'Change Logo' : 'Choose Logo'}
                         </span>
                     </label>
                     
-                    {logoFile && !formData.logo_url && (
-                        <button
-                            type="button"
-                            onClick={handleLogoUpload}
-                            disabled={isUploading}
-                            className="ml-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {isUploading ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Uploading...
-                                </>
-                            ) : (
-                                <>
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Upload
-                                </>
-                            )}
-                        </button>
-                    )}
-                    
-                    {formData.logo_url && (
-                        <div className="mt-2 flex items-center justify-center text-green-600">
+                    {logoFile && (
+                        <div className="mt-2 flex items-center justify-center text-blue-600">
                             <CheckCircle className="w-4 h-4 mr-2" />
-                            <span className="text-sm">Logo uploaded successfully!</span>
+                            <span className="text-sm">Logo selected! It will be uploaded when you create the store.</span>
                         </div>
                     )}
                 </div>
@@ -640,7 +697,7 @@ const CreateStore = () => {
                                 {isSubmitting ? (
                                     <>
                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                        Creating Store...
+                                        {logoFile ? 'Uploading Logo & Creating Store...' : 'Creating Store...'}
                                     </>
                                 ) : (
                                     <>
