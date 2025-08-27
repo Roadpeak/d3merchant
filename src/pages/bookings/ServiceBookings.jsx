@@ -6,33 +6,30 @@ import {
   Clock, 
   MapPin, 
   User, 
-  Filter, 
   Plus, 
   Search, 
   X,
-  ChevronDown,
   Star,
   Phone,
   Mail,
-  DollarSign,
   CheckCircle,
   AlertCircle,
-  XCircle
+  XCircle,
+  Settings,
+  Users
 } from "lucide-react";
 import Layout from "../../elements/Layout";
 import { fetchBookings } from "../../services/api_service";
 import moment from "moment";
 
-const MerchantBookings = () => {
+const ServiceBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filters, setFilters] = useState({
     store: '',
     staff: '',
-    dateRange: '',
-    status: '',
-    type: 'all' // 'all', 'offers', 'services'
+    status: ''
   });
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -56,7 +53,6 @@ const MerchantBookings = () => {
 
   // New booking form state
   const [newBooking, setNewBooking] = useState({
-    type: 'offer', // 'offer' or 'service'
     clientName: '',
     clientEmail: '',
     clientPhone: '',
@@ -65,8 +61,9 @@ const MerchantBookings = () => {
     store: null,
     staff: null,
     service: '',
+    duration: '',
     notes: '',
-    paymentStatus: 'not_paid', // 'not_paid', 'deposit', 'complete'
+    paymentStatus: 'not_paid',
     depositAmount: ''
   });
 
@@ -82,14 +79,25 @@ const MerchantBookings = () => {
     "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM"
   ];
 
+  const durationOptions = [
+    { value: '30', label: '30 minutes' },
+    { value: '45', label: '45 minutes' },
+    { value: '60', label: '1 hour' },
+    { value: '90', label: '1.5 hours' },
+    { value: '120', label: '2 hours' },
+    { value: '180', label: '3 hours' }
+  ];
+
   useEffect(() => {
     const loadBookings = async () => {
       try {
         const response = await fetchBookings();
-        setBookings(response);
-        setFilteredBookings(response);
+        // Filter only service bookings
+        const serviceBookings = response.filter(booking => !booking.isOffer);
+        setBookings(serviceBookings);
+        setFilteredBookings(serviceBookings);
       } catch (error) {
-        toast.error("Failed to fetch bookings");
+        toast.error("Failed to fetch service bookings");
       }
     };
 
@@ -99,13 +107,6 @@ const MerchantBookings = () => {
   // Filter and sort bookings
   useEffect(() => {
     let filtered = [...bookings];
-
-    // Apply filters
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(booking => 
-        filters.type === 'offers' ? booking.isOffer : !booking.isOffer
-      );
-    }
 
     if (filters.store) {
       filtered = filtered.filter(booking => 
@@ -172,7 +173,7 @@ const MerchantBookings = () => {
     try {
       // Validate required fields
       if (!newBooking.clientName || !newBooking.clientEmail || !newBooking.date || 
-          !newBooking.time || !newBooking.store || !newBooking.staff) {
+          !newBooking.time || !newBooking.store || !newBooking.staff || !newBooking.service) {
         toast.error("Please fill in all required fields");
         return;
       }
@@ -193,9 +194,9 @@ const MerchantBookings = () => {
           phone: newBooking.clientPhone
         },
         startTime: `${newBooking.date}T${convertTo24Hour(newBooking.time)}`,
-        endTime: `${newBooking.date}T${convertTo24Hour(newBooking.time)}`, // Add 1 hour
+        endTime: `${newBooking.date}T${convertTo24Hour(newBooking.time)}`,
         status: 'Confirmed',
-        isOffer: newBooking.type === 'offer'
+        isOffer: false // Always false for service bookings
       };
 
       // Add to bookings list
@@ -204,7 +205,6 @@ const MerchantBookings = () => {
       
       // Reset form
       setNewBooking({
-        type: 'offer',
         clientName: '',
         clientEmail: '',
         clientPhone: '',
@@ -213,16 +213,17 @@ const MerchantBookings = () => {
         store: null,
         staff: null,
         service: '',
+        duration: '',
         notes: '',
         paymentStatus: 'not_paid',
         depositAmount: ''
       });
       
       setShowCreateModal(false);
-      toast.success("Booking created successfully!");
+      toast.success("Service booking created successfully!");
       
     } catch (error) {
-      toast.error("Failed to create booking");
+      toast.error("Failed to create service booking");
     }
   };
 
@@ -264,12 +265,15 @@ const MerchantBookings = () => {
     }
   };
 
-  const CreateBookingModal = () => (
+  const CreateServiceBookingModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Create New Booking</h2>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <Settings className="w-6 h-6 mr-2 text-blue-600" />
+              Create New Service Booking
+            </h2>
             <button
               onClick={() => setShowCreateModal(false)}
               className="text-gray-400 hover:text-gray-600"
@@ -279,38 +283,35 @@ const MerchantBookings = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Booking Type */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Booking Type *
-              </label>
-              <div className="flex space-x-4">
-                
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="service"
-                    checked={newBooking.type === 'service'}
-                    onChange={(e) => setNewBooking({...newBooking, type: e.target.value})}
-                    className="mr-2"
-                  />
-                  Service Booking
-                </label>
-              </div>
-            </div>
-
             {/* Service */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Service
+                Service *
               </label>
               <input
                 type="text"
                 value={newBooking.service}
                 onChange={(e) => setNewBooking({...newBooking, service: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Search service name"
+                placeholder="Select or search service"
               />
+            </div>
+
+            {/* Duration */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Duration
+              </label>
+              <select
+                value={newBooking.duration}
+                onChange={(e) => setNewBooking({...newBooking, duration: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select duration</option>
+                {durationOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Client Information */}
@@ -423,8 +424,6 @@ const MerchantBookings = () => {
               </select>
             </div>
 
-            
-
             {/* Payment Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -469,7 +468,7 @@ const MerchantBookings = () => {
                 onChange={(e) => setNewBooking({...newBooking, notes: e.target.value})}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Additional notes..."
+                placeholder="Additional notes about the service booking..."
               />
             </div>
           </div>
@@ -483,9 +482,10 @@ const MerchantBookings = () => {
             </button>
             <button
               onClick={handleCreateBooking}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 flex items-center space-x-2"
             >
-              Create Booking
+              <Settings className="w-4 h-4" />
+              <span>Create Service Booking</span>
             </button>
           </div>
         </div>
@@ -494,27 +494,78 @@ const MerchantBookings = () => {
   );
 
   return (
-    <Layout title="Bookings">
+    <Layout title="Service Bookings">
       <div className="bg-gray-50 min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Bookings Management</h1>
-              <p className="text-gray-600 mt-1">Manage client bookings and appointments</p>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+                <Settings className="w-8 h-8 mr-3 text-blue-600" />
+                Service Bookings
+              </h1>
+              <p className="text-gray-600 mt-1">Manage client appointments for professional services</p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
             >
               <Plus className="w-5 h-5" />
-              <span>New Booking</span>
+              <span>New Service Booking</span>
             </button>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Settings className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Service Bookings</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredBookings.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Confirmed</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredBookings.filter(b => b.status === 'Confirmed').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <AlertCircle className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredBookings.filter(b => b.status === 'Pending').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredBookings.filter(b => b.status === 'Completed').length}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Filters and Search */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
               {/* Search */}
               <div className="md:col-span-2">
                 <div className="relative">
@@ -527,19 +578,6 @@ const MerchantBookings = () => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-              </div>
-
-              {/* Booking Type Filter */}
-              <div>
-                <select
-                  value={filters.type}
-                  onChange={(e) => setFilters({...filters, type: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">All Types</option>
-                  <option value="offers">Offers</option>
-                  <option value="services">Services</option>
-                </select>
               </div>
 
               {/* Store Filter */}
@@ -592,183 +630,103 @@ const MerchantBookings = () => {
             </div>
           </div>
 
-          {/* Bookings Sections */}
-          <div className="space-y-8">
-            {/* Offer Bookings Section */}
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                  Offer Bookings ({filteredBookings.filter(b => b.isOffer).length})
-                </h2>
-              </div>
-              <div className="p-6">
-                {filteredBookings.filter(booking => booking.isOffer).length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredBookings.filter(booking => booking.isOffer).map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="bg-gray-50 hover:bg-gray-100 transition rounded-lg p-4 cursor-pointer border border-gray-200"
-                        onClick={() => navigate(`/dashboard/bookings/${booking.id}/view`)}
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4 mb-2">
-                              <div>
-                                <h3 className="font-semibold text-gray-900">
-                                  {booking.User?.firstName || "Unknown"} {booking.User?.lastName || "User"}
-                                </h3>
-                                <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                                  <span className="flex items-center">
-                                    <Mail className="w-4 h-4 mr-1" />
-                                    {booking.User?.email}
-                                  </span>
-                                  {booking.User?.phone && (
-                                    <span className="flex items-center">
-                                      <Phone className="w-4 h-4 mr-1" />
-                                      {booking.User?.phone}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                              <div className="flex items-center text-gray-600">
-                                <Calendar className="w-4 h-4 mr-2 text-blue-500" />
-                                {moment(booking.startTime).format("MMM DD, YYYY")}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                <Clock className="w-4 h-4 mr-2 text-blue-500" />
-                                {moment(booking.startTime).format("hh:mm A")}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                <MapPin className="w-4 h-4 mr-2 text-blue-500" />
-                                {booking.store?.name || "N/A"}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                <User className="w-4 h-4 mr-2 text-blue-500" />
-                                {booking.staff?.name || "N/A"}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                {booking.Offer?.Service?.name || booking.service || "N/A"}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center space-x-2">
-                              {getPaymentStatusIcon(booking.paymentStatus)}
-                              <span className="text-sm">
-                                {paymentStatusOptions.find(p => p.value === booking.paymentStatus)?.label || 'Not Paid'}
-                              </span>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                              {booking.status || "Pending"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-12">No offer bookings found.</p>
-                )}
-              </div>
+          {/* Service Bookings List */}
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-blue-600" />
+                Service Bookings ({filteredBookings.length})
+              </h2>
             </div>
-
-            {/* Service Bookings Section */}
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <User className="w-5 h-5 mr-2 text-blue-600" />
-                  Service Bookings ({filteredBookings.filter(b => !b.isOffer).length})
-                </h2>
-              </div>
-              <div className="p-6">
-                {filteredBookings.filter(booking => !booking.isOffer).length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredBookings.filter(booking => !booking.isOffer).map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="bg-gray-50 hover:bg-gray-100 transition rounded-lg p-4 cursor-pointer border border-gray-200"
-                        onClick={() => navigate(`/dashboard/bookings/${booking.id}/view`)}
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4 mb-2">
-                              <div>
-                                <h3 className="font-semibold text-gray-900">
-                                  {booking.User?.firstName || "Unknown"} {booking.User?.lastName || "User"}
-                                </h3>
-                                <div className="flex items-center space-x-// Missing code for Service Bookings section - add this after line 4 in the space-x-4 text-sm text-gray-500 mt-1 section
-
-                                  4 text-sm text-gray-500 mt-1">
-                                  <span className="flex items-center">
-                                    <Mail className="w-4 h-4 mr-1" />
-                                    {booking.User?.email}
-                                  </span>
-                                  {booking.User?.phone && (
-                                    <span className="flex items-center">
-                                      <Phone className="w-4 h-4 mr-1" />
-                                      {booking.User?.phone}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+            <div className="p-6">
+              {filteredBookings.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="bg-gradient-to-r from-blue-50 to-white hover:from-blue-100 hover:to-blue-50 transition rounded-lg p-4 cursor-pointer border border-blue-200"
+                      onClick={() => navigate(`/dashboard/bookings/${booking.id}/view`)}
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-3 lg:space-y-0">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4 mb-2">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Settings className="w-5 h-5 text-blue-600" />
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                              <div className="flex items-center text-gray-600">
-                                <Calendar className="w-4 h-4 mr-2 text-blue-500" />
-                                {moment(booking.startTime).format("MMM DD, YYYY")}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                <Clock className="w-4 h-4 mr-2 text-blue-500" />
-                                {moment(booking.startTime).format("hh:mm A")}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                <MapPin className="w-4 h-4 mr-2 text-blue-500" />
-                                {booking.store?.name || "N/A"}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                <User className="w-4 h-4 mr-2 text-blue-500" />
-                                {booking.staff?.name || "N/A"}
-                              </div>
-                              <div className="flex items-center text-gray-600">
-                                {booking.Service?.name || booking.service || "N/A"}
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                {booking.User?.firstName || "Unknown"} {booking.User?.lastName || "User"}
+                              </h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                                <span className="flex items-center">
+                                  <Mail className="w-4 h-4 mr-1" />
+                                  {booking.User?.email}
+                                </span>
+                                {booking.User?.phone && (
+                                  <span className="flex items-center">
+                                    <Phone className="w-4 h-4 mr-1" />
+                                    {booking.User?.phone}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                           
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center space-x-2">
-                              {getPaymentStatusIcon(booking.paymentStatus)}
-                              <span className="text-sm">
-                                {paymentStatusOptions.find(p => p.value === booking.paymentStatus)?.label || 'Not Paid'}
-                              </span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="flex items-center text-gray-600">
+                              <Calendar className="w-4 h-4 mr-2 text-blue-500" />
+                              {moment(booking.startTime).format("MMM DD, YYYY")}
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                              {booking.status || "Pending"}
-                            </span>
+                            <div className="flex items-center text-gray-600">
+                              <Clock className="w-4 h-4 mr-2 text-blue-500" />
+                              {moment(booking.startTime).format("hh:mm A")}
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <MapPin className="w-4 h-4 mr-2 text-blue-500" />
+                              {booking.store?.name || "N/A"}
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <User className="w-4 h-4 mr-2 text-blue-500" />
+                              {booking.staff?.name || "N/A"}
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <Settings className="w-4 h-4 mr-2 text-blue-500" />
+                              {booking.Service?.name || booking.service || "N/A"}
+                            </div>
                           </div>
                         </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            {getPaymentStatusIcon(booking.paymentStatus)}
+                            <span className="text-sm">
+                              {paymentStatusOptions.find(p => p.value === booking.paymentStatus)?.label || 'Not Paid'}
+                            </span>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+                            {booking.status || "Pending"}
+                          </span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-12">No service bookings found.</p>
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Settings className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">No service bookings found</p>
+                  <p className="text-gray-400 text-sm">Create your first service booking to get started</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Create Booking Modal */}
-        {showCreateModal && <CreateBookingModal />}
+        {/* Create Service Booking Modal */}
+        {showCreateModal && <CreateServiceBookingModal />}
       </div>
     </Layout>
   );
 };
 
-export default MerchantBookings;
+export default ServiceBookings;

@@ -7,7 +7,8 @@ import OfferPage from './pages/offers/Offers'
 import CreateStore from './pages/stores/CreateStore'
 import Calendar from './pages/Calendar'
 import Page404 from './pages/Page404'
-import Booking from './pages/bookings/Bookings'
+import ServiceBookings from './pages/bookings/ServiceBookings'
+import OfferBookings from './pages/bookings/OfferBookings'
 import BookingDetails from './pages/bookings/BookingDetails'
 import StaffManagement from './pages/staff/StaffManagement'
 import Socials from './pages/socials/Socials'
@@ -40,7 +41,8 @@ const AppRoutes = () => {
       <Route path='/dashboard/offers' element={<OfferPage />} />
       <Route path='/dashboard/calendar' element={<Calendar />} />
       <Route path='/stores/create' element={<CreateStore />} />
-      <Route path="/dashboard/bookings" element={<Booking />} />
+      <Route path="/dashboard/service-bookings" element={<ServiceBookings />} />
+      <Route path="/dashboard/offer-bookings" element={<OfferBookings />} />
       <Route path="/dashboard/bookings/:id/view" element={<BookingDetails />} />
       <Route path='/dashboard/staff' element={<StaffManagement />} />
       <Route path='/dashboard/socials' element={<Socials />} />

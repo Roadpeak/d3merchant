@@ -84,9 +84,15 @@ const Sidebar = ({ onClose, currentMerchant }) => {
             path: "/dashboard/staff"
         },
         {
-            name: "Bookings",
+            name: "ServiceBookings",
             icon: <BookOpen size={20} />,
-            path: "/dashboard/bookings"
+            path: "/dashboard/service-bookings"
+        },
+
+        {
+            name: "OfferBookings",
+            icon: <BookOpen size={20} />,
+            path: "/dashboard/offer-bookings"
         },
 
         {
