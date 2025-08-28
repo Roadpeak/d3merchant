@@ -23,6 +23,7 @@ import clients from './pages/account/Invoice'
 import MerchantChatInterface from './pages/dashboard/MerchantChatInterface';
 import ClientsPage from './pages/clients';
 import ServiceRequests from './pages/servicereq/serviceRequests';
+import BookingView from './pages/bookings/BookingView';
 
 // In your dashboard
 
@@ -52,6 +53,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/account" element={<AccountPage />} />
       <Route path="/Clients" element={<ClientsPage />} />
       <Route path="/dashboard/serviceRequests" element={<ServiceRequests />} />
+      <Route path="/dashboard/bookings/:bookingId/view" element={<BookingView />} />
       <Route path="*" element={<Page404 />} />
     </Routes>
   )

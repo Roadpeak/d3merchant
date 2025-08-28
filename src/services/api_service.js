@@ -628,11 +628,33 @@ export const fetchStoreBookings = async (storeId, params = {}) => {
 // Fetch single booking
 export const fetchSingleBooking = async (bookingId) => {
     try {
-        const response = await axiosInstance.get(`/bookings/${bookingId}`, {
+        console.log('Fetching booking details for:', bookingId);
+
+        // For merchants, use the merchant-specific endpoint
+        const response = await axiosInstance.get(`/bookings/merchant/${bookingId}/view`, {
             headers: getAuthHeaders()
         });
+        
+        console.log('Merchant booking response:', response.data);
         return response.data;
     } catch (error) {
+        console.error('Error fetching merchant booking:', error);
+        
+        // If merchant endpoint fails, try the fallback general endpoint (for backward compatibility)
+        if (error.response?.status === 404 || error.response?.status === 501) {
+            try {
+                console.log('Trying fallback general endpoint...');
+                const fallbackResponse = await axiosInstance.get(`/bookings/${bookingId}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                return fallbackResponse.data;
+            } catch (fallbackError) {
+                console.error('Fallback also failed:', fallbackError);
+                handleApiError(fallbackError, 'fetching booking');
+            }
+        }
+        
         handleApiError(error, 'fetching booking');
     }
 };
