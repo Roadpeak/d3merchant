@@ -64,7 +64,7 @@ const Socials = () => {
             const token = merchantAuthService.getToken();
             console.log('🎫 Using token:', token ? 'Found' : 'Not found');
             
-            const response = await fetch('http://localhost:4000/api/v1/stores/merchant/my-stores', {
+            const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ const Socials = () => {
             
             const token = merchantAuthService.getToken();
             
-            const response = await fetch(`http://localhost:4000/api/v1/merchant/socials/${storeId}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/socials/${storeId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ const Socials = () => {
             
             console.log('➕ Creating social link:', { platform: newSocial.platform, link: newSocial.link });
             
-            const response = await fetch('http://localhost:4000/api/v1/socials', {
+            const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/socials', {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -316,7 +316,7 @@ const Socials = () => {
             
             console.log('✏️ Updating social link:', editing.id);
             
-            const response = await fetch(`http://localhost:4000/api/v1/socials/${editing.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials/${editing.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -365,7 +365,7 @@ const Socials = () => {
         try {
             console.log('🗑️ Deleting social link:', id);
             
-            const response = await fetch(`http://localhost:4000/api/v1/socials/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials/${id}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });

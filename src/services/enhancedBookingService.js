@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getTokenFromCookie } from '../services/api_service';
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 
 class EnhancedBookingService {
     constructor() {

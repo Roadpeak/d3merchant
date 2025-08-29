@@ -1,6 +1,6 @@
 // utils/envConfig.js - Dead simple universal environment config
 
-let API_BASE_URL = 'http://localhost:4000/api/v1';
+let API_BASE_URL = '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 let API_KEY = undefined;
 let SECRET_KEY = 'default-development-secret-key';
 let NODE_ENV = 'development';

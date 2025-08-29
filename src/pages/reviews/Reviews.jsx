@@ -76,7 +76,7 @@ const Reviews = () => {
       const token = merchantAuthService.getToken();
       console.log('🎫 Using token:', token ? 'Found' : 'Not found');
       
-      const response = await fetch('http://localhost:4000/api/v1/stores/merchant/my-stores', {
+      const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ const Reviews = () => {
       }
       
       // Use the merchant-specific endpoint that gets reviews for the merchant's own store
-      const response = await fetch(`http://localhost:4000/api/v1/merchant/reviews`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/reviews`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
