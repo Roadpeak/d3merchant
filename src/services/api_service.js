@@ -625,37 +625,58 @@ export const fetchStoreBookings = async (storeId, params = {}) => {
     }
 };
 
-// Fetch single booking
+// Fixed fetchSingleBooking function
 export const fetchSingleBooking = async (bookingId) => {
     try {
-        console.log('Fetching booking details for:', bookingId);
-
-        // For merchants, use the merchant-specific endpoint
+        // Main approach - use the merchant endpoint
         const response = await axiosInstance.get(`/bookings/merchant/${bookingId}/view`, {
             headers: getAuthHeaders()
         });
         
-        console.log('Merchant booking response:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error fetching merchant booking:', error);
-        
-        // If merchant endpoint fails, try the fallback general endpoint (for backward compatibility)
-        if (error.response?.status === 404 || error.response?.status === 501) {
+        // If the error is specifically about service association
+        if (error.response?.data?.error === "Service is not associated to booking") {
             try {
-                console.log('Trying fallback general endpoint...');
+                // Try alternate endpoint with skipServiceValidation param
                 const fallbackResponse = await axiosInstance.get(`/bookings/${bookingId}`, {
-                    headers: getAuthHeaders()
+                    headers: getAuthHeaders(),
+                    params: { skipServiceValidation: true }
                 });
                 
-                return fallbackResponse.data;
+                if (fallbackResponse.data && fallbackResponse.data.booking) {
+                    // Add warning to the booking object
+                    fallbackResponse.data.booking.serviceWarning = 
+                        "This booking doesn't have an associated service. Some functionality may be limited.";
+                    
+                    return fallbackResponse.data;
+                }
             } catch (fallbackError) {
                 console.error('Fallback also failed:', fallbackError);
-                handleApiError(fallbackError, 'fetching booking');
             }
+            
+            // Last resort - create a minimal booking object with error details
+            return {
+                success: false,
+                message: "This booking has no associated service.",
+                error: error.response?.data?.error,
+                booking: {
+                    id: bookingId,
+                    serviceWarning: "Missing service association. Please update this booking.",
+                    User: { firstName: "Unknown", lastName: "User" },
+                    status: "Unknown",
+                    serviceError: true
+                }
+            };
         }
         
-        handleApiError(error, 'fetching booking');
+        // Try general fallback endpoint for other errors
+        try {
+            const fallbackResponse = await axiosInstance.get(`/bookings/${bookingId}`);
+            return fallbackResponse.data;
+        } catch {
+            handleApiError(error, 'fetching booking');
+        }
     }
 };
 

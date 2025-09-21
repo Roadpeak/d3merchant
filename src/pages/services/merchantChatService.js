@@ -8,11 +8,11 @@ class MerchantChatService {
     
     this.API_BASE = process.env.NODE_ENV === 'production' 
       ? `${protocol}//${hostname}/api/v1`
-      : '${import.meta.env.VITE_API_BASE_URL}/api/v1';
+      : 'http://localhost:4000/api/v1';
       
     this.SOCKET_URL = process.env.NODE_ENV === 'production'
       ? `${protocol}//${hostname}`
-      : '${import.meta.env.VITE_API_BASE_URL}';
+      : 'http://localhost:4000';
   }
 
   // Get merchant auth token
