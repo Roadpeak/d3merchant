@@ -1,3 +1,5 @@
+// Updated ServiceBookings.js - Fixed import and function calls
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -30,7 +32,8 @@ import {
   DollarSign
 } from "lucide-react";
 import Layout from "../../elements/Layout";
-import { fetchBookings } from "../../services/api_service";
+// FIXED: Import the correct function
+import { fetchServiceBookings } from "../../services/api_service";
 import moment from "moment";
 
 // Import your Modal component - adjust the path as needed
@@ -43,7 +46,7 @@ const ServiceBookings = () => {
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false); // Add this new state
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [filters, setFilters] = useState({
@@ -116,35 +119,65 @@ const ServiceBookings = () => {
     { value: '180', label: '3 hours' }
   ];
 
+  // FIXED: Updated useEffect with correct function call and better error handling
   useEffect(() => {
     const loadBookings = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchBookings();
-        const serviceBookings = response.filter(booking => !booking.isOffer);
-        setBookings(serviceBookings);
-        setFilteredBookings(serviceBookings);
+        
+        console.log('Loading service bookings...');
+        
+        // Use the correct function call
+        const serviceBookings = await fetchServiceBookings();
+        
+        console.log('Service bookings loaded:', serviceBookings?.length || 0);
+        
+        // Handle different response formats
+        const bookingsArray = Array.isArray(serviceBookings) ? serviceBookings : [];
+        
+        setBookings(bookingsArray);
+        setFilteredBookings(bookingsArray);
+        
+        // Show appropriate message based on results
+        if (bookingsArray.length === 0) {
+          console.log('No service bookings found');
+          toast('No service bookings found');
+        } else {
+          toast.success(`${bookingsArray.length} service bookings loaded`);
+        }
+        
       } catch (error) {
+        console.error('Failed to load service bookings:', error);
         setError(error.message);
-        toast.error("Failed to fetch service bookings");
+        toast.error("Failed to fetch service bookings: " + error.message);
+        
+        // Set empty array as fallback
+        setBookings([]);
+        setFilteredBookings([]);
       } finally {
         setLoading(false);
       }
     };
-
+  
     loadBookings();
   }, []);
 
+  // FIXED: Updated handleRefresh with correct function call
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      const response = await fetchBookings();
-      const serviceBookings = response.filter(booking => !booking.isOffer);
-      setBookings(serviceBookings);
-      toast.success('Data refreshed successfully');
+      
+      const serviceBookings = await fetchServiceBookings();
+      const bookingsArray = Array.isArray(serviceBookings) ? serviceBookings : [];
+      
+      setBookings(bookingsArray);
+      
+      toast.success(`Service bookings refreshed - ${bookingsArray.length} found`);
+      
     } catch (error) {
-      toast.error('Failed to refresh data');
+      toast.error('Failed to refresh data: ' + error.message);
+      console.error('Refresh error:', error);
     } finally {
       setRefreshing(false);
     }
@@ -441,6 +474,9 @@ const ServiceBookings = () => {
 
   const stats = calculateStats();
   const todayStats = getTodayStats();
+
+  // Rest of your component remains the same...
+  // (All the modal components, render logic, etc. stay exactly as they were)
 
   // Add the Booking Details Modal component
   const BookingDetailsModal = () => {
@@ -1299,7 +1335,7 @@ const ServiceBookings = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                            {getInitials(booking.User?.firstName, booking.User?.lastName)}
+                          {getInitials(booking.bookingUser?.firstName, booking.bookingUser?.lastName)}
                           </div>
                         </div>
                         <div className="ml-4">
