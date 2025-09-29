@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
-import { 
-  Star, 
-  User, 
-  Calendar, 
-  MessageSquare, 
-  TrendingUp, 
+import {
+  Star,
+  User,
+  Calendar,
+  MessageSquare,
+  TrendingUp,
   Filter,
   Download,
   Eye,
@@ -47,7 +47,7 @@ const Reviews = () => {
   // Get auth headers
   const getAuthHeaders = () => {
     const token = merchantAuthService.getToken();
-    
+
     if (!token) {
       throw new Error('No authentication token found. Please log in again.');
     }
@@ -76,10 +76,10 @@ const Reviews = () => {
       if (!checkAuthStatus()) {
         throw new Error('Authentication required');
       }
-      
+
       const token = merchantAuthService.getToken();
-      
-      const response = await fetch('http://localhost:4000/api/v1/stores/merchant/my-stores', {
+
+      const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ const Reviews = () => {
         setStoreData(store);
         return store.id;
       }
-      
+
       throw new Error('No store found for your merchant account. Please create a store first.');
     } catch (error) {
       console.error('Error fetching merchant store:', error);
@@ -118,8 +118,8 @@ const Reviews = () => {
       if (!checkAuthStatus()) {
         return { reviews: [], stats: null };
       }
-      
-      const response = await fetch(`http://localhost:4000/api/v1/merchant/reviews`, {
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/reviews`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -130,21 +130,21 @@ const Reviews = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         if (response.status === 401) {
           throw new Error('Authentication failed while fetching reviews.');
         }
-        
+
         throw new Error(errorData.message || `Failed to fetch reviews (${response.status})`);
       }
 
       const data = await response.json();
-      
+
       return {
         reviews: data.success ? (data.reviews || []) : [],
         stats: data.success ? data.stats : null
       };
-      
+
     } catch (error) {
       console.error('Error fetching merchant reviews:', error);
       throw error;
@@ -164,7 +164,7 @@ const Reviews = () => {
 
     const totalReviews = reviewsData.length;
     const averageRating = reviewsData.reduce((sum, review) => sum + review.rating, 0) / totalReviews;
-    
+
     const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     reviewsData.forEach(review => {
       if (ratingDistribution[review.rating] !== undefined) {
@@ -176,11 +176,11 @@ const Reviews = () => {
     if (totalReviews >= 10) {
       const recentReviews = reviewsData.slice(0, 10);
       const olderReviews = reviewsData.slice(10, 20);
-      
+
       if (olderReviews.length > 0) {
         const recentAvg = recentReviews.reduce((sum, r) => sum + r.rating, 0) / recentReviews.length;
         const olderAvg = olderReviews.reduce((sum, r) => sum + r.rating, 0) / olderReviews.length;
-        
+
         if (recentAvg > olderAvg + 0.2) recentTrend = 'improving';
         else if (recentAvg < olderAvg - 0.2) recentTrend = 'declining';
       }
@@ -235,11 +235,10 @@ const Reviews = () => {
         {[...Array(5)].map((_, i) => (
           <Star
             key={i}
-            className={`${sizeClasses[size]} ${
-              i < Math.floor(rating)
+            className={`${sizeClasses[size]} ${i < Math.floor(rating)
                 ? 'fill-yellow-400 text-yellow-400'
                 : 'text-gray-300'
-            }`}
+              }`}
           />
         ))}
       </div>
@@ -249,7 +248,7 @@ const Reviews = () => {
   // Render rating distribution bar
   const renderRatingBar = (rating, count, total) => {
     const percentage = total > 0 ? (count / total) * 100 : 0;
-    
+
     return (
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 w-16">
@@ -257,7 +256,7 @@ const Reviews = () => {
           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
         </div>
         <div className="flex-1 bg-gray-200 rounded-full h-3">
-          <div 
+          <div
             className="bg-gradient-to-r from-yellow-400 to-yellow-500 h-3 rounded-full transition-all duration-500"
             style={{ width: `${percentage}%` }}
           />
@@ -275,16 +274,16 @@ const Reviews = () => {
     const now = new Date();
     const reviewDate = new Date(date);
     const diffInHours = Math.floor((now - reviewDate) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours} hours ago`;
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return `${diffInDays} days ago`;
-    
+
     const diffInWeeks = Math.floor(diffInDays / 7);
     if (diffInWeeks < 4) return `${diffInWeeks} weeks ago`;
-    
+
     const diffInMonths = Math.floor(diffInDays / 30);
     return `${diffInMonths} months ago`;
   };
@@ -292,16 +291,16 @@ const Reviews = () => {
   // Refresh data
   const handleRefresh = async () => {
     if (!storeId) return;
-    
+
     try {
       setRefreshing(true);
-      
+
       const { reviews: storeReviews, stats: backendStats } = await fetchStoreReviews(storeId);
       setReviews(storeReviews);
-      
+
       const stats = backendStats || calculateReviewStats(storeReviews);
       setReviewStats(stats);
-      
+
     } catch (error) {
       console.error('Error refreshing reviews:', error);
       setError('Failed to refresh reviews. Please try again.');
@@ -316,26 +315,26 @@ const Reviews = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         if (!merchantAuthService.isAuthenticated()) {
           throw new Error('Your session has expired. Please log in again.');
         }
-        
+
         const merchantStoreId = await getMerchantStore();
         setStoreId(merchantStoreId);
-        
+
         const { reviews: storeReviews, stats: backendStats } = await fetchStoreReviews(merchantStoreId);
         setReviews(storeReviews);
-        
+
         const stats = backendStats || calculateReviewStats(storeReviews);
         setReviewStats(stats);
-        
+
       } catch (error) {
         console.error('Error loading reviews data:', error);
         setError(error.message);
-        
-        if (error.message.includes('session has expired') || 
-            error.message.includes('Authentication failed')) {
+
+        if (error.message.includes('session has expired') ||
+          error.message.includes('Authentication failed')) {
           setTimeout(() => {
             merchantAuthService.logout();
           }, 3000);
@@ -364,7 +363,7 @@ const Reviews = () => {
 
   if (loading) {
     return (
-      <Layout 
+      <Layout
         title="Customer Reviews"
         subtitle="Track and manage customer feedback"
       >
@@ -374,7 +373,7 @@ const Reviews = () => {
   }
 
   return (
-    <Layout 
+    <Layout
       title="Customer Reviews"
       subtitle="Track and manage customer feedback"
     >
@@ -421,7 +420,7 @@ const Reviews = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="rounded-lg bg-white bg-opacity-10 p-4">
                 <div className="flex items-center space-x-2">
@@ -466,7 +465,7 @@ const Reviews = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Reviews</h3>
               <p className="text-gray-600 mb-6">{error}</p>
-              
+
               {error.includes('No store found') ? (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-500">
@@ -541,7 +540,7 @@ const Reviews = () => {
                   </button>
                 </div>
               </div>
-              
+
               {showFilters && (
                 <div className="p-6 bg-gray-50">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -588,7 +587,7 @@ const Reviews = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">
-                        Customer Reviews 
+                        Customer Reviews
                         {filterRating !== 'all' && (
                           <span className="ml-2 text-sm font-normal text-gray-600">
                             ({filterRating} star{filterRating !== '1' ? 's' : ''})
@@ -613,17 +612,17 @@ const Reviews = () => {
                           <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                             {(review.User?.firstName || review.user?.first_name || review.customerName || 'A').charAt(0).toUpperCase()}
                           </div>
-                          
+
                           {/* Review Content */}
                           <div className="flex-1 min-w-0">
                             {/* Customer Info */}
                             <div className="flex items-center gap-3 mb-3">
                               <h4 className="font-semibold text-gray-900">
-                                {review.User?.firstName 
+                                {review.User?.firstName
                                   ? `${review.User.firstName} ${review.User.lastName?.charAt(0) || ''}.`
                                   : review.user?.first_name
-                                  ? `${review.user.first_name} ${review.user.last_name?.charAt(0) || ''}.`
-                                  : review.customerName || review.name || 'Anonymous Customer'
+                                    ? `${review.user.first_name} ${review.user.last_name?.charAt(0) || ''}.`
+                                    : review.customerName || review.name || 'Anonymous Customer'
                                 }
                               </h4>
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -631,7 +630,7 @@ const Reviews = () => {
                                 {review.User ? 'Verified' : 'Customer'}
                               </span>
                             </div>
-                            
+
                             {/* Rating and Date */}
                             <div className="flex items-center gap-4 mb-4">
                               <div className="flex items-center gap-2">
@@ -715,12 +714,12 @@ const Reviews = () => {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No reviews yet</h3>
                   <p className="text-gray-600 mb-8">
-                    {storeData ? 
+                    {storeData ?
                       `Customers haven't left any reviews for ${storeData.name} yet. Reviews will appear here once customers start sharing their experiences.` :
                       'Customer reviews will appear here once they start sharing their experiences with your store.'
                     }
                   </p>
-                  
+
                   {/* Tips for getting reviews */}
                   <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 max-w-md mx-auto">
                     <div className="flex items-center justify-center mb-4">

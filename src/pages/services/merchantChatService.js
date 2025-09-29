@@ -5,26 +5,26 @@ class MerchantChatService {
   constructor() {
     const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
     const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    
-    this.API_BASE = process.env.NODE_ENV === 'production' 
+
+    this.API_BASE = process.env.NODE_ENV === 'production'
       ? `${protocol}//${hostname}/api/v1`
-      : 'http://localhost:4000/api/v1';
-      
+      : '${import.meta.env.VITE_API_BASE_URL}/api/v1';
+
     this.SOCKET_URL = process.env.NODE_ENV === 'production'
       ? `${protocol}//${hostname}`
-      : 'http://localhost:4000';
+      : '${import.meta.env.VITE_API_BASE_URL}';
   }
 
   // Get merchant auth token
   getAuthToken() {
     console.log('🏪 Getting merchant auth token...');
-    
+
     const merchantToken = merchantAuthService.getToken();
-    
+
     if (merchantToken) {
       try {
         const payload = JSON.parse(atob(merchantToken.split('.')[1]));
-        
+
         if (payload.type === 'merchant') {
           console.log('✅ Valid merchant token found');
           return merchantToken;
@@ -45,14 +45,14 @@ class MerchantChatService {
   // Get headers with merchant authentication
   getHeaders() {
     const token = this.getAuthToken();
-    
+
     if (!token) {
       console.error('🏪 No merchant token available for API request');
       throw new Error('Merchant authentication required');
     }
-  
+
     console.log('🏪 Using token for API call:', token.substring(0, 20) + '...');
-  
+
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -63,7 +63,7 @@ class MerchantChatService {
 
   async handleResponse(response) {
     console.log('📡 Merchant API Response status:', response.status);
-    
+
     if (!response.ok) {
       let errorData;
       try {
@@ -71,7 +71,7 @@ class MerchantChatService {
       } catch (e) {
         errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
       }
-      
+
       console.error('🏪 Merchant API Error:', errorData);
 
       if (response.status === 401) {
@@ -79,7 +79,7 @@ class MerchantChatService {
         merchantAuthService.logout();
         throw new Error('Merchant session expired. Please log in again.');
       }
-      
+
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     return response.json();
@@ -88,15 +88,15 @@ class MerchantChatService {
   // FIXED: Get customer↔store conversations for merchant's stores
   async getCustomerConversations() {
     console.log('🏪 Fetching customer↔store conversations for merchant...');
-    
+
     if (!merchantAuthService.isAuthenticated()) {
       throw new Error('Merchant authentication required');
     }
-  
+
     const endpoint = `${this.API_BASE}/chat/merchant/conversations`;
-    
+
     console.log('🏪 Using endpoint:', endpoint);
-  
+
     try {
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -104,20 +104,20 @@ class MerchantChatService {
         credentials: 'include',
         mode: 'cors'
       });
-  
+
       const result = await this.handleResponse(response);
       console.log(`✅ Loaded ${result.data?.length || 0} customer↔store conversations`);
-      
+
       // ✅ ALWAYS return real data, never mock data
       return result;
-      
+
     } catch (error) {
       console.error('❌ Error fetching customer↔store conversations:', error);
-      
+
       if (error.message.includes('Merchant authentication')) {
         throw error;
       }
-      
+
       // ✅ REMOVED: Don't return mock data - let the error bubble up
       // Instead, return empty data structure
       console.log('⚠️ API failed, returning empty conversations list');
@@ -128,18 +128,18 @@ class MerchantChatService {
       };
     }
   }
-  
+
   // Also update getCustomerMessages to avoid mock data:
   async getCustomerMessages(conversationId, page = 1, limit = 50) {
     console.log('🏪 Fetching customer↔store messages for merchant...');
-    
+
     if (!merchantAuthService.isAuthenticated()) {
       throw new Error('Merchant authentication required');
     }
-  
+
     const endpoint = `${this.API_BASE}/chat/conversations/${conversationId}/messages`;
     const url = `${endpoint}?page=${page}&limit=${limit}`;
-  
+
     try {
       const response = await fetch(url, {
         method: 'GET',
@@ -147,18 +147,18 @@ class MerchantChatService {
         credentials: 'include',
         mode: 'cors'
       });
-  
+
       const result = await this.handleResponse(response);
       console.log(`✅ Loaded ${result.data?.length || 0} customer↔store messages`);
       return result;
-      
+
     } catch (error) {
       console.error('❌ Error fetching customer↔store messages:', error);
-      
+
       if (error.message.includes('Merchant authentication')) {
         throw error;
       }
-      
+
       // ✅ Return empty messages instead of mock data
       console.log('⚠️ Messages API failed, returning empty messages');
       return {
@@ -170,7 +170,7 @@ class MerchantChatService {
   // Get messages for a customer↔store conversation
   async getCustomerMessages(conversationId, page = 1, limit = 50) {
     console.log('🏪 Fetching customer↔store messages for merchant...');
-    
+
     if (!merchantAuthService.isAuthenticated()) {
       throw new Error('Merchant authentication required');
     }
@@ -191,11 +191,11 @@ class MerchantChatService {
       return result;
     } catch (error) {
       console.error('❌ Error fetching customer↔store messages:', error);
-      
+
       if (error.message.includes('Merchant authentication')) {
         throw error;
       }
-      
+
       // Return mock messages for development
       if (process.env.NODE_ENV === 'development' && error.message.includes('404')) {
         console.log('⚠️ Development mode: returning mock messages');
@@ -236,7 +236,7 @@ class MerchantChatService {
           ]
         };
       }
-      
+
       throw error;
     }
   }
@@ -244,13 +244,13 @@ class MerchantChatService {
   // FIXED: Reply to customer as store (not as merchant directly)
   async replyToCustomer(conversationId, content, messageType = 'text') {
     console.log('🏪 Merchant replying to customer AS STORE...');
-    
+
     if (!merchantAuthService.isAuthenticated()) {
       throw new Error('Merchant authentication required');
     }
 
     const endpoint = `${this.API_BASE}/chat/messages`;
-    
+
     // Validate content
     const validation = this.validateMessage(content);
     if (!validation.valid) {
@@ -269,8 +269,8 @@ class MerchantChatService {
       // This represents the store responding to the customer, not the merchant directly
     };
 
-    console.log('🏪 Sending store response to customer:', { 
-      conversationId, 
+    console.log('🏪 Sending store response to customer:', {
+      conversationId,
       contentLength: content.length,
       merchantId: merchantProfile?.id,
       messageType: 'store_to_customer'
@@ -290,14 +290,14 @@ class MerchantChatService {
       return result;
     } catch (error) {
       console.error('❌ Error sending store response:', error);
-      
+
       if (error.message.includes('Merchant authentication')) {
         throw error;
       }
-      
+
       // For development, simulate successful message sending
-      if (process.env.NODE_ENV === 'development' && 
-          (error.message.includes('404') || error.message.includes('CORS'))) {
+      if (process.env.NODE_ENV === 'development' &&
+        (error.message.includes('404') || error.message.includes('CORS'))) {
         console.log('⚠️ Development mode: simulating successful store response');
         return {
           success: true,
@@ -319,7 +319,7 @@ class MerchantChatService {
           }
         };
       }
-      
+
       throw error;
     }
   }
@@ -332,7 +332,7 @@ class MerchantChatService {
     }
 
     const endpoint = `${this.API_BASE}/chat/conversations/${conversationId}/read`;
-    
+
     console.log('🏪 Merchant marking customer messages as read:', conversationId);
 
     try {
@@ -366,7 +366,7 @@ class MerchantChatService {
       `${this.API_BASE}/search/customers?query=${encodeURIComponent(query)}`,
       `${this.API_BASE}/merchant/search?query=${encodeURIComponent(query)}`
     ];
-    
+
     for (const endpoint of endpoints) {
       try {
         console.log('🏪 Searching customers at:', endpoint);
@@ -397,7 +397,7 @@ class MerchantChatService {
   // Get merchant profile
   async getMerchantProfile() {
     console.log('🏪 Getting merchant profile...');
-    
+
     try {
       return await merchantAuthService.getCurrentMerchantProfile();
     } catch (error) {
@@ -410,15 +410,15 @@ class MerchantChatService {
   async checkMerchantAuth() {
     try {
       console.log('🔐 Checking merchant authentication...');
-      
+
       const isAuth = merchantAuthService.isAuthenticated();
       if (!isAuth) {
         return { isAuthenticated: false, merchant: null };
       }
 
       const merchantProfile = await this.getMerchantProfile();
-      return { 
-        isAuthenticated: true, 
+      return {
+        isAuthenticated: true,
         merchant: merchantProfile?.merchantProfile || merchantProfile?.data || merchantProfile
       };
     } catch (error) {
@@ -438,7 +438,7 @@ class MerchantChatService {
       `${this.API_BASE}/merchant/analytics?period=${period}`,
       `${this.API_BASE}/analytics/merchant?period=${period}`
     ];
-    
+
     for (const endpoint of endpoints) {
       try {
         console.log('🏪 Fetching store conversation analytics from:', endpoint);
@@ -554,7 +554,7 @@ class MerchantChatService {
     if (customer?.avatar) {
       return customer.avatar;
     }
-    
+
     const name = customer?.name || `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim() || 'Customer';
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=${size}&background=random`;
   }
@@ -564,7 +564,7 @@ class MerchantChatService {
     if (store?.logo || store?.logo_url) {
       return store.logo || store.logo_url;
     }
-    
+
     const name = store?.name || 'Store';
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=${size}&background=2563eb&color=ffffff`;
   }

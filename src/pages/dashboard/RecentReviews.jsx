@@ -15,7 +15,7 @@ const RecentReviews = () => {
     // Get auth headers (same as your Reviews page)
     const getAuthHeaders = () => {
         const token = merchantAuthService.getToken();
-        
+
         if (!token) {
             throw new Error('No authentication token found. Please log in again.');
         }
@@ -43,14 +43,14 @@ const RecentReviews = () => {
         try {
             setLoading(!refreshing);
             setError(null);
-            
+
             if (!checkAuthStatus()) {
                 return;
             }
-            
+
             console.log('📝 Fetching merchant reviews for dashboard...');
-            
-            const response = await fetch(`http://localhost:4000/api/v1/merchant/reviews`, {
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/reviews`, {
                 method: 'GET',
                 headers: getAuthHeaders()
             });
@@ -62,16 +62,16 @@ const RecentReviews = () => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                
+
                 if (response.status === 401) {
                     throw new Error('Authentication failed while fetching reviews.');
                 }
-                
+
                 throw new Error(errorData.message || `Failed to fetch reviews (${response.status})`);
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 // Get only the 5 most recent reviews for dashboard
                 const recentReviews = (data.reviews || []).slice(0, 5);
@@ -80,7 +80,7 @@ const RecentReviews = () => {
             } else {
                 throw new Error('Failed to fetch reviews');
             }
-            
+
         } catch (err) {
             console.error('❌ Error fetching reviews:', err);
             setError(err.message);
@@ -114,11 +114,10 @@ const RecentReviews = () => {
             {[...Array(5)].map((_, i) => (
                 <Star
                     key={i}
-                    className={`w-4 h-4 ${
-                        i < Math.floor(rating)
+                    className={`w-4 h-4 ${i < Math.floor(rating)
                             ? 'fill-yellow-400 text-yellow-400'
                             : 'text-gray-300'
-                    }`}
+                        }`}
                 />
             ))}
             <span className="ml-1 text-xs font-medium text-gray-600">{rating}/5</span>
@@ -127,11 +126,11 @@ const RecentReviews = () => {
 
     // Get customer name (same logic as your Reviews page)
     const getCustomerName = (review) => {
-        return review.User?.firstName 
+        return review.User?.firstName
             ? `${review.User.firstName} ${review.User.lastName?.charAt(0) || ''}.`
             : review.user?.first_name
-            ? `${review.user.first_name} ${review.user.last_name?.charAt(0) || ''}.`
-            : review.customerName || review.name || 'Anonymous';
+                ? `${review.user.first_name} ${review.user.last_name?.charAt(0) || ''}.`
+                : review.customerName || review.name || 'Anonymous';
     };
 
     // Get review text (same logic as your Reviews page)
@@ -144,16 +143,16 @@ const RecentReviews = () => {
         const now = new Date();
         const reviewDate = new Date(date);
         const diffInHours = Math.floor((now - reviewDate) / (1000 * 60 * 60));
-        
+
         if (diffInHours < 1) return 'Just now';
         if (diffInHours < 24) return `${diffInHours}h ago`;
-        
+
         const diffInDays = Math.floor(diffInHours / 24);
         if (diffInDays < 7) return `${diffInDays}d ago`;
-        
+
         const diffInWeeks = Math.floor(diffInDays / 7);
         if (diffInWeeks < 4) return `${diffInWeeks}w ago`;
-        
+
         return 'Recently';
     };
 
@@ -185,7 +184,7 @@ const RecentReviews = () => {
                 <h2 className="text-primary text-[18px] font-semibold">
                     Recent Reviews
                 </h2>
-                <button 
+                <button
                     onClick={handleRefresh}
                     disabled={refreshing}
                     className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50"
@@ -193,13 +192,13 @@ const RecentReviews = () => {
                     <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
                 </button>
             </div>
-            
+
             {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
                     <AlertCircle size={16} className="text-red-500" />
                     <div className="flex-1">
                         <p className="text-red-700 text-sm">Failed to load reviews</p>
-                        <button 
+                        <button
                             onClick={handleRefresh}
                             className="text-red-600 hover:text-red-800 text-xs font-medium mt-1"
                         >
@@ -208,7 +207,7 @@ const RecentReviews = () => {
                     </div>
                 </div>
             )}
-            
+
             {reviews.length === 0 && !error ? (
                 <div className="text-center py-8">
                     <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -244,14 +243,14 @@ const RecentReviews = () => {
                                     </div>
                                     {renderStars(review.rating)}
                                 </div>
-                                
+
                                 <div className="relative">
                                     <Quote className="absolute top-0 left-0 w-3 h-3 text-gray-300 -translate-x-0.5 -translate-y-0.5" />
                                     <p className="text-[14px] line-clamp-2 ml-2 leading-relaxed">
                                         {getReviewText(review)}
                                     </p>
                                 </div>
-                                
+
                                 {review.service && (
                                     <span className="text-xs opacity-60 mt-2 truncate">
                                         Service: {review.service.name || review.service.title}
@@ -262,10 +261,10 @@ const RecentReviews = () => {
                     })}
                 </div>
             )}
-            
+
             {reviews.length > 0 && (
                 <div className="text-center mt-4">
-                    <button 
+                    <button
                         onClick={() => window.location.href = '/dashboard/reviews'}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
                     >

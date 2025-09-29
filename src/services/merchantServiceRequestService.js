@@ -1,7 +1,7 @@
 // services/merchantServiceRequestService.js - FIXED VERSION FOR STORE-BASED OFFERS
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 
 // Enhanced function to get auth headers for merchants
 const getMerchantAuthHeaders = () => {
@@ -9,14 +9,14 @@ const getMerchantAuthHeaders = () => {
   const headers = {
     'Content-Type': 'application/json'
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
     console.log('🔐 Merchant auth header added');
   } else {
     console.warn('⚠️ No merchant auth token available');
   }
-  
+
   return headers;
 };
 
@@ -24,7 +24,7 @@ const getMerchantAuthHeaders = () => {
 const makeMerchantAPIRequest = async (url, options = {}) => {
   try {
     const isAuthRequired = options.requireAuth !== false;
-    
+
     let headers = {
       'Content-Type': 'application/json',
       ...options.headers
@@ -43,21 +43,21 @@ const makeMerchantAPIRequest = async (url, options = {}) => {
       headers
     };
 
-    console.log('🌐 Merchant API Request:', { 
-      url: url.replace(API_BASE_URL, ''), 
+    console.log('🌐 Merchant API Request:', {
+      url: url.replace(API_BASE_URL, ''),
       method: config.method || 'GET',
       authenticated: !!headers.Authorization,
       requireAuth: isAuthRequired
     });
-    
+
     const response = await fetch(url, config);
-    
+
     console.log(`📡 Merchant API Response: ${response.status}`);
 
     // Check if response is JSON
     const contentType = response.headers.get('content-type');
     let data;
-    
+
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
     } else {
@@ -72,31 +72,31 @@ const makeMerchantAPIRequest = async (url, options = {}) => {
       const error = new Error(data.message || `HTTP error! status: ${response.status}`);
       error.status = response.status;
       error.data = data;
-      
+
       // Handle specific merchant auth errors
       if (response.status === 401) {
         console.warn('🔒 Merchant authentication failed (401)');
         throw new Error('Authentication failed. Please log in again.');
       }
-      
+
       if (response.status === 403) {
         throw new Error('Access denied. Merchant permissions required.');
       }
-      
+
       throw error;
     }
 
     console.log('✅ Merchant API request successful');
     return data;
-    
+
   } catch (error) {
     console.error(`❌ Merchant API request failed:`, error);
-    
+
     // Handle network errors
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       throw new Error('Network error. Please check your internet connection.');
     }
-    
+
     throw error;
   }
 };
@@ -106,7 +106,7 @@ class MerchantServiceRequestService {
   async getServiceRequestsForMerchant(filters = {}) {
     try {
       const queryParams = new URLSearchParams();
-      
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== 'all' && value !== '') {
           queryParams.append(key, value);
@@ -116,11 +116,11 @@ class MerchantServiceRequestService {
       // ✅ FIXED: Use the dedicated merchant endpoint
       const url = `${API_BASE_URL}/merchant/service-requests?${queryParams}`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: true });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch service requests for merchant');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching service requests for merchant:', error);
@@ -133,11 +133,11 @@ class MerchantServiceRequestService {
     try {
       const url = `${API_BASE_URL}/merchant/stores`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: true });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch merchant stores');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching merchant stores:', error);
@@ -155,7 +155,7 @@ class MerchantServiceRequestService {
       // Validate required fields
       const requiredFields = ['storeId', 'quotedPrice', 'message', 'availability'];
       const missingFields = requiredFields.filter(field => !offerData[field]);
-      
+
       if (missingFields.length > 0) {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
@@ -167,13 +167,13 @@ class MerchantServiceRequestService {
 
       // ✅ CRITICAL: Use the service request endpoint that creates STORE-BASED offers
       const url = `${API_BASE_URL}/request-service/${requestId}/offers`;
-      
+
       console.log('🚀 Creating STORE offer:', {
         requestId,
         storeId: offerData.storeId,
         quotedPrice: offerData.quotedPrice
       });
-      
+
       const response = await makeMerchantAPIRequest(url, {
         method: 'POST',
         body: JSON.stringify({
@@ -186,11 +186,11 @@ class MerchantServiceRequestService {
         }),
         requireAuth: true
       });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to create store offer');
       }
-      
+
       console.log('✅ Store offer created successfully:', response.data?.offer?.id);
       return response;
     } catch (error) {
@@ -203,26 +203,26 @@ class MerchantServiceRequestService {
   async getMerchantOffers(pagination = {}) {
     try {
       const { page = 1, limit = 10, status = 'all', storeId = 'all' } = pagination;
-      const queryParams = new URLSearchParams({ 
-        page: page.toString(), 
-        limit: limit.toString() 
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
       });
-      
+
       if (status !== 'all') {
         queryParams.append('status', status);
       }
-      
+
       if (storeId !== 'all') {
         queryParams.append('storeId', storeId);
       }
 
       const url = `${API_BASE_URL}/merchant/offers?${queryParams}`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: true });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch merchant offers');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching merchant offers:', error);
@@ -235,11 +235,11 @@ class MerchantServiceRequestService {
     try {
       const url = `${API_BASE_URL}/merchant/dashboard/stats`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: true });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch dashboard stats');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching merchant dashboard stats:', error);
@@ -260,11 +260,11 @@ class MerchantServiceRequestService {
         body: JSON.stringify({ status, reason }),
         requireAuth: true
       });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to update offer status');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error updating offer status:', error);
@@ -281,11 +281,11 @@ class MerchantServiceRequestService {
 
       const url = `${API_BASE_URL}/request-service/${requestId}/offers`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: true });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch request offers');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching request offers:', error);
@@ -302,11 +302,11 @@ class MerchantServiceRequestService {
 
       const url = `${API_BASE_URL}/request-service/${requestId}`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: false });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch service request details');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching service request details:', error);
@@ -328,7 +328,7 @@ class MerchantServiceRequestService {
       }
 
       const storeIds = storesResponse.data.stores.map(store => store.id);
-      
+
       // Get offers for this request
       const offersResponse = await this.getRequestOffers(requestId);
       if (!offersResponse.success || !offersResponse.data?.offers) {
@@ -336,7 +336,7 @@ class MerchantServiceRequestService {
       }
 
       // Check if any of the merchant's stores has offered
-      const merchantOffers = offersResponse.data.offers.filter(offer => 
+      const merchantOffers = offersResponse.data.offers.filter(offer =>
         storeIds.includes(offer.storeId)
       );
 
@@ -360,11 +360,11 @@ class MerchantServiceRequestService {
 
       const url = `${API_BASE_URL}/merchant/stores/${storeId}/analytics?period=${period}`;
       const response = await makeMerchantAPIRequest(url, { requireAuth: true });
-      
+
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch store analytics');
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error fetching store analytics:', error);
@@ -400,7 +400,7 @@ class MerchantServiceRequestService {
     const token = merchantAuthService.getToken();
     const isAuth = merchantAuthService.isAuthenticated();
     const merchant = this.getCurrentMerchant();
-    
+
     console.log('🔍 Merchant Auth Debug:', {
       hasToken: !!token,
       tokenLength: token ? token.length : 0,
@@ -409,7 +409,7 @@ class MerchantServiceRequestService {
       merchantEmail: merchant?.email_address,
       merchantName: merchant ? `${merchant.first_name} ${merchant.last_name}` : null
     });
-    
+
     return {
       hasToken: !!token,
       isAuthenticated: isAuth,
@@ -421,31 +421,31 @@ class MerchantServiceRequestService {
   // ✅ ENHANCED: Validate store offer data before submission
   validateOfferData(data) {
     const errors = [];
-    
+
     if (!data.storeId) {
       errors.push('Store selection is required');
     }
-    
+
     if (!data.quotedPrice || parseFloat(data.quotedPrice) <= 0) {
       errors.push('Valid quoted price is required and must be greater than 0');
     }
-    
+
     if (!data.message || data.message.trim().length < 10) {
       errors.push('Message must be at least 10 characters long');
     }
-    
+
     if (data.message && data.message.length > 1000) {
       errors.push('Message must be less than 1000 characters');
     }
-    
+
     if (!data.availability) {
       errors.push('Availability information is required');
     }
-    
+
     if (data.availability && data.availability.length > 200) {
       errors.push('Availability must be less than 200 characters');
     }
-    
+
     return errors;
   }
 
@@ -454,7 +454,7 @@ class MerchantServiceRequestService {
     const price = parseFloat(quotedPrice);
     const minBudget = parseFloat(requestBudgetMin) || 0;
     const maxBudget = parseFloat(requestBudgetMax) || Infinity;
-    
+
     return {
       isValid: price >= minBudget && price <= maxBudget,
       isWithinRange: price >= minBudget && price <= maxBudget,
@@ -479,7 +479,7 @@ class MerchantServiceRequestService {
     const now = new Date();
     const created = new Date(requestCreatedAt);
     const diffInHours = Math.abs(now - created) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       return 'Less than 1 hour';
     } else if (diffInHours < 24) {

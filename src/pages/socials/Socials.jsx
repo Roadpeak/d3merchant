@@ -61,7 +61,7 @@ const Socials = () => {
     // Get auth headers using existing auth service
     const getAuthHeaders = () => {
         const token = merchantAuthService.getToken();
-        
+
         if (!token) {
             throw new Error('No authentication token found. Please log in again.');
         }
@@ -90,10 +90,10 @@ const Socials = () => {
             if (!checkAuthStatus()) {
                 throw new Error('Authentication required');
             }
-            
+
             const token = merchantAuthService.getToken();
-            
-            const response = await fetch('http://localhost:4000/api/v1/stores/merchant/my-stores', {
+
+            const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ const Socials = () => {
                 setStoreData(store);
                 return store.id;
             }
-            
+
             throw new Error('No store found for your merchant account. Please create a store first.');
         } catch (error) {
             console.error('Error fetching merchant store:', error);
@@ -132,10 +132,10 @@ const Socials = () => {
             if (!checkAuthStatus()) {
                 return [];
             }
-            
+
             const token = merchantAuthService.getToken();
-            
-            const response = await fetch(`http://localhost:4000/api/v1/merchant/socials/${storeId}`, {
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/socials/${storeId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -151,14 +151,14 @@ const Socials = () => {
                 if (response.status === 401) {
                     throw new Error('Authentication failed while fetching social links.');
                 }
-                
+
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || `Failed to fetch social links (${response.status})`);
             }
 
             const data = await response.json();
             return data.success ? (data.socials || []) : [];
-            
+
         } catch (error) {
             console.error('Error fetching social links:', error);
             return [];
@@ -171,22 +171,22 @@ const Socials = () => {
             try {
                 setLoading(true);
                 setError(null);
-                
+
                 if (!merchantAuthService.isAuthenticated()) {
                     throw new Error('Your session has expired. Please log in again.');
                 }
-                
+
                 const merchantStoreId = await getMerchantStore();
                 setStoreId(merchantStoreId);
-                
+
                 const socials = await fetchSocialLinks(merchantStoreId);
                 setSocialLinks(socials);
-                
+
             } catch (error) {
                 console.error('Error loading socials data:', error);
                 setError(error.message);
-                
-                if (error.message.includes('session has expired') || 
+
+                if (error.message.includes('session has expired') ||
                     error.message.includes('Authentication failed')) {
                     setTimeout(() => {
                         merchantAuthService.logout();
@@ -215,7 +215,7 @@ const Socials = () => {
     // Open modal to add a new social link
     const handleAddSocial = () => {
         if (!checkAuthStatus()) return;
-        
+
         setEditing(null);
         setNewSocial({ platform: '', link: '' });
         setIsModalOpen(true);
@@ -224,7 +224,7 @@ const Socials = () => {
     // Handle creating a new social media link
     const handleCreateSocial = async (e) => {
         e.preventDefault();
-        
+
         if (!newSocial.platform || !newSocial.link) {
             showError('Please fill in all fields');
             return;
@@ -245,8 +245,8 @@ const Socials = () => {
 
         try {
             setSubmitting(true);
-            
-            const response = await fetch('http://localhost:4000/api/v1/socials', {
+
+            const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/socials', {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -282,7 +282,7 @@ const Socials = () => {
     // Handle editing a social media link
     const handleEditSocial = (social) => {
         if (!checkAuthStatus()) return;
-        
+
         setEditing(social);
         setNewSocial({ platform: social.platform, link: social.link });
         setIsModalOpen(true);
@@ -291,7 +291,7 @@ const Socials = () => {
     // Handle updating the social media link
     const handleUpdateSocial = async (e) => {
         e.preventDefault();
-        
+
         if (!editing || !newSocial.platform || !newSocial.link) {
             showError('Please fill in all fields');
             return;
@@ -307,8 +307,8 @@ const Socials = () => {
 
         try {
             setSubmitting(true);
-            
-            const response = await fetch(`http://localhost:4000/api/v1/socials/${editing.id}`, {
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials/${editing.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -328,7 +328,7 @@ const Socials = () => {
                 throw new Error(data.message || 'Failed to update social link');
             }
 
-            setSocialLinks(socialLinks.map(social => 
+            setSocialLinks(socialLinks.map(social =>
                 social.id === editing.id ? data.social : social
             ));
             setIsModalOpen(false);
@@ -352,7 +352,7 @@ const Socials = () => {
         if (!checkAuthStatus()) return;
 
         try {
-            const response = await fetch(`http://localhost:4000/api/v1/socials/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials/${id}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
@@ -401,7 +401,7 @@ const Socials = () => {
 
     if (loading) {
         return (
-            <Layout 
+            <Layout
                 title="Social Media Links"
                 subtitle="Connect your social media presence"
             >
@@ -411,7 +411,7 @@ const Socials = () => {
     }
 
     return (
-        <Layout 
+        <Layout
             title="Social Media Links"
             subtitle="Connect your social media presence to grow your audience"
         >
@@ -451,7 +451,7 @@ const Socials = () => {
                                 </button>
                             )}
                         </div>
-                        
+
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="rounded-lg bg-white bg-opacity-10 p-4">
                                 <div className="text-2xl font-bold">{socialLinks.length}</div>
@@ -480,7 +480,7 @@ const Socials = () => {
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Social Links</h3>
                             <p className="text-gray-600 mb-6">{error}</p>
-                            
+
                             {error.includes('No store found') ? (
                                 <div className="space-y-3">
                                     <p className="text-sm text-gray-500">
@@ -542,7 +542,7 @@ const Socials = () => {
                                 {socialLinks.map((social) => {
                                     const platformInfo = getPlatformInfo(social.platform);
                                     const Icon = platformInfo.icon;
-                                    
+
                                     return (
                                         <div key={social.id} className="p-6 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-center justify-between">
@@ -550,7 +550,7 @@ const Socials = () => {
                                                     <div className={`p-3 ${platformInfo.bgColor} rounded-xl`}>
                                                         <Icon className={`h-6 w-6 ${platformInfo.color}`} />
                                                     </div>
-                                                    
+
                                                     <div>
                                                         <h3 className="text-lg font-semibold text-gray-900">
                                                             {platformInfo.name}

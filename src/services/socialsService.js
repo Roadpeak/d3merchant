@@ -1,5 +1,5 @@
 // services/socialsService.js
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
@@ -25,7 +25,7 @@ const socialsService = {
       if (data.success && data.stores && data.stores.length > 0) {
         return data.stores[0].id;
       }
-      
+
       throw new Error('No store found for merchant');
     } catch (error) {
       console.error('Error fetching merchant store:', error);
@@ -47,7 +47,7 @@ const socialsService = {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create social link');
       }
@@ -69,7 +69,7 @@ const socialsService = {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch social links');
       }
@@ -89,7 +89,7 @@ const socialsService = {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch social links');
       }
@@ -114,7 +114,7 @@ const socialsService = {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to update social link');
       }
@@ -135,7 +135,7 @@ const socialsService = {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to delete social link');
       }
@@ -170,13 +170,13 @@ const socialsService = {
     try {
       const urlObj = new URL(url);
       const domain = urlObj.hostname.replace('www.', '');
-      
+
       if (platformDomains[platform.toLowerCase()]) {
-        return platformDomains[platform.toLowerCase()].some(validDomain => 
+        return platformDomains[platform.toLowerCase()].some(validDomain =>
           domain.includes(validDomain)
         );
       }
-      
+
       return true; // Allow other URLs
     } catch (error) {
       return false;

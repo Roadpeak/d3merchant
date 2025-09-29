@@ -2,7 +2,7 @@
 
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 
 class BranchService {
   constructor() {
@@ -21,7 +21,7 @@ class BranchService {
     if (!workingDays || !Array.isArray(workingDays)) {
       return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     }
-    
+
     // Ensure proper capitalization for API
     return workingDays.map(day => {
       if (!day) return '';
@@ -35,7 +35,7 @@ class BranchService {
     if (!workingDays || !Array.isArray(workingDays)) {
       return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     }
-    
+
     return workingDays.map(day => {
       if (!day) return '';
       const dayStr = day.toString().trim();
@@ -77,7 +77,7 @@ class BranchService {
       }
 
       console.log('✅ Additional branch created successfully:', data.branch);
-      
+
       // Format working days in response
       if (data.branch && data.branch.workingDays) {
         data.branch.workingDays = this.formatWorkingDaysFromApi(data.branch.workingDays);
@@ -321,7 +321,7 @@ class BranchService {
         errors.workingDays = 'At least one working day must be selected';
       } else {
         const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        const invalidDays = branchData.workingDays.filter(day => 
+        const invalidDays = branchData.workingDays.filter(day =>
           !validDays.includes(day.charAt(0).toUpperCase() + day.slice(1).toLowerCase())
         );
         if (invalidDays.length > 0) {
@@ -363,7 +363,7 @@ class BranchService {
 
   formatBusinessHours(openingTime, closingTime) {
     if (!openingTime || !closingTime) return '24/7';
-    
+
     // Convert 24hr to 12hr format
     const formatTime = (time) => {
       const [hours, minutes] = time.split(':');
@@ -384,10 +384,10 @@ class BranchService {
 
     const now = new Date();
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
-    
+
     // Ensure working days are properly formatted
     const workingDays = this.formatWorkingDaysFromApi(branch.workingDays);
-    
+
     if (!workingDays.includes(currentDay)) {
       return false;
     }

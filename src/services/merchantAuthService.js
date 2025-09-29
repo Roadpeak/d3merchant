@@ -2,7 +2,7 @@
 import CryptoJS from 'crypto-js';
 import Cookies from 'js-cookie';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 const API_KEY = import.meta.env.VITE_API_KEY;
 
@@ -23,7 +23,7 @@ class MerchantAuthService {
       console.log('🏪 Store API URL:', this.storeURL);
       console.log('🔑 API Key configured:', API_KEY ? 'Yes' : 'No');
       console.log('🔐 Secret Key configured:', SECRET_KEY ? 'Yes' : 'No');
-      
+
       // Don't check authentication during initialization - let components handle it
       console.log('✅ Service initialized - authentication check deferred to components');
       this.isInitialized = true;
@@ -72,7 +72,7 @@ class MerchantAuthService {
           unencrypted: true,
           timestamp: Date.now()
         };
-        Cookies.set('merchant_auth_fallback', JSON.stringify(fallbackData), { 
+        Cookies.set('merchant_auth_fallback', JSON.stringify(fallbackData), {
           expires: 7,
           secure: import.meta.env.PROD,
           sameSite: 'strict',
@@ -85,8 +85,8 @@ class MerchantAuthService {
         JSON.stringify(authData),
         SECRET_KEY
       ).toString();
-      
-      Cookies.set('merchant_auth', encryptedData, { 
+
+      Cookies.set('merchant_auth', encryptedData, {
         expires: 7, // 7 days
         secure: import.meta.env.PROD, // Only secure in production
         sameSite: 'strict',
@@ -111,7 +111,7 @@ class MerchantAuthService {
         try {
           const decryptedBytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY);
           const decryptedData = decryptedBytes.toString(CryptoJS.enc.Utf8);
-          
+
           if (decryptedData) {
             return JSON.parse(decryptedData);
           }
@@ -146,7 +146,7 @@ class MerchantAuthService {
 
       const authData = this.getAuthData();
       const hasValidData = authData && authData.token && authData.merchant;
-      
+
       if (!hasValidData) {
         console.log('❌ No valid auth data found');
         return false;
@@ -171,7 +171,7 @@ class MerchantAuthService {
   checkAuthenticationStatus() {
     const isAuth = this.isAuthenticated();
     const authData = this.getAuthData();
-    
+
     return {
       isAuthenticated: isAuth,
       hasAuthData: !!authData,
@@ -210,11 +210,11 @@ class MerchantAuthService {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const now = Math.floor(Date.now() / 1000);
       const isExpired = payload.exp < now;
-      
+
       if (isExpired) {
         console.log('⏰ Token has expired');
       }
-      
+
       return isExpired;
     } catch (error) {
       console.error('💥 Error checking token expiration:', error);
@@ -227,9 +227,9 @@ class MerchantAuthService {
     try {
       console.log('🔑 Logging in merchant...');
       console.log('📧 Login email:', credentials.email);
-      
+
       this.authCheckInProgress = true;
-      
+
       const response = await fetch(`${this.baseURL}/login`, {
         method: 'POST',
         headers: this.getHeaders(false),
@@ -276,7 +276,7 @@ class MerchantAuthService {
     try {
       console.log('🔑 Registering new merchant...');
       console.log('📝 Registration data:', { ...merchantData, password: '[HIDDEN]' });
-      
+
       const response = await fetch(`${this.baseURL}/register`, {
         method: 'POST',
         headers: this.getHeaders(false),
@@ -312,7 +312,7 @@ class MerchantAuthService {
   async getCurrentMerchantProfile() {
     try {
       console.log('📋 Fetching current merchant profile...');
-      
+
       const response = await fetch(`${this.baseURL}/profile`, {
         method: 'GET',
         headers: this.getHeaders(true),
@@ -343,7 +343,7 @@ class MerchantAuthService {
   async updateMerchantProfile(merchantId = null, profileData = null) {
     try {
       let updateData, targetMerchantId;
-      
+
       if (merchantId && typeof merchantId === 'object' && profileData === null) {
         updateData = merchantId;
         targetMerchantId = this.getMerchantId();
@@ -357,7 +357,7 @@ class MerchantAuthService {
       }
 
       console.log('🔄 Updating merchant profile...', targetMerchantId);
-      
+
       const response = await fetch(`${this.storeURL}/merchant/profile`, {
         method: 'PUT',
         headers: this.getHeaders(true),
@@ -418,7 +418,7 @@ class MerchantAuthService {
     // Only trigger logout for specific auth errors, not all 401s
     if (status === 401) {
       const criticalAuthErrors = [
-        'TOKEN_EXPIRED', 'INVALID_TOKEN', 'MERCHANT_NOT_FOUND', 
+        'TOKEN_EXPIRED', 'INVALID_TOKEN', 'MERCHANT_NOT_FOUND',
         'PASSWORD_CHANGED'
       ];
 
@@ -447,20 +447,20 @@ class MerchantAuthService {
   logout() {
     try {
       console.log('🚪 Logging out merchant...');
-      
+
       // Clear stored auth data
       Cookies.remove('merchant_auth', { path: '/' });
       Cookies.remove('merchant_auth_fallback', { path: '/' });
-      
+
       // Clear any other related data
       localStorage.removeItem('merchant_temp_data');
       sessionStorage.clear();
-      
+
       // Clear logout flag
       this._shouldLogout = false;
-      
+
       console.log('✅ Logout completed');
-      
+
       // Redirect to login page
       window.location.href = '/accounts/sign-in';
     } catch (error) {

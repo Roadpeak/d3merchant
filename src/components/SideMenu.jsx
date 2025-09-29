@@ -28,7 +28,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
     const [chatUnreadCount, setChatUnreadCount] = useState(0);
     const [isLoadingChatCount, setIsLoadingChatCount] = useState(false);
     const [lastCountUpdate, setLastCountUpdate] = useState(0);
-    
+
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -60,11 +60,11 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             };
 
             const endpoints = [
-                'http://localhost:4000/api/v1/chat/merchant/unread-count',
-                'http://localhost:4000/api/v1/chat/unread-count', 
-                'http://localhost:4000/api/v1/merchant/chat/unread',
-                'http://localhost:4000/api/v1/chat/merchant/conversations',
-                'http://localhost:4000/api/v1/notifications/counts?type=new_message'
+                '${import.meta.env.VITE_API_BASE_URL}/api/v1/chat/merchant/unread-count',
+                '${import.meta.env.VITE_API_BASE_URL}/api/v1/chat/unread-count',
+                '${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/chat/unread',
+                '${import.meta.env.VITE_API_BASE_URL}/api/v1/chat/merchant/conversations',
+                '${import.meta.env.VITE_API_BASE_URL}/api/v1/notifications/counts?type=new_message'
             ];
 
             let unreadCount = 0;
@@ -73,7 +73,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             for (const endpoint of endpoints) {
                 try {
                     console.log(`🔗 Trying endpoint: ${endpoint}`);
-                    
+
                     const response = await fetch(endpoint, {
                         method: 'GET',
                         headers: headers,
@@ -86,7 +86,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                     if (response.ok) {
                         const data = await response.json();
                         console.log(`✅ Success with ${endpoint}:`, data);
-                        
+
                         if (endpoint.includes('conversations')) {
                             if (data.success && Array.isArray(data.data)) {
                                 unreadCount = data.data.reduce((total, conv) => {
@@ -101,7 +101,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                         } else if (typeof data === 'number') {
                             unreadCount = data;
                         }
-                        
+
                         successfulEndpoint = endpoint;
                         break;
                     }
@@ -160,7 +160,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             if (response.ok) {
                 const data = await response.json();
                 let count = 0;
-                
+
                 if (workingEndpoint.includes('conversations') && data.success && Array.isArray(data.data)) {
                     count = data.data.reduce((total, conv) => total + (conv.unreadCount || 0), 0);
                 } else {
@@ -192,11 +192,11 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
         const handleNewCustomerMessage = (messageData) => {
             console.log('📨 WebSocket: New customer message received:', messageData);
-            
-            const isCustomerMessage = messageData.sender === 'user' || 
-                                    messageData.sender === 'customer' || 
-                                    messageData.sender_type === 'user' ||
-                                    messageData.senderType === 'user';
+
+            const isCustomerMessage = messageData.sender === 'user' ||
+                messageData.sender === 'customer' ||
+                messageData.sender_type === 'user' ||
+                messageData.senderType === 'user';
 
             if (isCustomerMessage) {
                 setChatUnreadCount(prev => {
@@ -239,12 +239,12 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
         const interval = setInterval(() => {
             const now = Date.now();
             const timeSinceLastUpdate = now - lastCountUpdate;
-            
-            if (merchantAuthService.isAuthenticated() && 
+
+            if (merchantAuthService.isAuthenticated() &&
                 document.visibilityState === 'visible' &&
                 location.pathname !== '/dashboard/chat' &&
                 timeSinceLastUpdate > 15000) {
-                
+
                 console.log('⏰ Periodic chat count refresh');
                 quickCountUpdate();
             }
@@ -255,10 +255,10 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
     useEffect(() => {
         const handleVisibilityChange = () => {
-            if (!document.hidden && 
-                merchantAuthService.isAuthenticated() && 
+            if (!document.hidden &&
+                merchantAuthService.isAuthenticated() &&
                 location.pathname !== '/dashboard/chat') {
-                
+
                 console.log('👁️ Page became visible, refreshing chat count');
                 setTimeout(quickCountUpdate, 1000);
             }
@@ -363,9 +363,9 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
         const firstName = currentMerchant.first_name || '';
         const lastName = currentMerchant.last_name || '';
         const name = firstName && lastName ? `${firstName} ${lastName}` : firstName || 'Merchant';
-        const initials = firstName && lastName 
+        const initials = firstName && lastName
             ? `${firstName.charAt(0)}${lastName.charAt(0)}`
-            : firstName 
+            : firstName
                 ? firstName.charAt(0)
                 : 'M';
         const storeName = currentMerchant.store?.name || 'Discoun3';
@@ -434,7 +434,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                                         console.log('💬 Chat clicked, clearing count temporarily');
                                         setChatUnreadCount(0);
                                         localStorage.removeItem('cachedChatCount');
-                                        
+
                                         setTimeout(() => {
                                             console.log('🔄 Reloading count after chat visit');
                                             quickCountUpdate();
@@ -454,24 +454,22 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                                 title={!isExpanded ? `${item.name}${item.badge ? ` (${item.badge})` : ''}` : ''}
                                 aria-current={isActive ? 'page' : undefined}
                             >
-                                <span className={`flex-shrink-0 transition-colors duration-200 ${
-                                    item.showPulse && !item.isLoading ? 'animate-pulse' : ''
-                                } ${item.isLoading ? 'animate-spin' : ''}`}>
+                                <span className={`flex-shrink-0 transition-colors duration-200 ${item.showPulse && !item.isLoading ? 'animate-pulse' : ''
+                                    } ${item.isLoading ? 'animate-spin' : ''}`}>
                                     {item.icon}
                                 </span>
 
                                 {isExpanded && (
                                     <>
                                         <span className="flex-1 truncate">{item.name}</span>
-                                        
+
                                         {item.badge && (
-                                            <span className={`px-2 py-0.5 text-xs rounded-full text-white font-bold ${
-                                                item.badgeColor || 'bg-red-500'
-                                            } ${item.showPulse ? 'animate-pulse' : ''} min-w-[20px] text-center shadow-lg`}>
+                                            <span className={`px-2 py-0.5 text-xs rounded-full text-white font-bold ${item.badgeColor || 'bg-red-500'
+                                                } ${item.showPulse ? 'animate-pulse' : ''} min-w-[20px] text-center shadow-lg`}>
                                                 {item.badge}
                                             </span>
                                         )}
-                                        
+
                                         {isChatItem && item.isLoading && !item.badge && (
                                             <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                                         )}
@@ -480,9 +478,8 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
                                 {/* Badge for collapsed state */}
                                 {!isExpanded && item.badge && (
-                                    <div className={`absolute -top-1 -right-1 min-w-[16px] h-4 text-white text-xs rounded-full flex items-center justify-center font-bold px-1 ${
-                                        item.badgeColor || 'bg-red-500'
-                                    } ${item.showPulse ? 'animate-pulse' : ''} shadow-lg border border-blue-800`}>
+                                    <div className={`absolute -top-1 -right-1 min-w-[16px] h-4 text-white text-xs rounded-full flex items-center justify-center font-bold px-1 ${item.badgeColor || 'bg-red-500'
+                                        } ${item.showPulse ? 'animate-pulse' : ''} shadow-lg border border-blue-800`}>
                                         {item.badge}
                                     </div>
                                 )}
@@ -559,7 +556,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                     >
                         <LogOut size={20} />
                         {isExpanded && <span>Logout</span>}
-                        
+
                         {/* Tooltip for collapsed state */}
                         {!isExpanded && !isHovered && (
                             <div className="absolute left-full ml-3 px-3 py-2 bg-blue-950 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-blue-800">
