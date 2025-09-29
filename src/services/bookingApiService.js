@@ -89,12 +89,12 @@ export const getMerchantServiceBookings = async (params = {}) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching merchant service bookings:', error);
-        
+
         // Fallback to mock data for development
         if (error.response?.status === 404 || error.response?.status === 501) {
             return generateMockServiceBookings(params.limit || 20);
         }
-        
+
         handleApiError(error, 'fetching service bookings');
     }
 };
@@ -158,7 +158,7 @@ export const checkInServiceBooking = async (bookingId, arrivalTime = null, notes
             actualArrivalTime: arrivalTime || new Date().toTimeString().slice(0, 5)
         };
 
-        return await updateServiceBookingStatus(bookingId, 'in_progress', 
+        return await updateServiceBookingStatus(bookingId, 'in_progress',
             `${notes || 'Customer checked in'}. Arrival time: ${checkInData.actualArrivalTime}`);
     } catch (error) {
         console.error('Error checking in service booking:', error);
@@ -171,7 +171,7 @@ export const checkInServiceBooking = async (bookingId, arrivalTime = null, notes
  */
 export const completeServiceBooking = async (bookingId, notes = '') => {
     try {
-        return await updateServiceBookingStatus(bookingId, 'completed', 
+        return await updateServiceBookingStatus(bookingId, 'completed',
             notes || 'Service completed successfully');
     } catch (error) {
         console.error('Error completing service booking:', error);
@@ -184,7 +184,7 @@ export const completeServiceBooking = async (bookingId, notes = '') => {
  */
 export const confirmServiceBooking = async (bookingId, notes = '') => {
     try {
-        return await updateServiceBookingStatus(bookingId, 'confirmed', 
+        return await updateServiceBookingStatus(bookingId, 'confirmed',
             notes || 'Booking confirmed by merchant');
     } catch (error) {
         console.error('Error confirming service booking:', error);
@@ -197,11 +197,635 @@ export const confirmServiceBooking = async (bookingId, notes = '') => {
  */
 export const cancelServiceBooking = async (bookingId, reason = '') => {
     try {
-        return await updateServiceBookingStatus(bookingId, 'cancelled', 
+        return await updateServiceBookingStatus(bookingId, 'cancelled',
             reason || 'Booking cancelled by merchant');
     } catch (error) {
         console.error('Error cancelling service booking:', error);
         handleApiError(error, 'cancelling service booking');
+    }
+};
+
+// ==========================================
+// ENHANCED SERVICE BOOKING ACTION METHODS
+// ==========================================
+
+/**
+ * Enhanced check in a service booking (using new dedicated endpoint)
+ */
+export const checkInServiceBookingEnhanced = async (bookingId, arrivalTime = null, notes = '') => {
+    try {
+        console.log('Enhanced checking in service booking:', { bookingId, arrivalTime, notes });
+
+        const response = await axiosInstance.put(`/merchant/bookings/services/${bookingId}/checkin`, {
+            arrivalTime: arrivalTime || new Date().toTimeString().slice(0, 5),
+            notes: notes || 'Customer checked in'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Check-in failed');
+        }
+    } catch (error) {
+        console.error('Error checking in service booking:', error);
+        handleApiError(error, 'checking in service booking');
+    }
+};
+
+/**
+ * Enhanced confirm a service booking (using new dedicated endpoint)
+ */
+export const confirmServiceBookingEnhanced = async (bookingId, notes = '') => {
+    try {
+        console.log('Enhanced confirming service booking:', { bookingId, notes });
+
+        const response = await axiosInstance.put(`/merchant/bookings/services/${bookingId}/confirm`, {
+            notes: notes || 'Confirmed by merchant'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Confirmation failed');
+        }
+    } catch (error) {
+        console.error('Error confirming service booking:', error);
+        handleApiError(error, 'confirming service booking');
+    }
+};
+
+/**
+ * Enhanced complete a service booking (using new dedicated endpoint)
+ */
+export const completeServiceBookingEnhanced = async (bookingId, notes = '', actualDuration = null, rating = null) => {
+    try {
+        console.log('Enhanced completing service booking:', { bookingId, notes, actualDuration, rating });
+
+        const response = await axiosInstance.put(`/merchant/bookings/services/${bookingId}/complete`, {
+            notes: notes || 'Service completed',
+            actualDuration,
+            rating
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Completion failed');
+        }
+    } catch (error) {
+        console.error('Error completing service booking:', error);
+        handleApiError(error, 'completing service booking');
+    }
+};
+
+/**
+ * Enhanced cancel a service booking (using new dedicated endpoint)
+ */
+export const cancelServiceBookingEnhanced = async (bookingId, reason = '', refundRequested = false) => {
+    try {
+        console.log('Enhanced cancelling service booking:', { bookingId, reason, refundRequested });
+
+        const response = await axiosInstance.put(`/merchant/bookings/services/${bookingId}/cancel`, {
+            reason: reason || 'Cancelled by merchant',
+            refundRequested
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Cancellation failed');
+        }
+    } catch (error) {
+        console.error('Error cancelling service booking:', error);
+        handleApiError(error, 'cancelling service booking');
+    }
+};
+
+/**
+ * Enhanced update service booking status (using new dedicated endpoint)
+ */
+export const updateServiceBookingStatusEnhanced = async (bookingId, status, notes = '') => {
+    try {
+        console.log('Enhanced updating service booking status:', { bookingId, status, notes });
+
+        const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'];
+        if (!validStatuses.includes(status)) {
+            throw new Error(`Invalid status: ${status}. Valid statuses are: ${validStatuses.join(', ')}`);
+        }
+
+        const response = await axiosInstance.put(`/merchant/bookings/services/${bookingId}/status`, {
+            status,
+            notes
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Status update failed');
+        }
+    } catch (error) {
+        console.error('Error updating service booking status:', error);
+        handleApiError(error, 'updating service booking status');
+    }
+};
+
+// ==========================================
+// NEW BULK OPERATIONS FOR SERVICE BOOKINGS
+// ==========================================
+
+/**
+ * Bulk update service booking statuses (enhanced)
+ */
+export const bulkUpdateServiceBookingStatusEnhanced = async (bookingIds, status, notes = '') => {
+    try {
+        console.log('Enhanced bulk updating service booking statuses:', { bookingIds, status, notes });
+
+        if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+            throw new Error('Booking IDs array is required and cannot be empty');
+        }
+
+        if (bookingIds.length > 50) {
+            throw new Error('Cannot update more than 50 bookings at once');
+        }
+
+        const response = await axiosInstance.put('/merchant/bookings/services/bulk-status', {
+            bookingIds,
+            status,
+            notes
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Bulk update failed');
+        }
+    } catch (error) {
+        console.error('Error bulk updating service booking statuses:', error);
+        handleApiError(error, 'bulk updating service booking statuses');
+    }
+};
+
+/**
+ * Bulk check-in service bookings
+ */
+export const bulkCheckInServiceBookings = async (bookingIds, notes = '') => {
+    try {
+        console.log('Bulk checking in service bookings:', { bookingIds, notes });
+
+        if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+            throw new Error('Booking IDs array is required and cannot be empty');
+        }
+
+        const response = await axiosInstance.put('/merchant/bookings/services/bulk-checkin', {
+            bookingIds,
+            notes: notes || 'Bulk check-in'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Bulk check-in failed');
+        }
+    } catch (error) {
+        console.error('Error bulk checking in service bookings:', error);
+        handleApiError(error, 'bulk checking in service bookings');
+    }
+};
+
+// ==========================================
+// ENHANCED MERCHANT LISTING METHODS
+// ==========================================
+
+/**
+ * Get merchant's service bookings for a specific store (enhanced)
+ */
+export const getMerchantStoreServiceBookingsEnhanced = async (storeId, filters = {}) => {
+    try {
+        console.log('Enhanced getting merchant store service bookings:', { storeId, filters });
+
+        const params = new URLSearchParams();
+
+        if (filters.status) params.append('status', filters.status);
+        if (filters.limit) params.append('limit', filters.limit);
+        if (filters.offset) params.append('offset', filters.offset);
+        if (filters.startDate) params.append('startDate', filters.startDate);
+        if (filters.endDate) params.append('endDate', filters.endDate);
+
+        const response = await axiosInstance.get(`/merchant/bookings/stores/${storeId}/services?${params}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch store service bookings');
+        }
+    } catch (error) {
+        console.error('Error getting merchant store service bookings:', error);
+
+        // Fallback to existing method
+        try {
+            return await getStoreBookings(storeId, filters);
+        } catch (fallbackError) {
+            handleApiError(error, 'getting merchant store service bookings');
+        }
+    }
+};
+
+/**
+ * Get all merchant's service bookings across all stores (enhanced)
+ */
+export const getAllMerchantServiceBookingsEnhanced = async (filters = {}) => {
+    try {
+        console.log('Enhanced getting all merchant service bookings:', filters);
+
+        const params = new URLSearchParams();
+
+        if (filters.status) params.append('status', filters.status);
+        if (filters.limit) params.append('limit', filters.limit);
+        if (filters.offset) params.append('offset', filters.offset);
+        if (filters.startDate) params.append('startDate', filters.startDate);
+        if (filters.endDate) params.append('endDate', filters.endDate);
+        if (filters.storeId) params.append('storeId', filters.storeId);
+        if (filters.serviceId) params.append('serviceId', filters.serviceId);
+
+        const response = await axiosInstance.get(`/merchant/bookings/services?${params}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch merchant service bookings');
+        }
+    } catch (error) {
+        console.error('Error getting all merchant service bookings:', error);
+
+        // Fallback to existing method
+        try {
+            return await getMerchantServiceBookings(filters);
+        } catch (fallbackError) {
+            handleApiError(error, 'getting all merchant service bookings');
+        }
+    }
+};
+
+/**
+ * Get service booking analytics (enhanced)
+ */
+export const getServiceBookingAnalyticsEnhanced = async (period = 30, storeId = null) => {
+    try {
+        console.log('Enhanced getting service booking analytics:', { period, storeId });
+
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if (storeId) params.append('storeId', storeId);
+
+        const response = await axiosInstance.get(`/merchant/bookings/services/analytics?${params}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch analytics');
+        }
+    } catch (error) {
+        console.error('Error getting service booking analytics:', error);
+
+        // Fallback to existing analytics method
+        try {
+            const timeRange = period <= 1 ? '1d' : period <= 7 ? '7d' : period <= 30 ? '30d' : '90d';
+            return await getBookingAnalytics(timeRange);
+        } catch (fallbackError) {
+            handleApiError(error, 'getting service booking analytics');
+        }
+    }
+};
+
+/**
+ * Get specific service booking details for merchant (enhanced)
+ */
+export const getMerchantServiceBookingDetailsEnhanced = async (bookingId) => {
+    try {
+        console.log('Enhanced getting merchant service booking details:', { bookingId });
+
+        const response = await axiosInstance.get(`/merchant/bookings/services/${bookingId}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to fetch booking details');
+        }
+    } catch (error) {
+        console.error('Error getting service booking details:', error);
+
+        // Fallback to existing method
+        try {
+            return await getServiceBookingById(bookingId);
+        } catch (fallbackError) {
+            handleApiError(error, 'getting service booking details');
+        }
+    }
+};
+
+/**
+ * Add notes to a service booking
+ */
+export const addServiceBookingNotes = async (bookingId, notes) => {
+    try {
+        console.log('Adding notes to service booking:', { bookingId, notes });
+
+        if (!notes || notes.trim() === '') {
+            throw new Error('Notes content is required');
+        }
+
+        const response = await axiosInstance.put(`/merchant/bookings/services/${bookingId}/notes`, {
+            notes: notes.trim()
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to add notes');
+        }
+    } catch (error) {
+        console.error('Error adding notes to service booking:', error);
+        handleApiError(error, 'adding notes to service booking');
+    }
+};
+
+// ==========================================
+// QUICK ACTION METHODS (Alternative endpoints)
+// ==========================================
+
+/**
+ * Quick check-in (alternative endpoint)
+ */
+export const quickCheckIn = async (bookingId, arrivalTime = null, notes = '') => {
+    try {
+        console.log('Quick check-in:', { bookingId, arrivalTime, notes });
+
+        const response = await axiosInstance.post(`/merchant/bookings/${bookingId}/checkin`, {
+            arrivalTime: arrivalTime || new Date().toTimeString().slice(0, 5),
+            notes: notes || 'Customer checked in'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Quick check-in failed');
+        }
+    } catch (error) {
+        console.error('Error with quick check-in:', error);
+
+        // Fallback to existing method
+        try {
+            return await checkInServiceBooking(bookingId, arrivalTime, notes);
+        } catch (fallbackError) {
+            handleApiError(error, 'quick check-in');
+        }
+    }
+};
+
+/**
+ * Quick confirm (alternative endpoint)
+ */
+export const quickConfirm = async (bookingId, notes = '') => {
+    try {
+        console.log('Quick confirm:', { bookingId, notes });
+
+        const response = await axiosInstance.post(`/merchant/bookings/${bookingId}/confirm`, {
+            notes: notes || 'Confirmed by merchant'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Quick confirm failed');
+        }
+    } catch (error) {
+        console.error('Error with quick confirm:', error);
+
+        // Fallback to existing method
+        try {
+            return await confirmServiceBooking(bookingId, notes);
+        } catch (fallbackError) {
+            handleApiError(error, 'quick confirm');
+        }
+    }
+};
+
+/**
+ * Quick complete (alternative endpoint)
+ */
+export const quickComplete = async (bookingId, notes = '', actualDuration = null, rating = null) => {
+    try {
+        console.log('Quick complete:', { bookingId, notes, actualDuration, rating });
+
+        const response = await axiosInstance.post(`/merchant/bookings/${bookingId}/complete`, {
+            notes: notes || 'Service completed',
+            actualDuration,
+            rating
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Quick complete failed');
+        }
+    } catch (error) {
+        console.error('Error with quick complete:', error);
+
+        // Fallback to existing method
+        try {
+            return await completeServiceBooking(bookingId, notes);
+        } catch (fallbackError) {
+            handleApiError(error, 'quick complete');
+        }
+    }
+};
+
+/**
+ * Quick cancel (alternative endpoint)
+ */
+export const quickCancel = async (bookingId, reason = '') => {
+    try {
+        console.log('Quick cancel:', { bookingId, reason });
+
+        const response = await axiosInstance.post(`/merchant/bookings/${bookingId}/cancel`, {
+            reason: reason || 'Cancelled by merchant'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Quick cancel failed');
+        }
+    } catch (error) {
+        console.error('Error with quick cancel:', error);
+
+        // Fallback to existing method
+        try {
+            return await cancelServiceBooking(bookingId, reason);
+        } catch (fallbackError) {
+            handleApiError(error, 'quick cancel');
+        }
+    }
+};
+
+// ==========================================
+// UTILITY HELPER METHODS
+// ==========================================
+
+/**
+ * Get available booking statuses
+ */
+export const getAvailableBookingStatuses = () => {
+    return [
+        { value: 'pending', label: 'Pending', color: '#f59e0b', bgColor: '#fef3c7' },
+        { value: 'confirmed', label: 'Confirmed', color: '#3b82f6', bgColor: '#dbeafe' },
+        { value: 'in_progress', label: 'In Progress', color: '#eab308', bgColor: '#fef08a' },
+        { value: 'completed', label: 'Completed', color: '#10b981', bgColor: '#d1fae5' },
+        { value: 'cancelled', label: 'Cancelled', color: '#ef4444', bgColor: '#fee2e2' },
+        { value: 'no_show', label: 'No Show', color: '#6b7280', bgColor: '#f3f4f6' }
+    ];
+};
+
+/**
+ * Validate booking status
+ */
+export const isValidBookingStatus = (status) => {
+    const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'];
+    return validStatuses.includes(status);
+};
+
+/**
+ * Get status color for UI
+ */
+export const getStatusColor = (status) => {
+    const statusColors = {
+        pending: '#f59e0b',      // amber
+        confirmed: '#3b82f6',     // blue
+        in_progress: '#eab308',   // yellow
+        completed: '#10b981',     // emerald
+        cancelled: '#ef4444',     // red
+        no_show: '#6b7280'        // gray
+    };
+    return statusColors[status] || '#6b7280';
+};
+
+/**
+ * Get status background color for UI
+ */
+export const getStatusBgColor = (status) => {
+    const statusBgColors = {
+        pending: '#fef3c7',      // amber-100
+        confirmed: '#dbeafe',     // blue-100
+        in_progress: '#fef08a',   // yellow-100
+        completed: '#d1fae5',     // emerald-100
+        cancelled: '#fee2e2',     // red-100
+        no_show: '#f3f4f6'        // gray-100
+    };
+    return statusBgColors[status] || '#f3f4f6';
+};
+
+/**
+ * Format booking time for display
+ */
+export const formatBookingTime = (dateTime) => {
+    try {
+        const date = new Date(dateTime);
+        return {
+            date: date.toLocaleDateString(),
+            time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            full: date.toLocaleString(),
+            iso: date.toISOString(),
+            readable: `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        };
+    } catch (error) {
+        console.error('Error formatting booking time:', error);
+        return { date: 'Invalid', time: 'Invalid', full: 'Invalid Date', iso: '', readable: 'Invalid Date' };
+    }
+};
+
+/**
+ * Check if booking can be modified
+ */
+export const canModifyBooking = (booking) => {
+    if (!booking) return false;
+
+    const modifiableStatuses = ['pending', 'confirmed'];
+    const bookingTime = new Date(booking.startTime);
+    const now = new Date();
+
+    return modifiableStatuses.includes(booking.status) && bookingTime > now;
+};
+
+/**
+ * Check if booking can be checked in
+ */
+export const canCheckInBooking = (booking) => {
+    if (!booking || booking.status !== 'confirmed') return false;
+
+    const bookingTime = new Date(booking.startTime);
+    const now = new Date();
+    const timeDiff = (bookingTime - now) / (1000 * 60); // minutes
+
+    // Allow check-in 15 minutes early and up to 2 hours after scheduled time
+    return timeDiff >= -15 && timeDiff <= 120;
+};
+
+/**
+ * Get booking type label
+ */
+export const getBookingTypeLabel = (booking) => {
+    if (booking.serviceId || booking.Service || booking.bookingType === 'service') {
+        return 'Service';
+    }
+    if (booking.offerId || booking.Offer || booking.bookingType === 'offer') {
+        return 'Offer';
+    }
+    return 'Unknown';
+};
+
+/**
+ * Calculate booking duration in minutes
+ */
+export const calculateBookingDuration = (startTime, endTime) => {
+    try {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        return Math.round((end - start) / (1000 * 60));
+    } catch (error) {
+        console.error('Error calculating booking duration:', error);
+        return 0;
     }
 };
 
@@ -237,12 +861,12 @@ export const getMerchantOfferBookings = async (params = {}) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching merchant offer bookings:', error);
-        
+
         // Fallback to mock data for development
         if (error.response?.status === 404 || error.response?.status === 501) {
             return generateMockOfferBookings(params.limit || 20);
         }
-        
+
         handleApiError(error, 'fetching offer bookings');
     }
 };
@@ -306,7 +930,7 @@ export const checkInOfferBooking = async (bookingId, arrivalTime = null, notes =
             actualArrivalTime: arrivalTime || new Date().toTimeString().slice(0, 5)
         };
 
-        return await updateOfferBookingStatus(bookingId, 'in_progress', 
+        return await updateOfferBookingStatus(bookingId, 'in_progress',
             `${notes || 'Customer checked in for offer'}. Arrival time: ${checkInData.actualArrivalTime}`);
     } catch (error) {
         console.error('Error checking in offer booking:', error);
@@ -319,7 +943,7 @@ export const checkInOfferBooking = async (bookingId, arrivalTime = null, notes =
  */
 export const completeOfferBooking = async (bookingId, notes = '') => {
     try {
-        return await updateOfferBookingStatus(bookingId, 'completed', 
+        return await updateOfferBookingStatus(bookingId, 'completed',
             notes || 'Offer service completed successfully');
     } catch (error) {
         console.error('Error completing offer booking:', error);
@@ -332,7 +956,7 @@ export const completeOfferBooking = async (bookingId, notes = '') => {
  */
 export const confirmOfferBooking = async (bookingId, notes = '') => {
     try {
-        return await updateOfferBookingStatus(bookingId, 'confirmed', 
+        return await updateOfferBookingStatus(bookingId, 'confirmed',
             notes || 'Offer booking confirmed by merchant');
     } catch (error) {
         console.error('Error confirming offer booking:', error);
@@ -345,7 +969,7 @@ export const confirmOfferBooking = async (bookingId, notes = '') => {
  */
 export const cancelOfferBooking = async (bookingId, reason = '') => {
     try {
-        return await updateOfferBookingStatus(bookingId, 'cancelled', 
+        return await updateOfferBookingStatus(bookingId, 'cancelled',
             reason || 'Offer booking cancelled by merchant');
     } catch (error) {
         console.error('Error cancelling offer booking:', error);
@@ -385,11 +1009,11 @@ export const getMerchantAllBookings = async (params = {}) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching all merchant bookings:', error);
-        
+
         // Fallback: try to get both service and offer bookings separately
         try {
             console.log('Trying to combine service and offer bookings...');
-            
+
             const [serviceResult, offerResult] = await Promise.allSettled([
                 getMerchantServiceBookings({ ...params, limit: Math.floor((params.limit || 50) / 2) }),
                 getMerchantOfferBookings({ ...params, limit: Math.floor((params.limit || 50) / 2) })
@@ -469,7 +1093,7 @@ export const updateBookingStatus = async (bookingId, status, notes = '') => {
         // Try to determine booking type first
         try {
             const booking = await getBookingById(bookingId);
-            
+
             if (booking.bookingType === 'service' || booking.serviceId || booking.Service) {
                 return await updateServiceBookingStatus(bookingId, status, notes);
             } else if (booking.bookingType === 'offer' || booking.offerId || booking.Offer) {
@@ -557,7 +1181,7 @@ export const getBookingAnalytics = async (timeRange = '7d') => {
         return response.data;
     } catch (error) {
         console.error('Error fetching booking analytics:', error);
-        
+
         // Fallback: calculate analytics from booking data
         try {
             const allBookings = await getMerchantAllBookings({ limit: 1000 });
@@ -644,7 +1268,7 @@ export const exportBookingData = async (filters = {}, format = 'csv') => {
         return { success: true, message: 'Export completed successfully' };
     } catch (error) {
         console.error('Error exporting booking data:', error);
-        
+
         // Fallback: create simple export from current data
         try {
             const allBookings = await getMerchantAllBookings({ limit: 1000 });
@@ -680,12 +1304,12 @@ const generateMockServiceBookings = (limit = 20) => {
         const service = services[i % services.length];
         const customer = customers[i % customers.length];
         const status = statuses[i % statuses.length];
-        
+
         // Generate random date within last 30 days or next 30 days
         const now = new Date();
         const randomDays = (Math.random() - 0.5) * 60; // -30 to +30 days
         const bookingDate = new Date(now.getTime() + randomDays * 24 * 60 * 60 * 1000);
-        
+
         const booking = {
             id: 1000 + i,
             serviceId: service.id,
@@ -696,7 +1320,7 @@ const generateMockServiceBookings = (limit = 20) => {
             duration: service.duration,
             bookingType: 'service',
             createdAt: new Date(bookingDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            
+
             // User data
             User: {
                 id: 100 + i,
@@ -705,7 +1329,7 @@ const generateMockServiceBookings = (limit = 20) => {
                 email: customer.email,
                 phoneNumber: customer.phoneNumber
             },
-            
+
             // Service data
             Service: {
                 id: service.id,
@@ -713,7 +1337,7 @@ const generateMockServiceBookings = (limit = 20) => {
                 duration: service.duration,
                 price: service.price
             },
-            
+
             // Derived properties
             customerName: `${customer.firstName} ${customer.lastName}`,
             serviceName: service.name,
@@ -721,7 +1345,7 @@ const generateMockServiceBookings = (limit = 20) => {
             isPast: bookingDate < now,
             canModify: ['pending', 'confirmed'].includes(status) && bookingDate > now
         };
-        
+
         mockBookings.push(booking);
     }
 
@@ -768,12 +1392,12 @@ const generateMockOfferBookings = (limit = 20) => {
         const offer = offers[i % offers.length];
         const customer = customers[i % customers.length];
         const status = statuses[i % statuses.length];
-        
+
         // Generate random date within last 30 days or next 30 days
         const now = new Date();
         const randomDays = (Math.random() - 0.5) * 60; // -30 to +30 days
         const bookingDate = new Date(now.getTime() + randomDays * 24 * 60 * 60 * 1000);
-        
+
         const booking = {
             id: 2000 + i,
             offerId: offer.id,
@@ -784,7 +1408,7 @@ const generateMockOfferBookings = (limit = 20) => {
             bookingType: 'offer',
             accessFee: Math.round(offer.discounted_price * 0.1), // 10% access fee
             createdAt: new Date(bookingDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            
+
             // User data
             User: {
                 id: 200 + i,
@@ -793,7 +1417,7 @@ const generateMockOfferBookings = (limit = 20) => {
                 email: customer.email,
                 phoneNumber: customer.phoneNumber
             },
-            
+
             // Offer data
             Offer: {
                 id: offer.id,
@@ -802,7 +1426,7 @@ const generateMockOfferBookings = (limit = 20) => {
                 original_price: offer.original_price,
                 discounted_price: offer.discounted_price
             },
-            
+
             // Derived properties
             customerName: `${customer.firstName} ${customer.lastName}`,
             offerTitle: offer.title,
@@ -811,7 +1435,7 @@ const generateMockOfferBookings = (limit = 20) => {
             canModify: ['pending', 'confirmed'].includes(status) && bookingDate > now,
             accessFeePaid: ['confirmed', 'in_progress', 'completed'].includes(status)
         };
-        
+
         mockBookings.push(booking);
     }
 
@@ -841,10 +1465,10 @@ const generateMockOfferBookings = (limit = 20) => {
 const generateMockCombinedBookings = (limit = 20) => {
     const serviceLimit = Math.ceil(limit / 2);
     const offerLimit = Math.floor(limit / 2);
-    
+
     const serviceBookings = generateMockServiceBookings(serviceLimit);
     const offerBookings = generateMockOfferBookings(offerLimit);
-    
+
     const combinedBookings = [
         ...serviceBookings.bookings,
         ...offerBookings.bookings
@@ -878,7 +1502,7 @@ const generateMockCombinedBookings = (limit = 20) => {
 const calculateBookingAnalytics = (bookings = [], timeRange = '7d') => {
     const now = new Date();
     let startDate;
-    
+
     switch (timeRange) {
         case '1d':
             startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -896,15 +1520,15 @@ const calculateBookingAnalytics = (bookings = [], timeRange = '7d') => {
             startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     }
 
-    const filteredBookings = bookings.filter(booking => 
+    const filteredBookings = bookings.filter(booking =>
         new Date(booking.createdAt) >= startDate
     );
 
-    const serviceBookings = filteredBookings.filter(b => 
+    const serviceBookings = filteredBookings.filter(b =>
         b.serviceId || b.Service || b.bookingType === 'service'
     );
-    
-    const offerBookings = filteredBookings.filter(b => 
+
+    const offerBookings = filteredBookings.filter(b =>
         b.offerId || b.Offer || b.bookingType === 'offer'
     );
 
@@ -928,7 +1552,7 @@ const calculateBookingAnalytics = (bookings = [], timeRange = '7d') => {
             cancelled: filteredBookings.filter(b => b.status === 'cancelled').length,
             revenue: revenue,
             averageBookingValue: filteredBookings.length > 0 ? revenue / filteredBookings.length : 0,
-            completionRate: filteredBookings.length > 0 ? 
+            completionRate: filteredBookings.length > 0 ?
                 (filteredBookings.filter(b => b.status === 'completed').length / filteredBookings.length) * 100 : 0
         }
     };
@@ -956,7 +1580,7 @@ const getEmptyAnalytics = () => ({
 const createSimpleBookingExport = (bookings = [], format = 'csv') => {
     try {
         const headers = [
-            'ID', 'Type', 'Customer Name', 'Customer Email', 'Service/Offer', 
+            'ID', 'Type', 'Customer Name', 'Customer Email', 'Service/Offer',
             'Date', 'Time', 'Status', 'Duration', 'Price', 'Notes'
         ];
 
@@ -990,16 +1614,16 @@ const createSimpleBookingExport = (bookings = [], format = 'csv') => {
             link.remove();
             window.URL.revokeObjectURL(url);
 
-            return { 
-                success: true, 
+            return {
+                success: true,
                 message: 'Simple CSV export completed successfully',
-                recordCount: bookings.length 
+                recordCount: bookings.length
             };
         }
 
-        return { 
-            success: false, 
-            message: 'Only CSV export is supported in fallback mode' 
+        return {
+            success: false,
+            message: 'Only CSV export is supported in fallback mode'
         };
     } catch (error) {
         console.error('Error creating simple export:', error);
@@ -1031,7 +1655,7 @@ export const searchBookings = async (query, params = {}) => {
         throw new Error(response.data.message || 'Search failed');
     } catch (error) {
         console.error('Error searching bookings:', error);
-        
+
         // Fallback: search within all bookings
         try {
             const allBookings = await getMerchantAllBookings({ limit: 1000 });
@@ -1079,7 +1703,7 @@ export const filterBookings = async (filters = {}) => {
         throw new Error(response.data.message || 'Filter failed');
     } catch (error) {
         console.error('Error filtering bookings:', error);
-        
+
         // Fallback: filter within all bookings
         try {
             const allBookings = await getMerchantAllBookings({ limit: 1000 });
@@ -1163,7 +1787,7 @@ export const sendBookingReminder = async (bookingId, reminderType = 'default') =
 export const getTodayBookingSummary = async () => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        
+
         const response = await axiosInstance.get('/merchant/bookings/summary/today', {
             headers: getAuthHeaders()
         });
@@ -1173,13 +1797,13 @@ export const getTodayBookingSummary = async () => {
         }
 
         // Fallback: calculate from all bookings
-        const allBookings = await getMerchantAllBookings({ 
+        const allBookings = await getMerchantAllBookings({
             startDate: today,
             endDate: today,
             limit: 1000
         });
 
-        const todayBookings = (allBookings.bookings || []).filter(booking => 
+        const todayBookings = (allBookings.bookings || []).filter(booking =>
             new Date(booking.startTime).toDateString() === new Date().toDateString()
         );
 
@@ -1191,7 +1815,7 @@ export const getTodayBookingSummary = async () => {
                 in_progress: todayBookings.filter(b => b.status === 'in_progress').length,
                 completed: todayBookings.filter(b => b.status === 'completed').length,
                 cancelled: todayBookings.filter(b => b.status === 'cancelled').length,
-                upcoming: todayBookings.filter(b => 
+                upcoming: todayBookings.filter(b =>
                     new Date(b.startTime) > new Date() && ['confirmed', 'pending'].includes(b.status)
                 ).length
             },
@@ -1224,9 +1848,9 @@ export const getUpcomingBookings = async (hours = 24) => {
 
         const upcomingBookings = (allBookings.bookings || []).filter(booking => {
             const bookingTime = new Date(booking.startTime);
-            return bookingTime > now && 
-                   bookingTime <= futureTime && 
-                   ['confirmed', 'pending'].includes(booking.status);
+            return bookingTime > now &&
+                bookingTime <= futureTime &&
+                ['confirmed', 'pending'].includes(booking.status);
         }).sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
         return {
@@ -1240,6 +1864,409 @@ export const getUpcomingBookings = async (hours = 24) => {
         handleApiError(error, 'getting upcoming bookings');
     }
 };
+
+// ==========================================
+// AUTO-COMPLETION RELATED METHODS
+// ==========================================
+
+/**
+ * Manual complete a booking (override auto-completion)
+ */
+export const manualCompleteBooking = async (bookingId, notes = '', actualDuration = null) => {
+    try {
+        console.log('Manual completing booking:', { bookingId, notes, actualDuration });
+
+        const response = await axiosInstance.put(`/merchant/bookings/${bookingId}/manual-complete`, {
+            notes: notes || 'Manually completed by merchant',
+            actualDuration,
+            completionMethod: 'manual'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Manual completion failed');
+        }
+    } catch (error) {
+        console.error('Error manually completing booking:', error);
+        handleApiError(error, 'manually completing booking');
+    }
+};
+
+/**
+ * Get auto-completion statistics
+ */
+export const getAutoCompletionStats = async (storeId = null, period = '30d') => {
+    try {
+        console.log('Getting auto-completion statistics:', { storeId, period });
+
+        const params = new URLSearchParams();
+        if (storeId) params.append('storeId', storeId);
+        params.append('period', period);
+
+        const response = await axiosInstance.get(`/merchant/bookings/auto-completion/statistics?${params}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to get auto-completion statistics');
+        }
+    } catch (error) {
+        console.error('Error getting auto-completion statistics:', error);
+        handleApiError(error, 'getting auto-completion statistics');
+    }
+};
+
+// ==========================================
+// NO-SHOW RELATED METHODS
+// ==========================================
+
+/**
+ * Mark a booking as no-show
+ */
+export const markAsNoShow = async (bookingId, reason = '') => {
+    try {
+        console.log('Marking booking as no-show:', { bookingId, reason });
+
+        const response = await axiosInstance.put(`/merchant/bookings/${bookingId}/no-show`, {
+            reason: reason || 'Customer did not arrive'
+        }, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to mark as no-show');
+        }
+    } catch (error) {
+        console.error('Error marking booking as no-show:', error);
+        handleApiError(error, 'marking booking as no-show');
+    }
+};
+
+/**
+ * Get no-show statistics
+ */
+export const getNoShowStats = async (storeId = null, period = '30d') => {
+    try {
+        console.log('Getting no-show statistics:', { storeId, period });
+
+        const params = new URLSearchParams();
+        if (storeId) params.append('storeId', storeId);
+        params.append('period', period);
+
+        const response = await axiosInstance.get(`/merchant/bookings/no-show/statistics?${params}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to get no-show statistics');
+        }
+    } catch (error) {
+        console.error('Error getting no-show statistics:', error);
+        handleApiError(error, 'getting no-show statistics');
+    }
+};
+
+// ==========================================
+// ENHANCED BOOKING STATUS METHODS
+// ==========================================
+
+/**
+ * Get booking with detailed status information
+ */
+export const getBookingWithDetails = async (bookingId) => {
+    try {
+        console.log('Getting booking with details:', bookingId);
+
+        const response = await axiosInstance.get(`/merchant/bookings/view/${bookingId}?includeDetails=true`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to get booking details');
+        }
+    } catch (error) {
+        console.error('Error getting booking details:', error);
+        handleApiError(error, 'getting booking details');
+    }
+};
+
+/**
+ * Get service automation status
+ */
+export const getAutomationStatus = async () => {
+    try {
+        console.log('Getting automation service status');
+
+        const response = await axiosInstance.get('/merchant/bookings/automation/status', {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data) {
+            return response.data;
+        } else {
+            throw new Error('Failed to get automation status');
+        }
+    } catch (error) {
+        console.error('Error getting automation status:', error);
+        return {
+            success: false,
+            error: error.message,
+            noShowService: { isRunning: false },
+            autoCompletionService: { isRunning: false }
+        };
+    }
+};
+
+// ==========================================
+// ENHANCED BOOKING HISTORY METHODS
+// ==========================================
+
+/**
+ * Get booking timeline (detailed history)
+ */
+export const getBookingTimeline = async (bookingId) => {
+    try {
+        console.log('Getting booking timeline:', bookingId);
+
+        const response = await axiosInstance.get(`/merchant/bookings/${bookingId}/timeline`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to get booking timeline');
+        }
+    } catch (error) {
+        console.error('Error getting booking timeline:', error);
+        handleApiError(error, 'getting booking timeline');
+    }
+};
+
+/**
+ * Get performance metrics for bookings
+ */
+export const getBookingPerformanceMetrics = async (filters = {}) => {
+    try {
+        console.log('Getting booking performance metrics:', filters);
+
+        const params = new URLSearchParams();
+        Object.keys(filters).forEach(key => {
+            if (filters[key]) params.append(key, filters[key]);
+        });
+
+        const response = await axiosInstance.get(`/merchant/bookings/metrics?${params}`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to get performance metrics');
+        }
+    } catch (error) {
+        console.error('Error getting performance metrics:', error);
+        handleApiError(error, 'getting performance metrics');
+    }
+};
+
+// ==========================================
+// UTILITY METHODS FOR NEW FEATURES
+// ==========================================
+
+/**
+ * Check if booking is eligible for auto-completion
+ */
+export const checkAutoCompletionEligibility = async (bookingId) => {
+    try {
+        console.log('Checking auto-completion eligibility:', bookingId);
+
+        const response = await axiosInstance.get(`/merchant/bookings/${bookingId}/auto-completion/eligible`, {
+            headers: getAuthHeaders()
+        });
+
+        return response.data;
+    } catch (error) {
+        console.error('Error checking auto-completion eligibility:', error);
+        return { eligible: false, reason: 'Unable to check eligibility' };
+    }
+};
+
+/**
+ * Check if booking is eligible for no-show
+ */
+export const checkNoShowEligibility = async (bookingId) => {
+    try {
+        console.log('Checking no-show eligibility:', bookingId);
+
+        const response = await axiosInstance.get(`/merchant/bookings/${bookingId}/no-show/eligible`, {
+            headers: getAuthHeaders()
+        });
+
+        return response.data;
+    } catch (error) {
+        console.error('Error checking no-show eligibility:', error);
+        return { eligible: false, reason: 'Unable to check eligibility' };
+    }
+};
+
+/**
+ * Get service configuration for automation
+ */
+export const getServiceAutomationConfig = async (serviceId) => {
+    try {
+        console.log('Getting service automation config:', serviceId);
+
+        const response = await axiosInstance.get(`/services/${serviceId}/automation-config`, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to get automation config');
+        }
+    } catch (error) {
+        console.error('Error getting service automation config:', error);
+        handleApiError(error, 'getting service automation config');
+    }
+};
+
+/**
+ * Update service automation settings
+ */
+export const updateServiceAutomationConfig = async (serviceId, config) => {
+    try {
+        console.log('Updating service automation config:', { serviceId, config });
+
+        const response = await axiosInstance.put(`/services/${serviceId}/automation-config`, config, {
+            headers: getAuthHeaders()
+        });
+
+        if (response.data && response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data?.message || 'Failed to update automation config');
+        }
+    } catch (error) {
+        console.error('Error updating service automation config:', error);
+        handleApiError(error, 'updating service automation config');
+    }
+};
+
+// ==========================================
+// ENHANCED STATUS UTILITIES
+// ==========================================
+
+/**
+ * Get enhanced status color including new statuses
+ */
+export const getEnhancedStatusColor = (status, autoCompleted = false) => {
+    const baseColor = getStatusColor(status);
+
+    // Add special styling for auto-completed bookings
+    if (status === 'completed' && autoCompleted) {
+        return 'bg-blue-100 text-blue-800'; // Different color for auto-completed
+    }
+
+    switch (status?.toLowerCase()) {
+        case 'no_show':
+            return 'bg-gray-100 text-gray-800';
+        default:
+            return baseColor;
+    }
+};
+
+/**
+ * Get status badge text including completion method
+ */
+export const getStatusBadgeText = (booking) => {
+    const status = booking.status;
+
+    if (status === 'completed') {
+        return booking.auto_completed ? 'Auto-Completed' : 'Completed';
+    }
+
+    if (status === 'no_show') {
+        return 'No Show';
+    }
+
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+/**
+ * Calculate booking efficiency metrics
+ */
+export const calculateBookingEfficiency = (booking) => {
+    if (booking.status !== 'completed') return null;
+
+    const scheduledDuration = booking.Service?.duration || 60;
+    const actualDuration = booking.actual_duration || scheduledDuration;
+
+    return {
+        scheduledDuration,
+        actualDuration,
+        efficiency: (scheduledDuration / actualDuration) * 100,
+        overtime: Math.max(0, actualDuration - scheduledDuration),
+        isOnTime: actualDuration <= scheduledDuration,
+        completionMethod: booking.completion_method || (booking.auto_completed ? 'automatic' : 'manual')
+    };
+};
+
+/**
+ * Format booking timing information
+ */
+export const formatBookingTiming = (booking) => {
+    const result = {
+        scheduled: {
+            date: formatBookingTime(booking.startTime).date,
+            time: formatBookingTime(booking.startTime).time
+        }
+    };
+
+    if (booking.checked_in_at) {
+        result.checkedIn = {
+            time: formatBookingTime(booking.checked_in_at).time,
+            difference: moment(booking.checked_in_at).diff(moment(booking.startTime), 'minutes')
+        };
+    }
+
+    if (booking.service_started_at) {
+        result.serviceStarted = {
+            time: formatBookingTime(booking.service_started_at).time
+        };
+    }
+
+    if (booking.completedAt) {
+        result.completed = {
+            time: formatBookingTime(booking.completedAt).time,
+            method: booking.completion_method || (booking.auto_completed ? 'automatic' : 'manual')
+        };
+    }
+
+    if (booking.no_show_marked_at) {
+        result.noShow = {
+            time: formatBookingTime(booking.no_show_marked_at).time,
+            reason: booking.no_show_reason
+        };
+    }
+
+    return result;
+};
+
+
+
 
 // ===== DEFAULT EXPORT =====
 
@@ -1288,5 +2315,67 @@ export default {
 
     // Summary Methods
     getTodayBookingSummary,
-    getUpcomingBookings
+    getUpcomingBookings,
+
+    // Enhanced Service Booking Actions
+    checkInServiceBookingEnhanced,
+    confirmServiceBookingEnhanced,
+    completeServiceBookingEnhanced,
+    cancelServiceBookingEnhanced,
+    updateServiceBookingStatusEnhanced,
+
+    // New Bulk Operations
+    bulkUpdateServiceBookingStatusEnhanced,
+    bulkCheckInServiceBookings,
+
+    // Enhanced Merchant Listing
+    getMerchantStoreServiceBookingsEnhanced,
+    getAllMerchantServiceBookingsEnhanced,
+    getServiceBookingAnalyticsEnhanced,
+    getMerchantServiceBookingDetailsEnhanced,
+    addServiceBookingNotes,
+
+    // Quick Actions
+    quickCheckIn,
+    quickConfirm,
+    quickComplete,
+    quickCancel,
+
+    // Utilities
+    getAvailableBookingStatuses,
+    isValidBookingStatus,
+    getStatusColor,
+    getStatusBgColor,
+    formatBookingTime,
+    canModifyBooking,
+    canCheckInBooking,
+    getBookingTypeLabel,
+    calculateBookingDuration,
+
+    // New auto-completion methods
+    manualCompleteBooking,
+    getAutoCompletionStats,
+
+    // New no-show methods
+    markAsNoShow,
+    getNoShowStats,
+
+    // Enhanced booking methods
+    getBookingWithDetails,
+    getAutomationStatus,
+    getBookingTimeline,
+    getBookingPerformanceMetrics,
+
+    // Utility methods
+    checkAutoCompletionEligibility,
+    checkNoShowEligibility,
+    getServiceAutomationConfig,
+    updateServiceAutomationConfig,
+
+    // Enhanced status utilities
+    getEnhancedStatusColor,
+    getStatusBadgeText,
+    calculateBookingEfficiency,
+    formatBookingTiming
+ 
 };

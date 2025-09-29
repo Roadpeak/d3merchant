@@ -82,11 +82,10 @@ const LoadingSpinner = () => (
 );
 
 const InfoBox = ({ type, message, onClose }) => (
-  <div className={`border rounded-lg p-4 mb-6 ${
-    type === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
-    type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-    'bg-blue-50 border-blue-200 text-blue-700'
-  }`}>
+  <div className={`border rounded-lg p-4 mb-6 ${type === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
+      type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+        'bg-blue-50 border-blue-200 text-blue-700'
+    }`}>
     <div className="flex justify-between items-start">
       <p>{message}</p>
       {onClose && (
@@ -158,19 +157,19 @@ export default function MerchantServiceRequestDashboard() {
   const loadServiceRequests = async () => {
     try {
       console.log('📊 Loading service requests for merchant...');
-      
+
       const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-      
+
       const response = await merchantServiceRequestService.getServiceRequestsForMerchant(filters);
-      
+
       if (response && response.success) {
         console.log('✅ Loaded service requests from API:', response.data.requests.length);
         setServiceRequests(response.data.requests);
-        
+
         if (response.data.pagination) {
           setPagination(response.data.pagination);
         }
-        
+
         return response.data.requests;
       } else {
         throw new Error(response?.message || 'Failed to load service requests');
@@ -187,11 +186,11 @@ export default function MerchantServiceRequestDashboard() {
   const loadMerchantStores = async () => {
     try {
       console.log('🏪 Loading merchant stores...');
-      
+
       const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-      
+
       const response = await merchantServiceRequestService.getMerchantStores();
-      
+
       if (response && response.success) {
         console.log('✅ Loaded merchant stores:', response.data?.stores?.length || 0);
         setMerchantStores(response.data?.stores || []);
@@ -211,11 +210,11 @@ export default function MerchantServiceRequestDashboard() {
   const loadDashboardStats = async () => {
     try {
       console.log('📊 Loading dashboard statistics...');
-      
+
       const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-      
+
       const response = await merchantServiceRequestService.getDashboardStats();
-      
+
       if (response && response.success) {
         console.log('✅ Loaded dashboard stats:', response.data);
         setDashboardStats(response.data);
@@ -233,11 +232,11 @@ export default function MerchantServiceRequestDashboard() {
   const loadMerchantOffers = async () => {
     try {
       console.log('📤 Loading merchant offers...');
-      
+
       const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-      
+
       const response = await merchantServiceRequestService.getMerchantOffers();
-      
+
       if (response && response.success) {
         console.log('✅ Loaded merchant offers:', response.data?.offers?.length || 0);
         setMerchantOffers(response.data?.offers || []);
@@ -264,7 +263,7 @@ export default function MerchantServiceRequestDashboard() {
         // Check authentication
         const isAuth = merchantAuthService.isAuthenticated();
         console.log('🔐 Authentication status:', isAuth);
-        
+
         if (!isAuth) {
           console.log('❌ User not authenticated, redirecting to login...');
           merchantAuthService.logout();
@@ -284,11 +283,11 @@ export default function MerchantServiceRequestDashboard() {
 
         // Load all dashboard data
         await loadDashboardData();
-        
+
       } catch (err) {
         console.error('💥 Dashboard initialization error:', err);
         setError(err.message || 'Failed to initialize dashboard');
-        
+
         // If it's an auth error, redirect to login
         if (err.message?.includes('log in') || err.message?.includes('authenticate')) {
           setTimeout(() => merchantAuthService.logout(), 2000);
@@ -314,7 +313,7 @@ export default function MerchantServiceRequestDashboard() {
   const loadDashboardData = async () => {
     try {
       console.log('📊 Loading all dashboard data...');
-      
+
       // Load all data in parallel
       const [stores, requests, offers, stats] = await Promise.allSettled([
         loadMerchantStores(),
@@ -330,7 +329,7 @@ export default function MerchantServiceRequestDashboard() {
         offers: offers.status === 'fulfilled' ? offers.value?.length : 'failed',
         stats: stats.status === 'fulfilled' ? 'loaded' : 'failed'
       });
-      
+
     } catch (err) {
       console.error('💥 Error loading dashboard data:', err);
     }
@@ -339,10 +338,10 @@ export default function MerchantServiceRequestDashboard() {
   // ✅ FIXED: Submit STORE offer (not individual merchant offer)
   const handleOfferFormSubmit = async () => {
     setSubmitting(true);
-    
+
     try {
       console.log('📤 Submitting STORE offer for request:', selectedRequest.id);
-      
+
       // Validate required fields
       if (!offerForm.storeId || !offerForm.quotedPrice || !offerForm.message || !offerForm.availability) {
         throw new Error('Please fill in all required fields');
@@ -356,7 +355,7 @@ export default function MerchantServiceRequestDashboard() {
 
       // Import service dynamically
       const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-      
+
       // Validate offer data
       const validationErrors = merchantServiceRequestService.validateOfferData(offerForm);
       if (validationErrors.length > 0) {
@@ -387,10 +386,10 @@ export default function MerchantServiceRequestDashboard() {
         estimatedDuration: offerForm.estimatedDuration.trim() || null,
         includesSupplies: offerForm.includesSupplies
       });
-      
+
       if (result && result.success) {
         console.log('✅ Store offer submitted successfully');
-        
+
         // Reset form and close modal
         setShowOfferForm(false);
         setOfferForm({
@@ -402,14 +401,14 @@ export default function MerchantServiceRequestDashboard() {
           includesSupplies: false
         });
         setSelectedRequest(null);
-        
+
         // Refresh data
         await Promise.all([
           loadMerchantOffers(),
           loadDashboardStats(),
           loadServiceRequests()
         ]);
-        
+
         alert(`Store offer submitted successfully! Your store "${selectedStore?.name}" has offered $${price} for this service request.`);
       } else {
         throw new Error(result?.message || 'Failed to submit store offer');
@@ -513,23 +512,23 @@ export default function MerchantServiceRequestDashboard() {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8">
-          <InfoBox 
-            type="error" 
+          <InfoBox
+            type="error"
             message={error}
             onClose={() => setError(null)}
           />
           <div className="text-center">
-            <button 
+            <button
               onClick={() => {
                 setError(null);
                 setInitialized(false);
-              }} 
+              }}
               className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 font-medium mr-4"
             >
               Retry
             </button>
-            <button 
-              onClick={() => merchantAuthService.logout()} 
+            <button
+              onClick={() => merchantAuthService.logout()}
               className="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 font-medium"
             >
               Logout
@@ -550,7 +549,7 @@ export default function MerchantServiceRequestDashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Merchant Dashboard</h1>
                 <p className="text-gray-600">Manage service requests and offers for your stores</p>
-                
+
                 {currentMerchant && (
                   <div className="mt-2 text-sm text-gray-500">
                     Welcome, {currentMerchant.first_name} {currentMerchant.last_name} ({currentMerchant.email_address})
@@ -621,7 +620,7 @@ export default function MerchantServiceRequestDashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                  <p className="text-2xl font-bold text-gray-900">${dashboardStats.totalEarnings?.toLocaleString() || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">KSH {dashboardStats.totalEarnings?.toLocaleString() || 0}</p>
                   <p className="text-xs text-gray-500">From completed services</p>
                 </div>
               </div>
@@ -645,8 +644,8 @@ export default function MerchantServiceRequestDashboard() {
 
           {/* No Stores Warning */}
           {merchantStores.length === 0 && (
-            <InfoBox 
-              type="warning" 
+            <InfoBox
+              type="warning"
               message="You don't have any active stores yet. Create a store to start receiving service requests that match your business categories!"
             />
           )}
@@ -677,19 +676,18 @@ export default function MerchantServiceRequestDashboard() {
                   <Filter className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium">Filters:</span>
                 </div>
-                
+
                 <select
                   value={filters.budget}
                   onChange={(e) => handleFilterChange('budget', e.target.value)}
                   className="border border-gray-200 rounded px-3 py-1 text-sm"
                 >
-                  <option value="all">All Budgets</option>
-                  <option value="0-100">$0 - $100</option>
-                  <option value="100-300">$100 - $300</option>
-                  <option value="300-500">$300 - $500</option>
-                  <option value="500+">$500+</option>
+                  <option value="0-1000">KSH 0 - 1000</option>
+                  <option value="1000-10000">KSH 1000 - 10000</option>
+                  <option value="10000-50000">KSH 10000 - 50000</option>
+                  <option value="50000+">KSH 50000+</option>
                 </select>
-                
+
                 <select
                   value={filters.timeline}
                   onChange={(e) => handleFilterChange('timeline', e.target.value)}
@@ -721,7 +719,7 @@ export default function MerchantServiceRequestDashboard() {
                 <div className="text-center py-12">
                   <div className="text-gray-400 text-xl mb-4">No service requests available</div>
                   <p className="text-gray-600 mb-6">
-                    {merchantStores.length === 0 
+                    {merchantStores.length === 0
                       ? 'Create stores first to start receiving service requests that match your business categories.'
                       : 'Check back later for new service requests matching your store categories.'
                     }
@@ -738,11 +736,10 @@ export default function MerchantServiceRequestDashboard() {
                             <div className="flex-1">
                               <div className="flex items-center space-x-3 mb-2">
                                 <h3 className="text-xl font-semibold">{request.title}</h3>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  request.priority === 'urgent' ? 'bg-red-100 text-red-800' : 
-                                  request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                  'bg-green-100 text-green-800'
-                                }`}>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                    request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-green-100 text-green-800'
+                                  }`}>
                                   {request.priority}
                                 </span>
                                 <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -795,7 +792,7 @@ export default function MerchantServiceRequestDashboard() {
                                 </div>
 
                                 <div className="flex space-x-2">
-                                  <button 
+                                  <button
                                     className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 font-medium"
                                     onClick={() => {
                                       alert('View Details functionality would show full request details');
@@ -933,7 +930,7 @@ export default function MerchantServiceRequestDashboard() {
                             <div className="flex justify-between items-start mb-2">
                               <div>
                                 <span className="text-sm text-gray-600">Store Quote:</span>
-                                <p className="text-2xl font-bold text-green-600">${offer.quotedPrice}</p>
+                                <p className="text-2xl font-bold text-green-600">KSH {offer.quotedPrice}</p>
                               </div>
                               <div className="text-right">
                                 <span className="text-sm text-gray-600">Customer Budget:</span>
@@ -1032,13 +1029,12 @@ export default function MerchantServiceRequestDashboard() {
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span className="text-gray-500">Customer budget: {selectedRequest.budget}</span>
                     {offerForm.quotedPrice && (
-                      <span className={`font-medium ${
-                        isPriceInBudget(offerForm.quotedPrice, selectedRequest) 
-                          ? 'text-green-600' 
+                      <span className={`font-medium ${isPriceInBudget(offerForm.quotedPrice, selectedRequest)
+                          ? 'text-green-600'
                           : 'text-orange-600'
-                      }`}>
-                        {isPriceInBudget(offerForm.quotedPrice, selectedRequest) 
-                          ? '✓ Within budget' 
+                        }`}>
+                        {isPriceInBudget(offerForm.quotedPrice, selectedRequest)
+                          ? '✓ Within budget'
                           : '⚠ Outside budget range'
                         }
                       </span>

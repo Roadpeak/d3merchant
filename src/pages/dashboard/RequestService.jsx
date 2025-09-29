@@ -56,19 +56,24 @@ const RequestService = () => {
   };
 
   const formatBudget = (request) => {
+    // If budget is already formatted from backend, return it
+    if (request.budget && typeof request.budget === 'string' && request.budget.includes('KSH')) {
+      return request.budget;
+    }
+    
     const min = request.budgetMin || request.budget_min;
     const max = request.budgetMax || request.budget_max;
     
     if (min && max) {
-      return `$${min} - $${max}`;
+      return `KSH ${min} - KSH ${max}`;
     } else if (min) {
-      return `$${min}+`;
+      return `KSH ${min}+`;
     } else if (max) {
-      return `Up to $${max}`;
+      return `Up to KSH ${max}`;
     }
     return 'Budget not specified';
   };
-
+  
   const getTimeAgo = (dateString) => {
     try {
       const now = new Date();
