@@ -28,8 +28,6 @@ jobs:
           context: .
           push: true
           tags: roadpeak/discoun3-merchants:latest
-          cache-from: type=registry,ref=roadpeak/discoun3-merchants:buildcache
-          cache-to: type=registry,ref=roadpeak/discoun3-merchants:buildcache,mode=max
 
       - name: Deploy to Digital Ocean
         uses: appleboy/ssh-action@master
@@ -38,21 +36,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
-            # Navigate to deployment directory
-            cd /root/discoun3-deployment || mkdir -p /root/discoun3-deployment && cd /root/discoun3-deployment
-            
-            # Pull latest docker-compose file if not exists
-            if [ ! -f docker-compose.yml ]; then
-              git clone https://github.com/roadpeak/discoun3-deployment.git /tmp/deploy
-              cp /tmp/deploy/docker-compose.yml .
-              rm -rf /tmp/deploy
-            fi
-            
-            # Pull latest image
+            cd /root/discoun3-deployment
             docker pull roadpeak/discoun3-merchants:latest
-            
-            # Restart the merchants container
-            docker-compose up -d --no-deps --build merchants
-            
-            # Clean up old images
+            docker-compose up -d --no-deps merchants
             docker image prune -f
