@@ -1,5 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
+
+# Hardcode production environment variables
+ENV VITE_API_BASE_URL=https://api.discoun3ree.com/api/v1
+
 COPY package*.json ./
 RUN npm ci
 COPY . .
