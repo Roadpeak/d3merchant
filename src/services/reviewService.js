@@ -1,6 +1,6 @@
 // services/reviewService.js - New service for handling reviews
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.discoun3ree.com/api/v1';
 
 class ReviewService {
   constructor() {
