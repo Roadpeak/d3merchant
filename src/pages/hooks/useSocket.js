@@ -199,11 +199,9 @@ const useSocket = (user) => {
       setConnectionError('Invalid or expired authentication token');
       return;
     }
-
-    const socketUrl = process.env.NODE_ENV === 'production'
-      ? window.location.origin
-      : 'https://api.discoun3ree.com/api/v1';
-
+     
+    const socketUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000';
+    
     console.log('🌐 Connecting to customer↔store socket server:', socketUrl);
 
     // Enhanced socket configuration for customer↔store communication

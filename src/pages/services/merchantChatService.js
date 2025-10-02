@@ -2,19 +2,10 @@
 import merchantAuthService from '../../services/merchantAuthService';
 
 class MerchantChatService {
-  constructor() {
-    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-
-    this.API_BASE = process.env.NODE_ENV === 'production'
-      ? `${protocol}//${hostname}/api/v1`
-      : 'https://api.discoun3ree.com/api/v1';
-
-    this.SOCKET_URL = process.env.NODE_ENV === 'production'
-      ? `${protocol}//${hostname}`
-      : 'https://api.discoun3ree.com/api/v1';
-  }
-
+constructor() {
+  this.API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+  this.SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000';
+}
   // Get merchant auth token
   getAuthToken() {
     console.log('🏪 Getting merchant auth token...');
