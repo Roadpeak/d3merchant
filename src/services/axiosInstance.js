@@ -17,7 +17,7 @@ axiosInstance.interceptors.request.use(
             // Always add API key if available
             const apiKey = import.meta.env.VITE_API_KEY;
             if (apiKey) {
-                config.headers['api-key'] = apiKey;
+                config.headers['x-api-key'] = apiKey;
                 console.log('✅ API key added to request');
             } else {
                 console.warn('⚠️ VITE_API_KEY not found in environment variables');
