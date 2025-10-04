@@ -2,7 +2,7 @@
 import CryptoJS from 'crypto-js';
 import Cookies from 'js-cookie';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.discoun3ree.com/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 const API_KEY = import.meta.env.VITE_API_KEY;
 
@@ -41,7 +41,7 @@ class MerchantAuthService {
 
     // Always include API key if configured
     if (API_KEY) {
-      headers['api-key'] = API_KEY;
+      headers['x-api-key'] = API_KEY;
       console.log('✅ API key added to request headers');
     } else {
       console.warn('⚠️ VITE_API_KEY not found in environment variables');

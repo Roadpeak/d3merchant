@@ -1,10 +1,11 @@
 // services/socialsService.js
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://api.discoun3ree.com/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
   return {
     'Content-Type': 'application/json',
+    'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl',
     'Authorization': `Bearer ${token}`
   };
 };

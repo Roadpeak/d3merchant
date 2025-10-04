@@ -1,13 +1,14 @@
 // services/merchantServiceRequestService.js - FIXED VERSION FOR STORE-BASED OFFERS
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.discoun3ree.com/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
 
 // Enhanced function to get auth headers for merchants
 const getMerchantAuthHeaders = () => {
   const token = merchantAuthService.getToken();
   const headers = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
   };
 
   if (token) {
