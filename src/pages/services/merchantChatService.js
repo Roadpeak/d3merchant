@@ -36,16 +36,17 @@ constructor() {
   // Get headers with merchant authentication
   getHeaders() {
     const token = this.getAuthToken();
-
+  
     if (!token) {
       console.error('🏪 No merchant token available for API request');
       throw new Error('Merchant authentication required');
     }
-
+  
     console.log('🏪 Using token for API call:', token.substring(0, 20) + '...');
-
+  
     return {
       'Content-Type': 'application/json',
+      'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl',
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
       'User-Type': 'merchant'
