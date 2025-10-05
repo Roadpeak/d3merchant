@@ -1,7 +1,7 @@
 // services/merchantServiceRequestService.js - FIXED VERSION FOR STORE-BASED OFFERS
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Enhanced function to get auth headers for merchants
 const getMerchantAuthHeaders = () => {

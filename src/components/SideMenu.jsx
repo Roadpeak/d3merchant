@@ -32,10 +32,8 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Determine if sidebar should be expanded (either not collapsed OR hovered when collapsed)
     const isExpanded = !isCollapsed || (isCollapsed && isHovered);
 
-    // All your existing chat count functionality
     const loadChatCount = async () => {
         if (!merchantAuthService.isAuthenticated()) {
             console.log('User not authenticated, skipping chat count');
@@ -44,11 +42,11 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
         try {
             setIsLoadingChatCount(true);
-            console.log('🔍 Loading chat count via direct API calls...');
+            console.log('Loading chat count via direct API calls...');
 
             const token = merchantAuthService.getToken();
             if (!token) {
-                console.log('❌ No token available');
+                console.log('No token available');
                 return;
             }
 
@@ -60,11 +58,11 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             };
 
             const endpoints = [
-                '${import.meta.env.VITE_API_BASE_URL}/api/v1/chat/merchant/unread-count',
-                '${import.meta.env.VITE_API_BASE_URL}/api/v1/chat/unread-count',
-                '${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/chat/unread',
-                '${import.meta.env.VITE_API_BASE_URL}/api/v1/chat/merchant/conversations',
-                '${import.meta.env.VITE_API_BASE_URL}/api/v1/notifications/counts?type=new_message'
+                `${import.meta.env.VITE_API_BASE_URL}/chat/merchant/unread-count`,
+                `${import.meta.env.VITE_API_BASE_URL}/chat/unread-count`,
+                `${import.meta.env.VITE_API_BASE_URL}/merchant/chat/unread`,
+                `${import.meta.env.VITE_API_BASE_URL}/chat/merchant/conversations`,
+                `${import.meta.env.VITE_API_BASE_URL}/notifications/counts?type=new_message`
             ];
 
             let unreadCount = 0;
@@ -72,7 +70,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
             for (const endpoint of endpoints) {
                 try {
-                    console.log(`🔗 Trying endpoint: ${endpoint}`);
+                    console.log(`Trying endpoint: ${endpoint}`);
 
                     const response = await fetch(endpoint, {
                         method: 'GET',
@@ -81,18 +79,18 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                         mode: 'cors'
                     });
 
-                    console.log(`📡 Response status: ${response.status}`);
+                    console.log(`Response status: ${response.status}`);
 
                     if (response.ok) {
                         const data = await response.json();
-                        console.log(`✅ Success with ${endpoint}:`, data);
+                        console.log(`Success with ${endpoint}:`, data);
 
                         if (endpoint.includes('conversations')) {
                             if (data.success && Array.isArray(data.data)) {
                                 unreadCount = data.data.reduce((total, conv) => {
                                     return total + (conv.unreadCount || 0);
                                 }, 0);
-                                console.log(`📊 Counted ${unreadCount} unread from conversations`);
+                                console.log(`Counted ${unreadCount} unread from conversations`);
                             }
                         } else if (data.success !== undefined) {
                             unreadCount = data.data?.count || data.data?.unread || data.data?.total || 0;
@@ -106,31 +104,31 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                         break;
                     }
                 } catch (fetchError) {
-                    console.log(`❌ ${endpoint} request failed:`, fetchError.message);
+                    console.log(`${endpoint} request failed:`, fetchError.message);
                 }
             }
 
             if (successfulEndpoint) {
-                console.log(`✅ Successfully got count ${unreadCount} from ${successfulEndpoint}`);
+                console.log(`Successfully got count ${unreadCount} from ${successfulEndpoint}`);
                 setChatUnreadCount(Math.max(0, unreadCount));
                 setLastCountUpdate(Date.now());
                 localStorage.setItem('workingChatEndpoint', successfulEndpoint);
                 localStorage.setItem('cachedChatCount', unreadCount.toString());
             } else {
-                console.log('❌ All endpoints failed, trying cached count...');
+                console.log('All endpoints failed, trying cached count...');
                 const cachedCount = localStorage.getItem('cachedChatCount');
                 if (cachedCount && !isNaN(parseInt(cachedCount))) {
                     const cached = parseInt(cachedCount);
-                    console.log('📦 Using cached count:', cached);
+                    console.log('Using cached count:', cached);
                     setChatUnreadCount(cached);
                 } else {
-                    console.log('💭 No cached count available, setting to 0');
+                    console.log('No cached count available, setting to 0');
                     setChatUnreadCount(0);
                 }
             }
 
         } catch (error) {
-            console.error('💥 Critical error in loadChatCount:', error);
+            console.error('Critical error in loadChatCount:', error);
             setChatUnreadCount(0);
         } finally {
             setIsLoadingChatCount(false);
@@ -169,29 +167,28 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
                 setChatUnreadCount(Math.max(0, count));
                 localStorage.setItem('cachedChatCount', count.toString());
-                console.log(`⚡ Quick update: ${count} unread messages`);
+                console.log(`Quick update: ${count} unread messages`);
             }
         } catch (error) {
-            console.log('⚡ Quick update failed, will use full reload next time');
+            console.log('Quick update failed, will use full reload next time');
         }
     };
 
-    // All your existing useEffects
     useEffect(() => {
-        console.log('🚀 Initial chat count load triggered');
+        console.log('Initial chat count load triggered');
         loadChatCount();
     }, [currentMerchant?.id]);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.io) {
-            console.log('📡 WebSocket not available for chat count updates');
+            console.log('WebSocket not available for chat count updates');
             return;
         }
 
-        console.log('🔗 Setting up WebSocket listeners for chat count...');
+        console.log('Setting up WebSocket listeners for chat count...');
 
         const handleNewCustomerMessage = (messageData) => {
-            console.log('📨 WebSocket: New customer message received:', messageData);
+            console.log('WebSocket: New customer message received:', messageData);
 
             const isCustomerMessage = messageData.sender === 'user' ||
                 messageData.sender === 'customer' ||
@@ -201,7 +198,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             if (isCustomerMessage) {
                 setChatUnreadCount(prev => {
                     const newCount = prev + 1;
-                    console.log(`📈 Chat count incremented: ${prev} → ${newCount}`);
+                    console.log(`Chat count incremented: ${prev} → ${newCount}`);
                     localStorage.setItem('cachedChatCount', newCount.toString());
                     return newCount;
                 });
@@ -210,7 +207,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
         };
 
         const handleMessagesRead = (data) => {
-            console.log('📖 WebSocket: Messages marked as read:', data);
+            console.log('WebSocket: Messages marked as read:', data);
             setTimeout(quickCountUpdate, 500);
         };
 
@@ -231,7 +228,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             eventHandlers.forEach(([event, handler]) => {
                 window.io.off(event, handler);
             });
-            console.log('🧹 WebSocket listeners cleaned up');
+            console.log('WebSocket listeners cleaned up');
         };
     }, []);
 
@@ -245,7 +242,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                 location.pathname !== '/dashboard/chat' &&
                 timeSinceLastUpdate > 15000) {
 
-                console.log('⏰ Periodic chat count refresh');
+                console.log('Periodic chat count refresh');
                 quickCountUpdate();
             }
         }, 30000);
@@ -259,7 +256,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                 merchantAuthService.isAuthenticated() &&
                 location.pathname !== '/dashboard/chat') {
 
-                console.log('👁️ Page became visible, refreshing chat count');
+                console.log('Page became visible, refreshing chat count');
                 setTimeout(quickCountUpdate, 1000);
             }
         };
@@ -375,7 +372,7 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
 
     const merchantInfo = getMerchantDisplayInfo();
 
-    console.log('🎯 Sidebar render:', {
+    console.log('Sidebar render:', {
         chatUnreadCount,
         isLoadingChatCount,
         isCollapsed,
@@ -402,7 +399,6 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Header WITHOUT toggle button (now controlled by Layout) */}
             <div className="flex items-center justify-center p-6">
                 {isExpanded ? (
                     <div className="flex items-center gap-3 w-full">
@@ -418,7 +414,6 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                 )}
             </div>
 
-            {/* Navigation */}
             <div className="px-6 mb-6 flex-1">
                 <nav className="space-y-1">
                     {menuItems.map((item, index) => {
@@ -431,12 +426,12 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                                 to={item.path}
                                 onClick={() => {
                                     if (isChatItem && chatUnreadCount > 0) {
-                                        console.log('💬 Chat clicked, clearing count temporarily');
+                                        console.log('Chat clicked, clearing count temporarily');
                                         setChatUnreadCount(0);
                                         localStorage.removeItem('cachedChatCount');
 
                                         setTimeout(() => {
-                                            console.log('🔄 Reloading count after chat visit');
+                                            console.log('Reloading count after chat visit');
                                             quickCountUpdate();
                                         }, 3000);
                                     }
@@ -476,7 +471,6 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                                     </>
                                 )}
 
-                                {/* Badge for collapsed state */}
                                 {!isExpanded && item.badge && (
                                     <div className={`absolute -top-1 -right-1 min-w-[16px] h-4 text-white text-xs rounded-full flex items-center justify-center font-bold px-1 ${item.badgeColor || 'bg-red-500'
                                         } ${item.showPulse ? 'animate-pulse' : ''} shadow-lg border border-blue-800`}>
@@ -488,7 +482,6 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                                 )}
 
-                                {/* Tooltip for collapsed items - only when not hovering sidebar */}
                                 {!isExpanded && !isHovered && (
                                     <div className="absolute left-full ml-3 px-3 py-2 bg-blue-950 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-blue-800">
                                         {item.name}
@@ -503,14 +496,13 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                 </nav>
             </div>
 
-            {/* Footer */}
             <div className="mt-auto p-6 border-t border-blue-800 border-opacity-50">
                 {isExpanded && (
                     <div className="mb-4">
                         <p className="text-blue-300 text-xs mb-1">{merchantInfo.storeName} - Admin Dashboard</p>
                         {chatUnreadCount > 0 && (
                             <p className="text-orange-400 text-xs font-medium">
-                                💬 {chatUnreadCount} unread message{chatUnreadCount !== 1 ? 's' : ''}
+                                {chatUnreadCount} unread message{chatUnreadCount !== 1 ? 's' : ''}
                             </p>
                         )}
                         {process.env.NODE_ENV === 'development' && (
@@ -528,11 +520,10 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                 )}
 
                 <div className="space-y-1">
-                    {/* Manual refresh button (development only) */}
                     {process.env.NODE_ENV === 'development' && isExpanded && (
                         <button
                             onClick={() => {
-                                console.log('🔄 Manual refresh triggered');
+                                console.log('Manual refresh triggered');
                                 loadChatCount();
                             }}
                             disabled={isLoadingChatCount}
@@ -543,7 +534,6 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                         </button>
                     )}
 
-                    {/* Logout button */}
                     <button
                         onClick={handleLogout}
                         className={`
@@ -557,7 +547,6 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                         <LogOut size={20} />
                         {isExpanded && <span>Logout</span>}
 
-                        {/* Tooltip for collapsed state */}
                         {!isExpanded && !isHovered && (
                             <div className="absolute left-full ml-3 px-3 py-2 bg-blue-950 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-blue-800">
                                 Logout

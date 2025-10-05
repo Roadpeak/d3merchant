@@ -79,7 +79,7 @@ const Reviews = () => {
 
       const token = merchantAuthService.getToken();
 
-      const response = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
