@@ -49,7 +49,7 @@ const handleApiError = (error, context = '') => {
 
 class NotificationService {
     constructor() {
-        this.baseURL = '/api/v1/notifications'; // Fixed: Added full path
+        this.baseURL = '/notifications'; // Fixed: Added full path
         this.cache = new Map();
         this.cacheTimeout = 30000;
         this.wsConnected = false;
