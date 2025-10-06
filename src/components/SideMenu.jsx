@@ -54,7 +54,8 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json',
-                'User-Type': 'merchant'
+                'User-Type': 'merchant',
+                'x-api-key': import.meta.env.VITE_API_KEY || ''
             };
 
             const endpoints = [
