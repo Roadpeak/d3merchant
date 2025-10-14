@@ -90,17 +90,18 @@ const Socials = () => {
             if (!checkAuthStatus()) {
                 throw new Error('Authentication required');
             }
-
+    
             const token = merchantAuthService.getToken();
-
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores`, {
+    
+            // FIXED: Remove /api/v1 prefix (it's already in VITE_API_BASE_URL)
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
             });
-
+    
             if (!response.ok) {
                 if (response.status === 401) {
                     throw new Error('Authentication failed. Your session may have expired.');
@@ -110,21 +111,22 @@ const Socials = () => {
                     throw new Error(`Failed to fetch stores: ${response.status}`);
                 }
             }
-
+    
             const data = await response.json();
-
+    
             if (data.success && data.stores && data.stores.length > 0) {
                 const store = data.stores[0];
                 setStoreData(store);
                 return store.id;
             }
-
+    
             throw new Error('No store found for your merchant account. Please create a store first.');
         } catch (error) {
             console.error('Error fetching merchant store:', error);
             throw error;
         }
     };
+    
 
     // Fetch social media links for the store
     const fetchSocialLinks = async (storeId) => {
@@ -132,33 +134,34 @@ const Socials = () => {
             if (!checkAuthStatus()) {
                 return [];
             }
-
+    
             const token = merchantAuthService.getToken();
-
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/socials/${storeId}`, {
+    
+            // FIXED: Remove /api/v1 prefix
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${storeId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
             });
-
+    
             if (response.status === 404) {
                 return [];
             }
-
+    
             if (!response.ok) {
                 if (response.status === 401) {
                     throw new Error('Authentication failed while fetching social links.');
                 }
-
+    
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || `Failed to fetch social links (${response.status})`);
             }
-
+    
             const data = await response.json();
             return data.success ? (data.socials || []) : [];
-
+    
         } catch (error) {
             console.error('Error fetching social links:', error);
             return [];
@@ -224,29 +227,30 @@ const Socials = () => {
     // Handle creating a new social media link
     const handleCreateSocial = async (e) => {
         e.preventDefault();
-
+    
         if (!newSocial.platform || !newSocial.link) {
             showError('Please fill in all fields');
             return;
         }
-
+    
         const urlRegex = /^https?:\/\/.+/;
         if (!urlRegex.test(newSocial.link)) {
             showError('Please enter a valid URL starting with http:// or https://');
             return;
         }
-
+    
         if (!storeId) {
             showError('Store ID not available. Please refresh the page.');
             return;
         }
-
+    
         if (!checkAuthStatus()) return;
-
+    
         try {
             setSubmitting(true);
-
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials`, {
+    
+            // FIXED: Remove /api/v1 prefix
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/socials`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -255,9 +259,9 @@ const Socials = () => {
                     link: newSocial.link
                 })
             });
-
+    
             const data = await response.json();
-
+    
             if (!response.ok) {
                 if (response.status === 401) {
                     setError('Authentication failed. Please log in again.');
@@ -266,7 +270,7 @@ const Socials = () => {
                 }
                 throw new Error(data.message || 'Failed to create social link');
             }
-
+    
             setSocialLinks([...socialLinks, data.social]);
             setIsModalOpen(false);
             setNewSocial({ platform: '', link: '' });
@@ -278,7 +282,6 @@ const Socials = () => {
             setSubmitting(false);
         }
     };
-
     // Handle editing a social media link
     const handleEditSocial = (social) => {
         if (!checkAuthStatus()) return;
@@ -291,24 +294,25 @@ const Socials = () => {
     // Handle updating the social media link
     const handleUpdateSocial = async (e) => {
         e.preventDefault();
-
+    
         if (!editing || !newSocial.platform || !newSocial.link) {
             showError('Please fill in all fields');
             return;
         }
-
+    
         const urlRegex = /^https?:\/\/.+/;
         if (!urlRegex.test(newSocial.link)) {
             showError('Please enter a valid URL starting with http:// or https://');
             return;
         }
-
+    
         if (!checkAuthStatus()) return;
-
+    
         try {
             setSubmitting(true);
-
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials/${editing.id}`, {
+    
+            // FIXED: Remove /api/v1 prefix
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/socials/${editing.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -316,9 +320,9 @@ const Socials = () => {
                     link: newSocial.link
                 })
             });
-
+    
             const data = await response.json();
-
+    
             if (!response.ok) {
                 if (response.status === 401) {
                     setError('Authentication failed. Please log in again.');
@@ -327,7 +331,7 @@ const Socials = () => {
                 }
                 throw new Error(data.message || 'Failed to update social link');
             }
-
+    
             setSocialLinks(socialLinks.map(social =>
                 social.id === editing.id ? data.social : social
             ));
@@ -342,23 +346,23 @@ const Socials = () => {
             setSubmitting(false);
         }
     };
-
     // Handle deleting a social media link
     const handleDeleteSocial = async (id) => {
         if (!window.confirm('Are you sure you want to delete this social media link?')) {
             return;
         }
-
+    
         if (!checkAuthStatus()) return;
-
+    
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/socials/${id}`, {
+            // FIXED: Remove /api/v1 prefix
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/socials/${id}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
-
+    
             const data = await response.json();
-
+    
             if (!response.ok) {
                 if (response.status === 401) {
                     setError('Authentication failed. Please log in again.');
@@ -367,7 +371,7 @@ const Socials = () => {
                 }
                 throw new Error(data.message || 'Failed to delete social link');
             }
-
+    
             setSocialLinks(socialLinks.filter((social) => social.id !== id));
             showSuccess('Social media link deleted successfully!');
         } catch (error) {
@@ -375,7 +379,6 @@ const Socials = () => {
             showError(error.message);
         }
     };
-
     // Get platform info
     const getPlatformInfo = (platformId) => {
         return socialMediaPlatforms.find(p => p.id === platformId.toLowerCase()) || {
