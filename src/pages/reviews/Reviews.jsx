@@ -79,15 +79,27 @@ const Reviews = () => {
 
       const token = merchantAuthService.getToken();
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores`, {
+      // ADD THESE DEBUG LOGS
+      const url = `${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`;
+      console.log('🏪 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+      console.log('🔗 Full getMerchantStore URL:', url);
+      console.log('🔑 Token exists:', !!token);
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'x-api-key': import.meta.env.VITE_API_KEY
         }
       });
 
+      console.log('📡 getMerchantStore Response Status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ getMerchantStore Error Response:', errorText);
+
         if (response.status === 401) {
           throw new Error('Authentication failed. Your session may have expired.');
         } else if (response.status === 404) {
@@ -98,6 +110,7 @@ const Reviews = () => {
       }
 
       const data = await response.json();
+      console.log('✅ getMerchantStore Success:', data);
 
       if (data.success && data.stores && data.stores.length > 0) {
         const store = data.stores[0];
@@ -107,50 +120,60 @@ const Reviews = () => {
 
       throw new Error('No store found for your merchant account. Please create a store first.');
     } catch (error) {
-      console.error('Error fetching merchant store:', error);
+      console.error('💥 getMerchantStore Error:', error);
       throw error;
     }
   };
-
   // Fetch reviews for the merchant's store
-  const fetchStoreReviews = async (storeId = null) => {
-    try {
-      if (!checkAuthStatus()) {
-        return { reviews: [], stats: null };
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/reviews`, {
-        method: 'GET',
-        headers: getAuthHeaders()
-      });
-
-      if (response.status === 404) {
-        return { reviews: [], stats: null };
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        if (response.status === 401) {
-          throw new Error('Authentication failed while fetching reviews.');
-        }
-
-        throw new Error(errorData.message || `Failed to fetch reviews (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      return {
-        reviews: data.success ? (data.reviews || []) : [],
-        stats: data.success ? data.stats : null
-      };
-
-    } catch (error) {
-      console.error('Error fetching merchant reviews:', error);
-      throw error;
+ const fetchStoreReviews = async (storeId = null) => {
+  try {
+    if (!checkAuthStatus()) {
+      return { reviews: [], stats: null };
     }
-  };
 
+    // ADD THESE DEBUG LOGS
+    const url = `${import.meta.env.VITE_API_BASE_URL}/merchant/reviews`;
+    console.log('📝 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+    console.log('🔗 Full fetchStoreReviews URL:', url);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    console.log('📡 fetchStoreReviews Response Status:', response.status);
+
+    if (response.status === 404) {
+      console.log('ℹ️ No reviews found (404)');
+      return { reviews: [], stats: null };
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ fetchStoreReviews Error Response:', errorText);
+      
+      const errorData = await response.json().catch(() => ({}));
+
+      if (response.status === 401) {
+        throw new Error('Authentication failed while fetching reviews.');
+      }
+
+      throw new Error(errorData.message || `Failed to fetch reviews (${response.status})`);
+    }
+
+    const data = await response.json();
+    console.log('✅ fetchStoreReviews Success:', data);
+
+    return {
+      reviews: data.success ? (data.reviews || []) : [],
+      stats: data.success ? data.stats : null
+    };
+
+  } catch (error) {
+    console.error('💥 fetchStoreReviews Error:', error);
+    throw error;
+  }
+};
   // Calculate review statistics
   const calculateReviewStats = (reviewsData) => {
     if (!reviewsData || reviewsData.length === 0) {
@@ -236,8 +259,8 @@ const Reviews = () => {
           <Star
             key={i}
             className={`${sizeClasses[size]} ${i < Math.floor(rating)
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'text-gray-300'
+              ? 'fill-yellow-400 text-yellow-400'
+              : 'text-gray-300'
               }`}
           />
         ))}
