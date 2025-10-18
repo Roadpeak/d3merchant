@@ -326,11 +326,11 @@ const Sidebar = ({ onClose, currentMerchant, isCollapsed = false, onToggleCollap
             icon: <Share2 size={20} />,
             path: "/dashboard/socials"
         },
-        {
-            name: "Billing",
-            icon: <CreditCard size={20} />,
-            path: "/dashboard/billing"
-        },
+        // {
+        //     name: "Billing",
+        //     icon: <CreditCard size={20} />,
+        //     path: "/dashboard/billing"
+        // },
         {
             name: "Account",
             icon: <User size={20} />,
