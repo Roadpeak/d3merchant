@@ -130,7 +130,7 @@ class ReviewService {
       queryParams.append('rating', rating);
     }
 
-    return this.fetchData(`/merchant/reviews?${queryParams.toString()}`);
+    return this.fetchData(`/api/v1/merchant/reviews?${queryParams.toString()}`);
   }
 
   // Get reviews for a specific store (public endpoint)
@@ -149,7 +149,7 @@ class ReviewService {
       queryParams.append('rating', rating);
     }
 
-    return this.fetchData(`/stores/${storeId}/reviews?${queryParams.toString()}`);
+    return this.fetchData(`/api/v1/stores/${storeId}/reviews?${queryParams.toString()}`);
   }
 
   // Create a new review (for customers)
@@ -193,7 +193,7 @@ class ReviewService {
     console.log('📤 Exporting reviews:', storeId, format);
 
     // This would be implemented when export functionality is added
-    return this.fetchData(`/stores/${storeId}/reviews/export?format=${format}`);
+    return this.fetchData(`/api/v1/stores/${storeId}/reviews/export?format=${format}`);
   }
 }
 

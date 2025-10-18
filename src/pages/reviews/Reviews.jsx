@@ -79,7 +79,7 @@ const Reviews = () => {
 
       const token = merchantAuthService.getToken();
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/stores/merchant/my-stores`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ const Reviews = () => {
         return { reviews: [], stats: null };
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/reviews`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/merchant/reviews`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -236,8 +236,8 @@ const Reviews = () => {
           <Star
             key={i}
             className={`${sizeClasses[size]} ${i < Math.floor(rating)
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'text-gray-300'
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-gray-300'
               }`}
           />
         ))}
