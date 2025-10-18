@@ -54,7 +54,8 @@ const Reviews = () => {
 
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
+      'x-api-key': import.meta.env.VITE_API_KEY  // ADD THIS LINE!
     };
   };
 
