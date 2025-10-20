@@ -30,7 +30,7 @@ const ServiceBookings = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  
+
 
   // Filter and search states
   const [activeTab, setActiveTab] = useState('all');
@@ -134,104 +134,96 @@ const ServiceBookings = () => {
   };
 
   // Data loading
- const loadBookings = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    console.log('Loading service bookings...');
-    
-    // Try to get store ID using the existing helper
-    let storeId = null;
+  const loadBookings = async () => {
     try {
-      storeId = await bookingApiService.getMerchantStoreId();
-      if (storeId) {
-        console.log(`Filtering bookings for store ID: ${storeId}`);
-        setCurrentStoreId(storeId);
-        
-        // Set initial store filter
-        setFilters(prev => ({
-          ...prev,
-          store: storeId.toString()
-        }));
-      }
-    } catch (storeIdError) {
-      console.warn('Could not determine store ID:', storeIdError);
-      // Continue without store filtering
-    }
-    
-    // Include store filter if we have a store ID
-    const params = {
-      limit: 100,
-      offset: 0
-    };
-    
-    if (storeId) {
-      params.storeId = storeId;
-    }
-    
-    const response = await bookingApiService.getMerchantServiceBookings(params);
-    
-    // Rest of your existing code...
-    console.log('API response:', response);
-    
-    if (response && response.success && response.bookings) {
-      console.log('Bookings received:', response.bookings.length);
-      
-      setBookings(response.bookings);
-      setFilteredBookings(response.bookings);
-      
-      if (response.bookings.length === 0) {
-        toast('No service bookings found');
-      } else {
-        toast.success(`${response.bookings.length} service bookings loaded`);
-      }
-    } else {
-      throw new Error(response?.message || 'Failed to load service bookings');
-    }
-    
-  } catch (error) {
-    console.error('Booking load error:', error);
-    setError(error.message);
-    toast.error("Failed to fetch service bookings: " + error.message);
-    setBookings([]);
-    setFilteredBookings([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setLoading(true);
+      setError(null);
 
- const handleRefresh = async () => {
-  try {
-    setRefreshing(true);
-    
-    // Include store filter if we have a store ID
-    const params = {
-      limit: 100,
-      offset: 0
-    };
-    
-    if (currentStoreId) {
-      params.storeId = currentStoreId;
+      console.log('Loading service bookings...');
+
+      // Get store ID using the existing helper
+      let storeId = null;
+      try {
+        storeId = await bookingApiService.getMerchantStoreId();
+        if (storeId) {
+          console.log(`Filtering bookings for store ID: ${storeId}`);
+          setCurrentStoreId(storeId);
+
+          // IMPORTANT: Set initial store filter
+          setFilters(prev => ({
+            ...prev,
+            store: storeId.toString()
+          }));
+        }
+      } catch (storeIdError) {
+        console.warn('Could not determine store ID:', storeIdError);
+      }
+
+      // Include store filter if we have a store ID
+      const params = {
+        limit: 100,
+        offset: 0
+      };
+
+      if (storeId) {
+        params.storeId = storeId;
+      }
+
+      const response = await bookingApiService.getMerchantServiceBookings(params);
+
+      if (response && response.success && response.bookings) {
+        setBookings(response.bookings);
+        setFilteredBookings(response.bookings);
+
+        if (response.bookings.length === 0) {
+          toast('No service bookings found');
+        } else {
+          toast.success(`${response.bookings.length} service bookings loaded`);
+        }
+      } else {
+        throw new Error(response?.message || 'Failed to load service bookings');
+      }
+    } catch (error) {
+      console.error('Booking load error:', error);
+      setError(error.message);
+      toast.error("Failed to fetch service bookings: " + error.message);
+      setBookings([]);
+      setFilteredBookings([]);
+    } finally {
+      setLoading(false);
     }
-    
-    const response = await bookingApiService.getMerchantServiceBookings(params);
-    
-    if (response && response.success && response.bookings) {
-      setBookings(response.bookings);
-      setFilteredBookings(response.bookings);
-      toast.success(`Service bookings refreshed - ${response.bookings.length} found`);
-    } else {
-      throw new Error(response?.message || 'Failed to refresh');
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+
+      // Include store filter if we have a store ID
+      const params = {
+        limit: 100,
+        offset: 0
+      };
+
+      if (currentStoreId) {
+        params.storeId = currentStoreId;
+      }
+
+      const response = await bookingApiService.getMerchantServiceBookings(params);
+
+      if (response && response.success && response.bookings) {
+        setBookings(response.bookings);
+        setFilteredBookings(response.bookings);
+        toast.success(`Service bookings refreshed - ${response.bookings.length} found`);
+      } else {
+        throw new Error(response?.message || 'Failed to refresh');
+      }
+    } catch (error) {
+      toast.error('Failed to refresh data: ' + error.message);
+      console.error('Refresh error:', error);
+    } finally {
+      setRefreshing(false);
     }
-    
-  } catch (error) {
-    toast.error('Failed to refresh data: ' + error.message);
-    console.error('Refresh error:', error);
-  } finally {
-    setRefreshing(false);
-  }
-};
+  };
 
   // ==================== ENHANCED ACTION HANDLERS ====================
 
@@ -1826,29 +1818,28 @@ const ServiceBookings = () => {
       showSearch={false}
     >
       {/* Store Filter Banner - Add this */}
-     {currentStoreId && (
-       <div className="bg-blue-50 border border-blue-200 rounded-lg mb-6 p-4 flex items-center justify-between">
-         <div className="flex items-center">
-           <Building className="w-5 h-5 text-blue-600 mr-3" />
-           <div>
-             <p className="text-blue-800 font-medium">
-               Showing bookings for: {stores.find(s => s.id === parseInt(currentStoreId))?.name || `Store ID: ${currentStoreId}`}
-             </p>
-           </div>
-         </div>
-         <button
-           onClick={() => {
-             setFilters(prev => ({...prev, store: ''}));
-             setCurrentStoreId(null);
-             loadBookings();
-           }}
-           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-         >
-           View All Stores
-         </button>
-       </div>
-     )}
-
+      {currentStoreId && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg mb-6 p-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <Building className="w-5 h-5 text-blue-600 mr-3" />
+            <div>
+              <p className="text-blue-800 font-medium">
+                Showing bookings for: {stores.find(s => s.id === parseInt(currentStoreId))?.name || `Store ID: ${currentStoreId}`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setFilters(prev => ({ ...prev, store: '' }));
+              setCurrentStoreId(null);
+              loadBookings();
+            }}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            View All Stores
+          </button>
+        </div>
+      )}
       {/* Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-8 w-fit">
         <button
