@@ -16,6 +16,7 @@ import Modal from "../../elements/Modal";
 
 const ServiceBookings = () => {
   // State management
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ const ServiceBookings = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  
 
   // Filter and search states
   const [activeTab, setActiveTab] = useState('all');
@@ -44,7 +45,7 @@ const ServiceBookings = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  const [currentStore, setCurrentStore] = useState(null);
+  const [currentStoreId, setCurrentStoreId] = useState(null);
 
   // Form states for various actions
   const [checkinData, setCheckinData] = useState({
