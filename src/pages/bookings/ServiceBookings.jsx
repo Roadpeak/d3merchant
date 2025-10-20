@@ -133,102 +133,104 @@ const ServiceBookings = () => {
   };
 
   // Data loading
-  const loadBookings = async () => {
+ const loadBookings = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    console.log('Loading service bookings...');
+    
+    // Try to get store ID using the existing helper
+    let storeId = null;
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log('Loading service bookings...');
-
-      // Get current merchant to determine store
-      const merchant = merchantAuthService.getCurrentMerchant();
-
-      // Get merchant's store ID if available
-      const storeId = merchant?.storeId || merchant?.store_id ||
-        merchant?.store?.id || merchant?.defaultStoreId;
-
+      storeId = await bookingApiService.getMerchantStoreId();
       if (storeId) {
         console.log(`Filtering bookings for store ID: ${storeId}`);
         setCurrentStoreId(storeId);
-
+        
         // Set initial store filter
         setFilters(prev => ({
           ...prev,
           store: storeId.toString()
         }));
       }
-
-      // Include store filter if we have a store ID
-      const params = {
-        limit: 100,
-        offset: 0
-      };
-
-      if (storeId) {
-        params.storeId = storeId;
-      }
-
-      const response = await bookingApiService.getMerchantServiceBookings(params);
-
-      console.log('API response:', response);
-
-      if (response && response.success && response.bookings) {
-        console.log('Bookings received:', response.bookings.length);
-
-        setBookings(response.bookings);
-        setFilteredBookings(response.bookings);
-
-        if (response.bookings.length === 0) {
-          toast('No service bookings found');
-        } else {
-          toast.success(`${response.bookings.length} service bookings loaded`);
-        }
-      } else {
-        throw new Error(response?.message || 'Failed to load service bookings');
-      }
-
-    } catch (error) {
-      console.error('Booking load error:', error);
-      setError(error.message);
-      toast.error("Failed to fetch service bookings: " + error.message);
-      setBookings([]);
-      setFilteredBookings([]);
-    } finally {
-      setLoading(false);
+    } catch (storeIdError) {
+      console.warn('Could not determine store ID:', storeIdError);
+      // Continue without store filtering
     }
-  };
-
-  const handleRefresh = async () => {
-    try {
-      setRefreshing(true);
-
-      // Include store filter if we have a store ID
-      const params = {
-        limit: 100,
-        offset: 0
-      };
-
-      if (currentStoreId) {
-        params.storeId = currentStoreId;
-      }
-
-      const response = await bookingApiService.getMerchantServiceBookings(params);
-
-      if (response && response.success && response.bookings) {
-        setBookings(response.bookings);
-        setFilteredBookings(response.bookings);
-        toast.success(`Service bookings refreshed - ${response.bookings.length} found`);
-      } else {
-        throw new Error(response?.message || 'Failed to refresh');
-      }
-
-    } catch (error) {
-      toast.error('Failed to refresh data: ' + error.message);
-      console.error('Refresh error:', error);
-    } finally {
-      setRefreshing(false);
+    
+    // Include store filter if we have a store ID
+    const params = {
+      limit: 100,
+      offset: 0
+    };
+    
+    if (storeId) {
+      params.storeId = storeId;
     }
-  };
+    
+    const response = await bookingApiService.getMerchantServiceBookings(params);
+    
+    // Rest of your existing code...
+    console.log('API response:', response);
+    
+    if (response && response.success && response.bookings) {
+      console.log('Bookings received:', response.bookings.length);
+      
+      setBookings(response.bookings);
+      setFilteredBookings(response.bookings);
+      
+      if (response.bookings.length === 0) {
+        toast('No service bookings found');
+      } else {
+        toast.success(`${response.bookings.length} service bookings loaded`);
+      }
+    } else {
+      throw new Error(response?.message || 'Failed to load service bookings');
+    }
+    
+  } catch (error) {
+    console.error('Booking load error:', error);
+    setError(error.message);
+    toast.error("Failed to fetch service bookings: " + error.message);
+    setBookings([]);
+    setFilteredBookings([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+ const handleRefresh = async () => {
+  try {
+    setRefreshing(true);
+    
+    // Include store filter if we have a store ID
+    const params = {
+      limit: 100,
+      offset: 0
+    };
+    
+    if (currentStoreId) {
+      params.storeId = currentStoreId;
+    }
+    
+    const response = await bookingApiService.getMerchantServiceBookings(params);
+    
+    if (response && response.success && response.bookings) {
+      setBookings(response.bookings);
+      setFilteredBookings(response.bookings);
+      toast.success(`Service bookings refreshed - ${response.bookings.length} found`);
+    } else {
+      throw new Error(response?.message || 'Failed to refresh');
+    }
+    
+  } catch (error) {
+    toast.error('Failed to refresh data: ' + error.message);
+    console.error('Refresh error:', error);
+  } finally {
+    setRefreshing(false);
+  }
+};
 
   // ==================== ENHANCED ACTION HANDLERS ====================
 
