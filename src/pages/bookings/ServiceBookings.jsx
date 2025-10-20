@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { 
+import {
   Calendar, Clock, MapPin, User, Plus, Search, X,
   CheckCircle, AlertCircle, XCircle, Settings, MoreVertical,
   Filter, RefreshCw, Loader2, ChevronUp, ChevronDown,
@@ -22,7 +22,7 @@ const ServiceBookings = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
@@ -30,7 +30,7 @@ const ServiceBookings = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  
+
   // Filter and search states
   const [activeTab, setActiveTab] = useState('all');
   const [filters, setFilters] = useState({
@@ -44,7 +44,8 @@ const ServiceBookings = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  
+  const [currentStore, setCurrentStore] = useState(null);
+
   // Form states for various actions
   const [checkinData, setCheckinData] = useState({
     arrivalTime: new Date().toTimeString().slice(0, 5),
@@ -63,7 +64,7 @@ const ServiceBookings = () => {
     reason: '',
     refundRequested: false
   });
-  
+
   // Form states for new booking
   const [newBooking, setNewBooking] = useState({
     clientName: '',
@@ -120,13 +121,12 @@ const ServiceBookings = () => {
 
   const CompletionBadge = ({ booking }) => {
     if (booking.status !== 'completed') return null;
-    
+
     return (
-      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-        booking.auto_completed 
-          ? 'bg-blue-50 text-blue-700' 
-          : 'bg-green-50 text-green-700'
-      }`}>
+      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${booking.auto_completed
+        ? 'bg-blue-50 text-blue-700'
+        : 'bg-green-50 text-green-700'
+        }`}>
         {booking.auto_completed ? 'Auto-completed' : 'Manual'}
       </span>
     );
@@ -137,22 +137,47 @@ const ServiceBookings = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       console.log('Loading service bookings...');
-      
-      const response = await bookingApiService.getMerchantServiceBookings({
+
+      // Get current merchant to determine store
+      const merchant = merchantAuthService.getCurrentMerchant();
+
+      // Get merchant's store ID if available
+      const storeId = merchant?.storeId || merchant?.store_id ||
+        merchant?.store?.id || merchant?.defaultStoreId;
+
+      if (storeId) {
+        console.log(`Filtering bookings for store ID: ${storeId}`);
+        setCurrentStoreId(storeId);
+
+        // Set initial store filter
+        setFilters(prev => ({
+          ...prev,
+          store: storeId.toString()
+        }));
+      }
+
+      // Include store filter if we have a store ID
+      const params = {
         limit: 100,
         offset: 0
-      });
-      
+      };
+
+      if (storeId) {
+        params.storeId = storeId;
+      }
+
+      const response = await bookingApiService.getMerchantServiceBookings(params);
+
       console.log('API response:', response);
-      
+
       if (response && response.success && response.bookings) {
         console.log('Bookings received:', response.bookings.length);
-        
+
         setBookings(response.bookings);
         setFilteredBookings(response.bookings);
-        
+
         if (response.bookings.length === 0) {
           toast('No service bookings found');
         } else {
@@ -161,7 +186,7 @@ const ServiceBookings = () => {
       } else {
         throw new Error(response?.message || 'Failed to load service bookings');
       }
-      
+
     } catch (error) {
       console.error('Booking load error:', error);
       setError(error.message);
@@ -176,12 +201,19 @@ const ServiceBookings = () => {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      
-      const response = await bookingApiService.getMerchantServiceBookings({
+
+      // Include store filter if we have a store ID
+      const params = {
         limit: 100,
         offset: 0
-      });
-      
+      };
+
+      if (currentStoreId) {
+        params.storeId = currentStoreId;
+      }
+
+      const response = await bookingApiService.getMerchantServiceBookings(params);
+
       if (response && response.success && response.bookings) {
         setBookings(response.bookings);
         setFilteredBookings(response.bookings);
@@ -189,7 +221,7 @@ const ServiceBookings = () => {
       } else {
         throw new Error(response?.message || 'Failed to refresh');
       }
-      
+
     } catch (error) {
       toast.error('Failed to refresh data: ' + error.message);
       console.error('Refresh error:', error);
@@ -204,7 +236,7 @@ const ServiceBookings = () => {
     try {
       setActionLoading(true);
       setError(null);
-      
+
       console.log('Checking in booking:', booking.id);
 
       // Use enhanced method with fallback
@@ -242,21 +274,21 @@ const ServiceBookings = () => {
         });
 
         setBookings(updatedBookings);
-        
+
         // Reset form
         setCheckinData({
           arrivalTime: new Date().toTimeString().slice(0, 5),
           notes: ''
         });
-        
+
         setShowCheckinModal(false);
         setSelectedBooking(null);
-        
+
         toast.success('Customer checked in successfully!');
       } else {
         throw new Error(response?.message || 'Check-in failed');
       }
-      
+
     } catch (error) {
       console.error('Check-in error:', error);
       setError(error.message);
@@ -305,7 +337,7 @@ const ServiceBookings = () => {
 
         setBookings(updatedBookings);
         setConfirmationNotes('');
-        
+
         toast.success('Booking confirmed successfully!');
       } else {
         throw new Error(response?.message || 'Confirmation failed');
@@ -361,17 +393,17 @@ const ServiceBookings = () => {
         });
 
         setBookings(updatedBookings);
-        
+
         // Reset form
         setCompletionData({
           notes: '',
           actualDuration: '',
           rating: null
         });
-        
+
         setShowCompletionModal(false);
         setSelectedBooking(null);
-        
+
         toast.success('Service completed successfully!');
       } else {
         throw new Error(response?.message || 'Completion failed');
@@ -424,16 +456,16 @@ const ServiceBookings = () => {
         });
 
         setBookings(updatedBookings);
-        
+
         // Reset form
         setCancellationData({
           reason: '',
           refundRequested: false
         });
-        
+
         setShowCancelModal(false);
         setSelectedBooking(null);
-        
+
         toast.success('Booking cancelled successfully!');
       } else {
         throw new Error(response?.message || 'Cancellation failed');
@@ -455,7 +487,7 @@ const ServiceBookings = () => {
       setError(null);
 
       let response;
-      
+
       switch (action) {
         case 'confirm':
           response = await bookingApiService.quickConfirm(booking.id, 'Quick confirmed by merchant');
@@ -500,45 +532,45 @@ const ServiceBookings = () => {
     // Filter by tab
     if (activeTab === 'today') {
       const today = moment().format('YYYY-MM-DD');
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         moment(booking.startTime).format('YYYY-MM-DD') === today
       );
     }
 
     // Apply filters
     if (filters.startDate) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         moment(booking.startTime).format('YYYY-MM-DD') >= filters.startDate
       );
     }
 
     if (filters.endDate) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         moment(booking.startTime).format('YYYY-MM-DD') <= filters.endDate
       );
     }
 
     if (filters.store) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         booking.store?.id === parseInt(filters.store)
       );
     }
 
     if (filters.staff) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         booking.staff?.id === parseInt(filters.staff)
       );
     }
 
     if (filters.status) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         booking.status === filters.status
       );
     }
 
     // Apply search
     if (searchTerm) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         booking.User?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.User?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.User?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -549,7 +581,7 @@ const ServiceBookings = () => {
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue, bValue;
-      
+
       switch (sortBy) {
         case 'date':
           aValue = new Date(a.startTime);
@@ -589,8 +621,8 @@ const ServiceBookings = () => {
 
   const handleCreateBooking = async () => {
     try {
-      if (!newBooking.clientName || !newBooking.clientEmail || !newBooking.date || 
-          !newBooking.time || !newBooking.store || !newBooking.staff || !newBooking.service) {
+      if (!newBooking.clientName || !newBooking.clientEmail || !newBooking.date ||
+        !newBooking.time || !newBooking.store || !newBooking.staff || !newBooking.service) {
         toast.error("Please fill in all required fields");
         return;
       }
@@ -628,7 +660,7 @@ const ServiceBookings = () => {
 
       const updatedBookings = [bookingData, ...bookings];
       setBookings(updatedBookings);
-      
+
       setNewBooking({
         clientName: '',
         clientEmail: '',
@@ -643,10 +675,10 @@ const ServiceBookings = () => {
         paymentStatus: 'not_paid',
         depositAmount: ''
       });
-      
+
       setShowCreateModal(false);
       toast.success("Service booking created successfully!");
-      
+
     } catch (error) {
       console.error('Create booking error:', error);
       toast.error("Failed to create service booking");
@@ -656,7 +688,7 @@ const ServiceBookings = () => {
   const handleViewDetails = async (booking) => {
     try {
       console.log('Viewing details for booking:', booking.id);
-      
+
       try {
         const response = await bookingApiService.getServiceBookingById(booking.id);
         if (response && response.success && response.booking) {
@@ -668,7 +700,7 @@ const ServiceBookings = () => {
         console.warn('Failed to fetch fresh booking details, using local data:', detailError);
         setSelectedBooking(booking);
       }
-      
+
       setShowDetailsModal(true);
       setDropdownOpen(null);
     } catch (error) {
@@ -694,7 +726,7 @@ const ServiceBookings = () => {
     if (status === 'completed' && autoCompleted) {
       return 'bg-blue-100 text-blue-800'; // Different color for auto-completed
     }
-    
+
     switch (status?.toLowerCase()) {
       case 'completed':
         return 'bg-green-100 text-green-800';
@@ -712,7 +744,7 @@ const ServiceBookings = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
   // And create a helper for status text:
   const getStatusText = (booking) => {
     if (booking.status === 'completed') {
@@ -761,16 +793,16 @@ const ServiceBookings = () => {
     const completed = filteredBookings.filter(s => s.status?.toLowerCase() === 'completed').length;
     const noShow = filteredBookings.filter(s => s.status?.toLowerCase() === 'no_show').length; // NEW
     const autoCompleted = filteredBookings.filter(s => s.auto_completed).length; // NEW
-  
+
     return { total, confirmed, inProgress, completed, noShow, autoCompleted };
   };
 
   const getTodayStats = () => {
     const today = moment().format('YYYY-MM-DD');
-    const todayBookings = bookings.filter(booking => 
+    const todayBookings = bookings.filter(booking =>
       moment(booking.startTime).format('YYYY-MM-DD') === today
     );
-    
+
     return {
       total: todayBookings.length,
       confirmed: todayBookings.filter(b => b.status?.toLowerCase() === 'confirmed').length,
@@ -781,7 +813,7 @@ const ServiceBookings = () => {
 
   const getBookingActions = (booking) => {
     const actions = [];
-    
+
     // View Details (always available)
     actions.push({
       label: 'View Details',
@@ -876,8 +908,8 @@ const ServiceBookings = () => {
   // ==================== ENHANCED MODALS ====================
 
   const CheckinModal = () => (
-    <Modal 
-      isOpen={showCheckinModal} 
+    <Modal
+      isOpen={showCheckinModal}
       onClose={() => {
         setShowCheckinModal(false);
         setSelectedBooking(null);
@@ -896,9 +928,9 @@ const ServiceBookings = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Customer</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {selectedBooking.customerName || 
-                   `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim() ||
-                   'Unknown Customer'}
+                  {selectedBooking.customerName ||
+                    `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim() ||
+                    'Unknown Customer'}
                 </p>
               </div>
               <div>
@@ -930,7 +962,7 @@ const ServiceBookings = () => {
               <input
                 type="time"
                 value={checkinData.arrivalTime}
-                onChange={(e) => setCheckinData({...checkinData, arrivalTime: e.target.value})}
+                onChange={(e) => setCheckinData({ ...checkinData, arrivalTime: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -941,7 +973,7 @@ const ServiceBookings = () => {
               </label>
               <textarea
                 value={checkinData.notes}
-                onChange={(e) => setCheckinData({...checkinData, notes: e.target.value})}
+                onChange={(e) => setCheckinData({ ...checkinData, notes: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Any notes about the customer's arrival..."
@@ -994,8 +1026,8 @@ const ServiceBookings = () => {
   );
 
   const CompletionModal = () => (
-    <Modal 
-      isOpen={showCompletionModal} 
+    <Modal
+      isOpen={showCompletionModal}
       onClose={() => {
         setShowCompletionModal(false);
         setSelectedBooking(null);
@@ -1015,8 +1047,8 @@ const ServiceBookings = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Customer</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {selectedBooking.customerName || 
-                   `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim()}
+                  {selectedBooking.customerName ||
+                    `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim()}
                 </p>
               </div>
               <div>
@@ -1028,8 +1060,8 @@ const ServiceBookings = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Started</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {selectedBooking.service_started_at ? 
-                    moment(selectedBooking.service_started_at).format("hh:mm A") : 
+                  {selectedBooking.service_started_at ?
+                    moment(selectedBooking.service_started_at).format("hh:mm A") :
                     'Not started'
                   }
                 </p>
@@ -1051,7 +1083,7 @@ const ServiceBookings = () => {
               <input
                 type="number"
                 value={completionData.actualDuration}
-                onChange={(e) => setCompletionData({...completionData, actualDuration: e.target.value})}
+                onChange={(e) => setCompletionData({ ...completionData, actualDuration: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder={`Default: ${selectedBooking.Service?.duration || 60} minutes`}
                 min="1"
@@ -1068,12 +1100,11 @@ const ServiceBookings = () => {
                   <button
                     key={star}
                     type="button"
-                    onClick={() => setCompletionData({...completionData, rating: star})}
-                    className={`p-1 rounded ${
-                      completionData.rating >= star 
-                        ? 'text-yellow-400' 
-                        : 'text-gray-300 hover:text-yellow-400'
-                    }`}
+                    onClick={() => setCompletionData({ ...completionData, rating: star })}
+                    className={`p-1 rounded ${completionData.rating >= star
+                      ? 'text-yellow-400'
+                      : 'text-gray-300 hover:text-yellow-400'
+                      }`}
                   >
                     <Star className="w-6 h-6 fill-current" />
                   </button>
@@ -1087,7 +1118,7 @@ const ServiceBookings = () => {
               </label>
               <textarea
                 value={completionData.notes}
-                onChange={(e) => setCompletionData({...completionData, notes: e.target.value})}
+                onChange={(e) => setCompletionData({ ...completionData, notes: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Any notes about the service completion..."
@@ -1141,8 +1172,8 @@ const ServiceBookings = () => {
   );
 
   const CancellationModal = () => (
-    <Modal 
-      isOpen={showCancelModal} 
+    <Modal
+      isOpen={showCancelModal}
       onClose={() => {
         setShowCancelModal(false);
         setSelectedBooking(null);
@@ -1161,8 +1192,8 @@ const ServiceBookings = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Customer</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {selectedBooking.customerName || 
-                   `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim()}
+                  {selectedBooking.customerName ||
+                    `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim()}
                 </p>
               </div>
               <div>
@@ -1193,7 +1224,7 @@ const ServiceBookings = () => {
               </label>
               <textarea
                 value={cancellationData.reason}
-                onChange={(e) => setCancellationData({...cancellationData, reason: e.target.value})}
+                onChange={(e) => setCancellationData({ ...cancellationData, reason: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 placeholder="Please provide a reason for cancellation..."
@@ -1206,7 +1237,7 @@ const ServiceBookings = () => {
                 type="checkbox"
                 id="refundRequested"
                 checked={cancellationData.refundRequested}
-                onChange={(e) => setCancellationData({...cancellationData, refundRequested: e.target.checked})}
+                onChange={(e) => setCancellationData({ ...cancellationData, refundRequested: e.target.checked })}
                 className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
               />
               <label htmlFor="refundRequested" className="ml-2 block text-sm text-gray-900">
@@ -1264,8 +1295,8 @@ const ServiceBookings = () => {
     if (!selectedBooking) return null;
 
     return (
-      <Modal 
-        isOpen={showDetailsModal} 
+      <Modal
+        isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
         title={`Booking Details - #${selectedBooking.id?.toString().slice(-6) || 'Unknown'}`}
         size="large"
@@ -1282,13 +1313,13 @@ const ServiceBookings = () => {
                 <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-semibold text-gray-900">
-                    {selectedBooking.customerName || 
-                     `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim() ||
-                     'Unknown Customer'}
+                    {selectedBooking.customerName ||
+                      `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim() ||
+                      'Unknown Customer'}
                   </p>
                   <button
                     onClick={() => copyToClipboard(
-                      selectedBooking.customerName || 
+                      selectedBooking.customerName ||
                       `${selectedBooking.User?.firstName || ''} ${selectedBooking.User?.lastName || ''}`.trim(),
                       'Name'
                     )}
@@ -1298,7 +1329,7 @@ const ServiceBookings = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
                 <div className="flex items-center justify-between">
@@ -1395,7 +1426,7 @@ const ServiceBookings = () => {
                   {moment(selectedBooking.startTime).format('dddd, MMMM DD, YYYY')}
                 </p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Time</label>
                 <p className="text-lg font-semibold text-gray-900 flex items-center">
@@ -1499,12 +1530,12 @@ const ServiceBookings = () => {
 
   const ServiceTimingInfo = ({ booking }) => {
     if (!booking.service_started_at) return null;
-  
+
     const startTime = moment(booking.service_started_at);
     const endTime = booking.completedAt ? moment(booking.completedAt) : null;
     const scheduledDuration = booking.Service?.duration || 60;
     const actualDuration = booking.actual_duration;
-  
+
     return (
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-900 mb-2">Service Timing</h4>
@@ -1526,9 +1557,8 @@ const ServiceBookings = () => {
           {actualDuration && (
             <div>
               <span className="text-gray-600">Actual Duration:</span>
-              <p className={`font-medium ${
-                actualDuration > scheduledDuration ? 'text-orange-600' : 'text-green-600'
-              }`}>
+              <p className={`font-medium ${actualDuration > scheduledDuration ? 'text-orange-600' : 'text-green-600'
+                }`}>
                 {actualDuration} min
               </p>
             </div>
@@ -1540,8 +1570,8 @@ const ServiceBookings = () => {
 
   // Create Service Booking Modal - keeping your existing implementation but simplified
   const CreateServiceBookingModal = () => (
-    <Modal 
-      isOpen={showCreateModal} 
+    <Modal
+      isOpen={showCreateModal}
       onClose={() => setShowCreateModal(false)}
       title="Create New Service Booking"
       size="large"
@@ -1555,7 +1585,7 @@ const ServiceBookings = () => {
             <input
               type="text"
               value={newBooking.service}
-              onChange={(e) => setNewBooking({...newBooking, service: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, service: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter service name"
             />
@@ -1567,7 +1597,7 @@ const ServiceBookings = () => {
             </label>
             <select
               value={newBooking.duration}
-              onChange={(e) => setNewBooking({...newBooking, duration: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, duration: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Select duration</option>
@@ -1584,7 +1614,7 @@ const ServiceBookings = () => {
             <input
               type="text"
               value={newBooking.clientName}
-              onChange={(e) => setNewBooking({...newBooking, clientName: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, clientName: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter client full name"
             />
@@ -1597,7 +1627,7 @@ const ServiceBookings = () => {
             <input
               type="email"
               value={newBooking.clientEmail}
-              onChange={(e) => setNewBooking({...newBooking, clientEmail: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, clientEmail: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="client@example.com"
             />
@@ -1610,7 +1640,7 @@ const ServiceBookings = () => {
             <input
               type="tel"
               value={newBooking.clientPhone}
-              onChange={(e) => setNewBooking({...newBooking, clientPhone: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, clientPhone: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="0712345678"
             />
@@ -1623,7 +1653,7 @@ const ServiceBookings = () => {
             <input
               type="date"
               value={newBooking.date}
-              onChange={(e) => setNewBooking({...newBooking, date: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, date: e.target.value })}
               min={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -1635,7 +1665,7 @@ const ServiceBookings = () => {
             </label>
             <select
               value={newBooking.time}
-              onChange={(e) => setNewBooking({...newBooking, time: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, time: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Select time</option>
@@ -1653,7 +1683,7 @@ const ServiceBookings = () => {
               value={newBooking.store?.id || ''}
               onChange={(e) => {
                 const selectedStore = stores.find(s => s.id === parseInt(e.target.value));
-                setNewBooking({...newBooking, store: selectedStore});
+                setNewBooking({ ...newBooking, store: selectedStore });
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -1672,7 +1702,7 @@ const ServiceBookings = () => {
               value={newBooking.staff?.id || ''}
               onChange={(e) => {
                 const selectedStaff = staff.find(s => s.id === parseInt(e.target.value));
-                setNewBooking({...newBooking, staff: selectedStaff});
+                setNewBooking({ ...newBooking, staff: selectedStaff });
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -1689,7 +1719,7 @@ const ServiceBookings = () => {
             </label>
             <select
               value={newBooking.paymentStatus}
-              onChange={(e) => setNewBooking({...newBooking, paymentStatus: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, paymentStatus: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {paymentStatusOptions.map(option => (
@@ -1706,7 +1736,7 @@ const ServiceBookings = () => {
               <input
                 type="number"
                 value={newBooking.depositAmount}
-                onChange={(e) => setNewBooking({...newBooking, depositAmount: e.target.value})}
+                onChange={(e) => setNewBooking({ ...newBooking, depositAmount: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0.00"
                 min="0"
@@ -1721,7 +1751,7 @@ const ServiceBookings = () => {
             </label>
             <textarea
               value={newBooking.notes}
-              onChange={(e) => setNewBooking({...newBooking, notes: e.target.value})}
+              onChange={(e) => setNewBooking({ ...newBooking, notes: e.target.value })}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Additional notes about the service booking..."
@@ -1773,7 +1803,7 @@ const ServiceBookings = () => {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">Error Loading Bookings</h3>
             <p className="text-gray-600 mb-6">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -1792,25 +1822,47 @@ const ServiceBookings = () => {
       subtitle={`Manage client appointments for professional services - ${bookings.length} total bookings`}
       showSearch={false}
     >
+      {/* Store Filter Banner - Add this */}
+     {currentStoreId && (
+       <div className="bg-blue-50 border border-blue-200 rounded-lg mb-6 p-4 flex items-center justify-between">
+         <div className="flex items-center">
+           <Building className="w-5 h-5 text-blue-600 mr-3" />
+           <div>
+             <p className="text-blue-800 font-medium">
+               Showing bookings for: {stores.find(s => s.id === parseInt(currentStoreId))?.name || `Store ID: ${currentStoreId}`}
+             </p>
+           </div>
+         </div>
+         <button
+           onClick={() => {
+             setFilters(prev => ({...prev, store: ''}));
+             setCurrentStoreId(null);
+             loadBookings();
+           }}
+           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+         >
+           View All Stores
+         </button>
+       </div>
+     )}
+
       {/* Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-8 w-fit">
         <button
           onClick={() => setActiveTab('all')}
-          className={`px-6 py-2.5 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'all'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
+          className={`px-6 py-2.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'all'
+            ? 'bg-white text-blue-600 shadow-sm'
+            : 'text-gray-600 hover:text-gray-800'
+            }`}
         >
           All Bookings ({bookings.length})
         </button>
         <button
           onClick={() => setActiveTab('today')}
-          className={`px-6 py-2.5 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'today'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
+          className={`px-6 py-2.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'today'
+            ? 'bg-white text-blue-600 shadow-sm'
+            : 'text-gray-600 hover:text-gray-800'
+            }`}
         >
           <CalendarDays className="w-4 h-4 inline-block mr-2" />
           Today's Bookings ({getTodayStats().total})
@@ -1832,7 +1884,7 @@ const ServiceBookings = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -1886,7 +1938,7 @@ const ServiceBookings = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -1984,15 +2036,23 @@ const ServiceBookings = () => {
 
             <select
               value={filters.store}
-              onChange={(e) => setFilters(prev => ({ ...prev, store: e.target.value }))}
+              onChange={(e) => {
+                setFilters(prev => ({ ...prev, store: e.target.value }));
+                if (e.target.value) {
+                  setCurrentStoreId(e.target.value);
+                } else {
+                  setCurrentStoreId(null);
+                }
+              }}
               className="px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             >
               <option value="">All Stores</option>
               {stores.map(store => (
-                <option key={store.id} value={store.id}>{store.name}</option>
+                <option key={store.id} value={store.id}>
+                  {store.name} {parseInt(currentStoreId) === store.id ? '(Current)' : ''}
+                </option>
               ))}
             </select>
-
             <select
               value={filters.staff}
               onChange={(e) => setFilters(prev => ({ ...prev, staff: e.target.value }))}
@@ -2083,8 +2143,8 @@ const ServiceBookings = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {booking.customerName || 
-                             `${booking.User?.firstName || 'Unknown'} ${booking.User?.lastName || 'User'}`.trim()}
+                            {booking.customerName ||
+                              `${booking.User?.firstName || 'Unknown'} ${booking.User?.lastName || 'User'}`.trim()}
                           </div>
                           <div className="text-sm text-gray-500">{booking.User?.email}</div>
                           {(booking.User?.phoneNumber || booking.User?.phone) && (
@@ -2170,11 +2230,11 @@ const ServiceBookings = () => {
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
-                        
+
                         {dropdownOpen === booking.id && (
                           <>
-                            <div 
-                              className="fixed inset-0 z-10" 
+                            <div
+                              className="fixed inset-0 z-10"
                               onClick={() => setDropdownOpen(null)}
                             />
                             <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg z-20 border border-gray-100 py-2">
@@ -2186,9 +2246,8 @@ const ServiceBookings = () => {
                                     setDropdownOpen(null);
                                   }}
                                   disabled={actionLoading}
-                                  className={`flex items-center px-4 py-2.5 text-sm w-full text-left transition-colors ${action.color} ${
-                                    actionLoading ? 'opacity-50 cursor-not-allowed' : ''
-                                  }`}
+                                  className={`flex items-center px-4 py-2.5 text-sm w-full text-left transition-colors ${action.color} ${actionLoading ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                                 >
                                   <action.icon className="w-4 h-4 mr-3" />
                                   {action.label}
@@ -2215,11 +2274,11 @@ const ServiceBookings = () => {
               {activeTab === 'today' ? 'No Bookings Today' : 'No Service Bookings Found'}
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {searchTerm || Object.values(filters).some(f => f) 
+              {searchTerm || Object.values(filters).some(f => f)
                 ? 'No service bookings match your current search or filters. Try adjusting your criteria.'
                 : activeTab === 'today'
-                ? 'No service bookings scheduled for today. Check back later or create a new booking.'
-                : 'Get started by creating your first service booking to manage client appointments.'
+                  ? 'No service bookings scheduled for today. Check back later or create a new booking.'
+                  : 'Get started by creating your first service booking to manage client appointments.'
               }
             </p>
             <button
