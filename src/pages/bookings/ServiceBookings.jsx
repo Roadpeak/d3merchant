@@ -133,6 +133,34 @@ const ServiceBookings = () => {
     );
   };
 
+  const filterBookingsByStore = (bookings, storeId) => {
+    if (!storeId) return bookings;
+
+    console.log('Filtering bookings by store ID:', storeId);
+
+    return bookings.filter(booking => {
+      // Log a sample booking to understand its structure
+      if (booking === bookings[0]) {
+        console.log('Sample booking structure:', booking);
+      }
+
+      // Check all possible ways the store ID might be represented
+      const matchesStore =
+        (booking.storeId === parseInt(storeId)) ||
+        (booking.store_id === parseInt(storeId)) ||
+        (booking.store?.id === parseInt(storeId)) ||
+        (booking.store === parseInt(storeId)) ||
+        (booking.storeName &&
+          stores.find(s => s.id === parseInt(storeId) && s.name === booking.storeName));
+
+      if (booking === bookings[0]) {
+        console.log('First booking matches store?', matchesStore);
+      }
+
+      return matchesStore;
+    });
+  };
+
   // Data loading
   const loadBookings = async () => {
     try {
@@ -141,15 +169,15 @@ const ServiceBookings = () => {
 
       console.log('Loading service bookings...');
 
-      // Get store ID using the existing helper
+      // Try to get store ID using the existing helper
       let storeId = null;
       try {
         storeId = await bookingApiService.getMerchantStoreId();
         if (storeId) {
-          console.log(`Filtering bookings for store ID: ${storeId}`);
+          console.log(`Retrieved merchant store ID: ${storeId}`);
           setCurrentStoreId(storeId);
 
-          // IMPORTANT: Set initial store filter
+          // Set initial store filter
           setFilters(prev => ({
             ...prev,
             store: storeId.toString()
@@ -169,20 +197,32 @@ const ServiceBookings = () => {
         params.storeId = storeId;
       }
 
+      console.log('API request parameters:', params);
       const response = await bookingApiService.getMerchantServiceBookings(params);
 
       if (response && response.success && response.bookings) {
-        setBookings(response.bookings);
-        setFilteredBookings(response.bookings);
+        console.log(`API returned ${response.bookings.length} bookings`);
 
-        if (response.bookings.length === 0) {
-          toast('No service bookings found');
+        // Apply client-side store filter
+        const allBookings = response.bookings;
+        const filteredByStore = currentStoreId ?
+          filterBookingsByStore(allBookings, currentStoreId) :
+          allBookings;
+
+        console.log(`After client-side filtering: ${filteredByStore.length} bookings match store ID ${currentStoreId}`);
+
+        setBookings(filteredByStore);
+        setFilteredBookings(filteredByStore);
+
+        if (filteredByStore.length === 0) {
+          toast('No service bookings found for this store');
         } else {
-          toast.success(`${response.bookings.length} service bookings loaded`);
+          toast.success(`${filteredByStore.length} service bookings loaded for this store`);
         }
       } else {
         throw new Error(response?.message || 'Failed to load service bookings');
       }
+
     } catch (error) {
       console.error('Booking load error:', error);
       setError(error.message);
@@ -194,6 +234,7 @@ const ServiceBookings = () => {
     }
   };
 
+  // Updated handleRefresh function
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
@@ -208,15 +249,28 @@ const ServiceBookings = () => {
         params.storeId = currentStoreId;
       }
 
+      console.log('Refresh parameters:', params);
       const response = await bookingApiService.getMerchantServiceBookings(params);
 
       if (response && response.success && response.bookings) {
-        setBookings(response.bookings);
-        setFilteredBookings(response.bookings);
-        toast.success(`Service bookings refreshed - ${response.bookings.length} found`);
+        console.log(`Refresh returned ${response.bookings.length} bookings`);
+
+        // Apply client-side store filter
+        const allBookings = response.bookings;
+        const filteredByStore = currentStoreId ?
+          filterBookingsByStore(allBookings, currentStoreId) :
+          allBookings;
+
+        console.log(`After client-side filtering: ${filteredByStore.length} bookings match store ID ${currentStoreId}`);
+
+        setBookings(filteredByStore);
+        setFilteredBookings(filteredByStore);
+
+        toast.success(`Service bookings refreshed - ${filteredByStore.length} bookings found${currentStoreId ? ' for this store' : ''}`);
       } else {
         throw new Error(response?.message || 'Failed to refresh');
       }
+
     } catch (error) {
       toast.error('Failed to refresh data: ' + error.message);
       console.error('Refresh error:', error);
@@ -1824,7 +1878,10 @@ const ServiceBookings = () => {
             <Building className="w-5 h-5 text-blue-600 mr-3" />
             <div>
               <p className="text-blue-800 font-medium">
-                Showing bookings for: {stores.find(s => s.id === parseInt(currentStoreId))?.name || `Store ID: ${currentStoreId}`}
+                Showing bookings for: {stores.find(s => s.id === parseInt(currentStoreId))?.name || `Store #${currentStoreId}`}
+              </p>
+              <p className="text-blue-600 text-sm">
+                ({filteredBookings.length} bookings found)
               </p>
             </div>
           </div>
@@ -1836,7 +1893,7 @@ const ServiceBookings = () => {
             }}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
           >
-            View All Stores
+            Clear Store Filter
           </button>
         </div>
       )}
