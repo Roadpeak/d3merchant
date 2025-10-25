@@ -333,6 +333,48 @@ export default function MerchantServiceRequestDashboard() {
     }
   };
 
+  // ✅ NEW: Handle contacting customer (fetch phone and initiate call)
+  const handleContactCustomer = async (offer) => {
+    try {
+      console.log('📞 Fetching customer contact for offer:', offer.id);
+
+      // Get customer phone number from the offer or request details
+      const customerPhone = offer.customerPhone || offer.customerContact;
+
+      if (customerPhone) {
+        // Format the phone number for calling
+        const formattedPhone = customerPhone.startsWith('+') ? customerPhone : `+254${customerPhone.replace(/^0/, '')}`;
+        
+        console.log('📞 Calling customer:', formattedPhone);
+        
+        // Initiate phone call
+        window.location.href = `tel:${formattedPhone}`;
+      } else {
+        // If phone not in offer, fetch from service request details
+        console.log('📞 Fetching customer details from request:', offer.requestId);
+        
+        const response = await merchantServiceRequestService.getServiceRequestDetails(offer.requestId);
+        
+        if (response && response.success && response.data) {
+          const customerPhone = response.data.customerPhone || response.data.customer?.phone;
+          
+          if (customerPhone) {
+            const formattedPhone = customerPhone.startsWith('+') ? customerPhone : `+254${customerPhone.replace(/^0/, '')}`;
+            console.log('📞 Calling customer:', formattedPhone);
+            window.location.href = `tel:${formattedPhone}`;
+          } else {
+            alert('Customer phone number not available. Please contact through the platform messaging system.');
+          }
+        } else {
+          throw new Error('Failed to fetch customer contact details');
+        }
+      }
+    } catch (err) {
+      console.error('💥 Error contacting customer:', err);
+      alert('Failed to retrieve customer contact information. Please try again.');
+    }
+  };
+
   // ✅ FIXED: Submit STORE offer (not individual merchant offer)
   const handleOfferFormSubmit = async () => {
     setSubmitting(true);
@@ -949,7 +991,11 @@ export default function MerchantServiceRequestDashboard() {
                             </div>
                             <div className="flex space-x-2">
                               {offer.status === 'accepted' && (
-                                <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium">
+                                <button 
+                                  onClick={() => handleContactCustomer(offer)}
+                                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2"
+                                >
+                                  <MessageSquare className="w-4 h-4" />
                                   Contact Customer
                                 </button>
                               )}
