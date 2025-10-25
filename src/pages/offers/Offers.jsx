@@ -423,89 +423,116 @@ const EnhancedOfferPage = () => {
 
     return (
         <Layout
-            title="Enhanced Offers"
-            subtitle={`Manage your promotional offers with advanced booking settings - ${offers.length} total`}
+            title="Offers & Promotions"
+            subtitle="Manage your promotional offers with advanced booking settings"
             showSearch={false}
+            showMobileGrid={false}
+            className="p-0"
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-blue-600 text-white py-2.5 px-4 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="bg-blue-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
                 >
-                    <Plus className="w-4 h-4" />
-                    Create Offer
+                    <Plus className="w-5 h-5" />
+                    <span className="hidden sm:inline">Create Offer</span>
+                    <span className="sm:hidden">Create</span>
                 </button>
             }
         >
+            {/* Header Stats Card */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-6 mb-6 mx-6 mt-6 text-white shadow-lg">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h2 className="text-3xl font-bold mb-2">Your Offers</h2>
+                        <p className="text-blue-100">Create and manage promotional deals</p>
+                    </div>
+                    <div className="flex gap-6">
+                        <div className="text-center">
+                            <div className="text-3xl font-bold">{offers.length}</div>
+                            <div className="text-sm text-blue-100">Total</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl font-bold">{stats.active}</div>
+                            <div className="text-sm text-blue-100">Active</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl font-bold">{stats.avgDiscount}%</div>
+                            <div className="text-sm text-blue-100">Avg Discount</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Enhanced Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-                <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 mx-6">
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Active Offers</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                            <p className="text-xs text-gray-500 mt-1">Fixed: {stats.fixed} • Dynamic: {stats.dynamic}</p>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">Active Offers</p>
+                            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+                            <p className="text-xs text-gray-500 mt-2">Fixed: {stats.fixed} • Dynamic: {stats.dynamic}</p>
                         </div>
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <Tag className="w-6 h-6 text-blue-600" />
+                        <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
+                            <Tag className="w-7 h-7 text-blue-600" />
                         </div>
                     </div>
                 </div>
                 
-                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Available Now</p>
-                            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">Available Now</p>
+                            <p className="text-3xl font-bold text-green-600">{stats.active}</p>
                             <p className="text-xs text-gray-500 mt-1">Ready for booking</p>
                         </div>
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                            <CheckCircle className="w-6 h-6 text-green-600" />
+                        <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
+                            <CheckCircle className="w-7 h-7 text-green-600" />
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Auto-Confirm</p>
-                            <p className="text-2xl font-bold text-purple-600">{stats.autoConfirm}</p>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">Auto-Confirm</p>
+                            <p className="text-3xl font-bold text-purple-600">{stats.autoConfirm}</p>
                             <p className="text-xs text-gray-500 mt-1">Instant booking</p>
                         </div>
-                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                            <Shield className="w-6 h-6 text-purple-600" />
+                        <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
+                            <Shield className="w-7 h-7 text-purple-600" />
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Prepayment</p>
-                            <p className="text-2xl font-bold text-orange-600">{stats.requirePrepayment}</p>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">Prepayment</p>
+                            <p className="text-3xl font-bold text-orange-600">{stats.requirePrepayment}</p>
                             <p className="text-xs text-gray-500 mt-1">Payment required</p>
                         </div>
-                        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                            <CreditCard className="w-6 h-6 text-orange-600" />
+                        <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <CreditCard className="w-7 h-7 text-orange-600" />
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Avg. Discount</p>
-                            <p className="text-2xl font-bold text-red-600">{stats.avgDiscount}%</p>
+                            <p className="text-sm font-semibold text-gray-600 mb-2">Avg. Discount</p>
+                            <p className="text-3xl font-bold text-red-600">{stats.avgDiscount}%</p>
                             <p className="text-xs text-gray-500 mt-1">Across active offers</p>
                         </div>
-                        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                            <TrendingUp className="w-6 h-6 text-red-600" />
+                        <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center">
+                            <TrendingUp className="w-7 h-7 text-red-600" />
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Enhanced Search and Filter Section */}
-            <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6 mx-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <Filter className="w-5 h-5 text-gray-600" />
@@ -528,14 +555,14 @@ const EnhancedOfferPage = () => {
                 
                 <div className="space-y-4">
                     {/* Search Bar */}
-                    <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="relative max-w-lg">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                         <input
                             type="text"
-                            placeholder="Search offers and services..."
+                            placeholder="Search offers by name, service, or description..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                         />
                     </div>
 
@@ -579,9 +606,17 @@ const EnhancedOfferPage = () => {
             </div>
 
             {/* Enhanced Offers Grid */}
-            <div className="space-y-6">
+            <div className="mx-6 mb-6">
                 {filteredOffers?.length > 0 ? (
-                    <div className="grid gap-6">
+                    <>
+                        {/* Results Info */}
+                        <div className="mb-6">
+                            <p className="text-sm text-gray-600">
+                                Showing <span className="font-semibold text-gray-900">{filteredOffers.length}</span> of <span className="font-semibold text-gray-900">{offers.length}</span> offers
+                            </p>
+                        </div>
+
+                        <div className="grid gap-6">
                         {filteredOffers.map((offer) => {
                             const expired = isOfferExpired(offer.expiration_date);
                             const isDynamic = offer.offer_type === 'dynamic' || 
@@ -590,7 +625,7 @@ const EnhancedOfferPage = () => {
                             const bookingBadges = getBookingSettingsBadges(offer.service);
                             
                             return (
-                                <div key={offer.id} className="bg-white rounded-xl border border-gray-100 p-6 hover:shadow-lg transition-all duration-200">
+                                <div key={offer.id} className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6 hover:shadow-lg transition-all duration-200">
                                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                                         {/* Enhanced Offer Details */}
                                         <div className="flex-1 space-y-4">
@@ -803,30 +838,30 @@ const EnhancedOfferPage = () => {
                                 </div>
                             );
                         })}
-                    </div>
+                        </div>
+                    </>
                 ) : (
-                    <div className="bg-white rounded-xl border border-gray-100 p-12">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                <Tag className="w-8 h-8 text-gray-400" />
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                                {filter === 'all' ? 'No active offers yet' : `No ${filter} offers found`}
-                            </h3>
-                            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                                {filter === 'all' 
-                                    ? 'Create your first offer to attract more customers with special promotions and advanced booking features'
-                                    : `Try selecting a different filter or create new offers with enhanced service settings`
-                                }
-                            </p>
+                    <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
+                        <div className="w-16 h-16 bg-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Tag className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {filter === 'all' ? 'No Offers Yet' : `No ${filter} Offers Found`}
+                        </h3>
+                        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                            {filter === 'all' 
+                                ? 'Create your first offer to attract more customers with special promotions'
+                                : 'Try adjusting your filters or create a new offer'}
+                        </p>
+                        {filter === 'all' && (
                             <button
                                 onClick={() => setModalOpen(true)}
-                                className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
                             >
-                                <Plus className="w-4 h-4" />
-                                Create Enhanced Offer
+                                <Plus className="w-5 h-5" />
+                                Create Your First Offer
                             </button>
-                        </div>
+                        )}
                     </div>
                 )}
             </div>

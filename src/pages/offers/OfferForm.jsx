@@ -227,19 +227,22 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
     }
 
     return (
-        <div className="max-h-[80vh] overflow-y-auto p-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="w-full h-full max-h-[90vh] flex flex-col bg-white overflow-hidden rounded-xl">
+            {/* Form Content */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                <div className="p-4 md:p-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" id="offer-form">
                 
                 {/* Service Selection */}
                 <div>
-                    <label htmlFor="service_id" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="service_id" className="block text-sm font-semibold text-gray-800 mb-2">
                         <Tag className="w-4 h-4 inline mr-1" />
                         Select Service *
                     </label>
                     <select
                         id="service_id"
                         {...register('service_id', { required: 'Please select a service' })}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
                             formErrors.service_id ? 'border-red-400 bg-red-50' : 'border-gray-300'
                         }`}
                     >
@@ -405,7 +408,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
 
                 {/* Custom Offer Title */}
                 <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="title" className="block text-sm font-semibold text-gray-800 mb-2">
                         Custom Offer Title (Optional)
                     </label>
                     <input
@@ -413,7 +416,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                         id="title"
                         {...register('title')}
                         placeholder="e.g., Summer Special, New Customer Deal, Weekend Discount"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                         Leave empty to use the service name as the offer title
@@ -422,7 +425,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
 
                 {/* Discount Percentage */}
                 <div>
-                    <label htmlFor="discount" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="discount" className="block text-sm font-semibold text-gray-800 mb-2">
                         <Percent className="w-4 h-4 inline mr-1" />
                         Discount Percentage *
                     </label>
@@ -438,7 +441,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                         min="1"
                         max="100"
                         step="0.01"
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent ${
                             formErrors.discount ? 'border-red-400 bg-red-50' : 'border-gray-300'
                         }`}
                     />
@@ -489,7 +492,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                 {/* Custom Discount Explanation for Dynamic Services */}
                 {isServiceDynamic && (
                     <div>
-                        <label htmlFor="discount_explanation" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="discount_explanation" className="block text-sm font-semibold text-gray-800 mb-2">
                             <HelpCircle className="w-4 h-4 inline mr-1" />
                             Discount Explanation (Optional)
                         </label>
@@ -498,7 +501,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                             {...register('discount_explanation')}
                             placeholder="Customize how the discount is explained to customers..."
                             rows="3"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                         />
                         <p className="text-xs text-gray-500 mt-1">
                             Leave empty to use default explanation. This helps customers understand how the discount applies to dynamic pricing.
@@ -508,7 +511,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
 
                 {/* Expiration Date */}
                 <div>
-                    <label htmlFor="expiration_date" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="expiration_date" className="block text-sm font-semibold text-gray-800 mb-2">
                         <Calendar className="w-4 h-4 inline mr-1" />
                         Offer Expiration Date *
                     </label>
@@ -517,7 +520,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                         id="expiration_date"
                         {...register('expiration_date', { required: 'Expiration date is required' })}
                         min={new Date().toISOString().split('T')[0]}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent ${
                             formErrors.expiration_date ? 'border-red-400 bg-red-50' : 'border-gray-300'
                         }`}
                     />
@@ -534,7 +537,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
 
                 {/* Description */}
                 <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="description" className="block text-sm font-semibold text-gray-800 mb-2">
                         <FileText className="w-4 h-4 inline mr-1" />
                         Offer Description *
                     </label>
@@ -549,7 +552,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                             : "Describe what makes this offer special, what's included, any special benefits..."
                         }
                         rows="4"
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none ${
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none ${
                             formErrors.description ? 'border-red-400 bg-red-50' : 'border-gray-300'
                         }`}
                     />
@@ -568,7 +571,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Max Redemptions */}
                         <div>
-                            <label htmlFor="max_redemptions" className="block text-sm font-medium text-gray-700 mb-2">
+                            <label htmlFor="max_redemptions" className="block text-sm font-semibold text-gray-800 mb-2">
                                 Maximum Uses (Optional)
                             </label>
                             <input
@@ -577,7 +580,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                                 {...register('max_redemptions')}
                                 placeholder="e.g., 50"
                                 min="1"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
                             />
                             <p className="text-xs text-gray-500 mt-1">Leave empty for unlimited uses</p>
                         </div>
@@ -586,13 +589,13 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                         {/* Status */}
                         <div>
-                            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                            <label htmlFor="status" className="block text-sm font-semibold text-gray-800 mb-2">
                                 Offer Status
                             </label>
                             <select
                                 id="status"
                                 {...register('status')}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
                             >
                                 <option value="active">Active - Customers can book</option>
                                 <option value="inactive">Inactive - Hidden from customers</option>
@@ -644,7 +647,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
 
                     {/* Terms and Conditions */}
                     <div className="mt-4">
-                        <label htmlFor="terms_conditions" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="terms_conditions" className="block text-sm font-semibold text-gray-800 mb-2">
                             Terms & Conditions (Optional)
                         </label>
                         <textarea
@@ -655,7 +658,7 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                                 : "e.g., Valid for new customers only, Cannot be combined with other offers, Advance booking required..."
                             }
                             rows="3"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                         />
                         <p className="text-xs text-gray-500 mt-1">
                             Optional conditions that apply to this offer
@@ -724,6 +727,40 @@ const EnhancedOfferForm = ({ onClose, onOfferCreated, editingOffer = null }) => 
                     </div>
                 )}
             </form>
+                </div>
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4 md:p-6 pb-5 md:pb-7 shadow-lg">
+                <div className="flex gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 md:flex-none py-3 md:py-4 px-4 md:px-8 border-2 border-gray-300 rounded-xl text-sm md:text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        form="offer-form"
+                        disabled={submitting || !watchedServiceId}
+                        className="flex-1 py-3 md:py-4 px-4 md:px-8 bg-green-600 text-white rounded-xl text-sm md:text-base font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
+                    >
+                        {submitting ? (
+                            <>
+                                <Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                                <span>{editingOffer ? 'Updating...' : 'Creating...'}</span>
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                                <span>{editingOffer ? 'Update Offer' : 'Create Offer'}</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };
