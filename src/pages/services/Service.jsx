@@ -539,45 +539,45 @@ const ServicesPage = () => {
         const allImages = getAllImages(service);
 
         return (
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group">
-                <div className="relative">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                     <img
                         src={primaryImage}
                         alt={service.name}
-                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
-                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMzAgOTBIMTcwVjExMEgxMzBWOTBaIiBmaWxsPSIjRDFENUQ5Ii8+CjxwYXRoIGQ9Ik0xNDAgMTAwSDE2MFYxMjBIMTQwVjEwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNGM0Y0RjYiLz48cGF0aCBkPSJNMTMwIDkwSDE3MFYxMTBIMTMwVjkwWiIgZmlsbD0iI0QxRDVEOSIvPjxwYXRoIGQ9Ik0xNDAgMTAwSDE2MFYxMjBIMTQwVjEwMFoiIGZpbGw9IiM5Q0EzQUYiLz48L3N2Zz4=';
                         }}
                     />
 
                     <div className="absolute top-3 left-3 flex gap-2">
                         {allImages.length > 1 && (
-                            <span className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                <ImageIcon className="w-3 h-3" />
+                            <span className="bg-black/75 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 font-medium">
+                                <ImageIcon className="w-3.5 h-3.5" />
                                 {allImages.length}
                             </span>
                         )}
                         {service.featured && (
-                            <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                <Star className="w-3 h-3" />
+                            <span className="bg-yellow-500 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 font-medium">
+                                <Star className="w-3.5 h-3.5" />
                                 Featured
                             </span>
                         )}
                     </div>
 
                     <div className="absolute top-3 right-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 ${service.type === 'fixed'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
+                        <span className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 ${service.type === 'fixed'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-blue-500 text-white'
                             }`}>
                             {service.type === 'fixed' ? (
                                 <>
-                                    <DollarSign className="w-3 h-3" />
+                                    <DollarSign className="w-3.5 h-3.5" />
                                     Fixed
                                 </>
                             ) : (
                                 <>
-                                    <Calculator className="w-3 h-3" />
+                                    <Calculator className="w-3.5 h-3.5" />
                                     Dynamic
                                 </>
                             )}
@@ -586,105 +586,111 @@ const ServicesPage = () => {
                 </div>
 
                 <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
+                    <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-1">
                         {service.name}
                     </h3>
 
                     {service.type === 'fixed' && (
-                        <div className="flex items-center gap-4 mb-3">
+                        <div className="flex items-center gap-6 mb-4">
                             <div className="flex items-center text-blue-600">
-                                <DollarSign className="w-4 h-4 mr-1" />
-                                <span className="font-semibold">KES {service.price}</span>
+                                <DollarSign className="w-5 h-5 mr-1.5" />
+                                <span className="font-bold text-lg">KES {service.price}</span>
                             </div>
                             <div className="flex items-center text-gray-600">
-                                <Clock className="w-4 h-4 mr-1" />
-                                <span className="text-sm">{service.duration}m</span>
+                                <Clock className="w-5 h-5 mr-1.5" />
+                                <span className="text-sm font-medium">{service.duration}m</span>
                             </div>
                         </div>
                     )}
 
                     {service.type === 'dynamic' && service.price_range && (
-                        <div className="mb-3">
+                        <div className="mb-4">
                             <div className="flex items-center text-blue-600">
-                                <Calculator className="w-4 h-4 mr-1" />
-                                <span className="font-semibold">{service.price_range}</span>
+                                <Calculator className="w-5 h-5 mr-1.5" />
+                                <span className="font-bold text-lg">{service.price_range}</span>
                             </div>
                         </div>
                     )}
 
                     {service.category && (
-                        <div className="mb-3">
-                            <span className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                        <div className="mb-4">
+                            <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg font-medium">
+                                <Tag className="w-3.5 h-3.5" />
                                 {service.category}
                             </span>
                         </div>
                     )}
 
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                    <p className="text-sm text-gray-600 mb-5 line-clamp-2 leading-relaxed">
                         {service.description || 'No description available'}
                     </p>
 
-                    {/* NEW: Booking Settings Preview */}
-                    <div className="flex flex-wrap gap-1 mb-4">
+                    {/* Booking Settings Badges */}
+                    <div className="flex flex-wrap gap-2 mb-5">
                         {service.auto_confirm_bookings && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full">
-                                <CheckCircle className="w-3 h-3" />
+                            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-green-50 text-green-700 rounded-lg font-medium">
+                                <CheckCircle className="w-3.5 h-3.5" />
                                 Auto-Confirm
                             </span>
                         )}
                         {service.require_prepayment && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
-                                <CreditCard className="w-3 h-3" />
-                                Prepay
+                            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-blue-50 text-blue-700 rounded-lg font-medium">
+                                <CreditCard className="w-3.5 h-3.5" />
+                                Prepay Required
                             </span>
                         )}
                         {service.allow_early_checkin && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-full">
-                                <UserCheck className="w-3 h-3" />
+                            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-purple-50 text-purple-700 rounded-lg font-medium">
+                                <UserCheck className="w-3.5 h-3.5" />
                                 Early Check-in
                             </span>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => handleViewService(service)}
-                            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                         >
                             <Eye className="w-4 h-4" />
-                            View
+                            View Details
                         </button>
 
                         <button
                             onClick={() => handleEditService(service)}
-                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition-colors"
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-xl transition-colors"
                         >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-5 h-5" />
                         </button>
 
                         <button
                             onClick={() => handleDeleteService(service)}
-                            className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition-colors"
+                            className="bg-red-50 hover:bg-red-100 text-red-600 p-3 rounded-xl transition-colors"
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                         </button>
                     </div>
 
+                    {/* Staff Section */}
                     {service.staff && service.staff.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 mb-2">Assigned Staff:</p>
-                            <div className="flex gap-1">
-                                {service.staff.slice(0, 2).map((staff) => (
+                        <div className="mt-5 pt-5 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 font-medium mb-2.5 flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5" />
+                                Assigned Staff
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {service.staff.slice(0, 3).map((staff) => (
                                     <span
                                         key={staff.id}
-                                        className="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full"
+                                        className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 text-xs rounded-lg font-medium"
                                     >
                                         {staff.name}
                                     </span>
                                 ))}
-                                {service.staff.length > 2 && (
-                                    <span className="inline-flex items-center px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded-full">
-                                        +{service.staff.length - 2}
+                                {service.staff.length > 3 && (
+                                    <span className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-600 text-xs rounded-lg font-medium">
+                                        +{service.staff.length - 3} more
                                     </span>
                                 )}
                             </div>
@@ -698,127 +704,157 @@ const ServicesPage = () => {
     return (
         <Layout
             title="Services"
-            subtitle={`Manage your service offerings (${services.length} total)`}
+            subtitle={`Manage your service offerings`}
             showSearch={false}
+            showMobileGrid={false}
+            className="p-0"
             rightContent={
                 <button
                     onClick={() => setModalOpen(true)}
-                    className="bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="bg-blue-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
                 >
-                    <Plus className="w-4 h-4" />
-                    Add Service
+                    <Plus className="w-5 h-5" />
+                    <span className="hidden sm:inline">Add Service</span>
+                    <span className="sm:hidden">Add</span>
                 </button>
             }
         >
-            {/* Search and Filter Bar */}
-            <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input
-                            type="text"
-                            placeholder="Search services..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+            {/* Header Stats Card */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-6 mb-6 mx-6 mt-6 text-white shadow-lg">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold mb-2">Your Services</h2>
+                        <p className="text-blue-100">Manage and organize all your offerings</p>
                     </div>
-                    <div className="relative">
-                        <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <select
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            className="appearance-none pl-10 pr-8 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[140px]"
-                        >
-                            <option value="all">All Services</option>
-                            <option value="fixed">Fixed Price</option>
-                            <option value="dynamic">Dynamic Price</option>
-                        </select>
+                    <div className="flex gap-6">
+                        <div className="text-center">
+                            <div className="text-3xl font-bold">{services.length}</div>
+                            <div className="text-sm text-blue-100">Total</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl font-bold">{services.filter(s => s.type === 'fixed').length}</div>
+                            <div className="text-sm text-blue-100">Fixed</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-3xl font-bold">{services.filter(s => s.featured).length}</div>
+                            <div className="text-sm text-blue-100">Featured</div>
+                        </div>
                     </div>
-                    <button
-                        onClick={refreshServices}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2.5 rounded-lg transition-colors"
-                        title="Refresh Services"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
                 </div>
-
-                {/* Filter Statistics */}
-                {!loading && !error && services.length > 0 && (
-                    <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-100">
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">{services.filter(s => s.auto_confirm_bookings).length}</span> auto-confirm services
-                        </div>
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">{services.filter(s => s.require_prepayment).length}</span> require prepayment
-                        </div>
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">{services.filter(s => s.featured).length}</span> featured services
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* Results Summary */}
-            {!loading && !error && (
-                <div className="mb-6">
-                    <p className="text-gray-600">
-                        {filteredServices.length === services.length
-                            ? `Showing all ${services.length} services`
-                            : `Showing ${filteredServices.length} of ${services.length} services`
-                        }
-                        {searchTerm && ` matching "${searchTerm}"`}
-                        {filterType !== 'all' && ` with ${filterType} pricing`}
-                    </p>
-                </div>
-            )}
-
-            {/* Main Content */}
-            {loading ? (
-                <LoadingState />
-            ) : error ? (
-                <ErrorState />
-            ) : filteredServices.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredServices.map((service) => (
-                        <ServiceCard key={service.id} service={service} />
-                    ))}
-                </div>
-            ) : services.length > 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4">
-                    <div className="bg-gray-50 rounded-2xl p-8 mb-6">
-                        <Search className="w-16 h-16 text-gray-400 mx-auto" />
+            {/* Search and Filter Bar */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6 mx-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search services by name, category, or description..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        No Services Found
-                    </h3>
-                    <p className="text-gray-600 text-center mb-6 max-w-md">
-                        No services match your current search or filter criteria.
-                    </p>
-                    <button
-                        onClick={() => {
-                            setSearchTerm('');
-                            setFilterType('all');
-                        }}
-                        className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                    >
-                        Clear Filters
-                    </button>
+                    <div className="flex gap-3">
+                        <div className="relative">
+                            <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                                className="appearance-none pl-12 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[160px] text-sm font-medium"
+                            >
+                                <option value="all">All Services</option>
+                                <option value="fixed">Fixed Price</option>
+                                <option value="dynamic">Dynamic Price</option>
+                            </select>
+                        </div>
+                        <button
+                            onClick={refreshServices}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-xl transition-colors"
+                            title="Refresh Services"
+                        >
+                            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
                 </div>
-            ) : (
-                <EmptyState />
-            )}
+            </div>
+
+            {/* Content Area */}
+            <div className="mx-6 mb-6">
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="text-center">
+                            <RefreshCw className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+                            <p className="text-gray-600 font-medium">Loading services...</p>
+                        </div>
+                    </div>
+                ) : error ? (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+                        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-red-900 mb-2">Error Loading Services</h3>
+                        <p className="text-red-700 mb-4">{error}</p>
+                        <button
+                            onClick={refreshServices}
+                            className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-red-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                ) : filteredServices.length === 0 ? (
+                    <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
+                        <div className="w-16 h-16 bg-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {services.length === 0 ? 'No Services Yet' : 'No Matching Services'}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {services.length === 0
+                                ? 'Get started by adding your first service'
+                                : 'Try adjusting your search or filters'}
+                        </p>
+                        {services.length === 0 && (
+                            <button
+                                onClick={() => setModalOpen(true)}
+                                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Add Your First Service
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        {/* Results Info */}
+                        <div className="mb-6">
+                            <p className="text-sm text-gray-600">
+                                Showing <span className="font-semibold text-gray-900">{filteredServices.length}</span> of <span className="font-semibold text-gray-900">{services.length}</span> services
+                            </p>
+                        </div>
+                        
+                        {/* Services Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredServices.map((service) => (
+                                <ServiceCard key={service.id} service={service} />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
 
             {/* Modals */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setModalOpen(false)}
-                title=""
-                size="landscape"
+                title="Add New Service"
+                size="large"
             >
                 <ServiceForm
-                    onClose={() => setModalOpen(false)}
+                    onClose={() => {
+                        setModalOpen(false);
+                        refreshServices();
+                    }}
                     onServiceAdded={refreshServices}
                 />
             </Modal>
@@ -831,8 +867,8 @@ const ServicesPage = () => {
                     setEditModalOpen(false);
                     setSelectedService(null);
                 }}
-                title=""
-                size="landscape"
+                title="Edit Service"
+                size="large"
             >
                 <ServiceForm
                     onClose={() => {

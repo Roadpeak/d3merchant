@@ -639,10 +639,105 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
         { id: 'settings', label: 'Settings', icon: Settings }
     ];
 
+    const currentStepIndex = steps.findIndex(step => step.id === activeTab);
+    const progress = ((currentStepIndex + 1) / steps.length) * 100;
+
+    // Mobile Progress Stepper Component
+    const MobileProgressStepper = () => (
+        <div className="bg-white border-b border-gray-200 pb-4 mb-6">
+            {/* Progress Bar */}
+            <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-semibold text-gray-900">
+                        Step {currentStepIndex + 1} of {steps.length}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                        {Math.round(progress)}% Complete
+                    </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div 
+                        className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all duration-300 ease-in-out"
+                        style={{ width: `${progress}%` }}
+                    ></div>
+                </div>
+            </div>
+
+            {/* Current Step Info */}
+            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                {React.createElement(steps[currentStepIndex].icon, { 
+                    className: "w-6 h-6 text-blue-600 flex-shrink-0" 
+                })}
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-gray-900">
+                        {steps[currentStepIndex].label}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                        {getStepDescription(steps[currentStepIndex].id)}
+                    </p>
+                </div>
+            </div>
+
+            {/* Desktop: Show all steps */}
+            <div className="hidden md:flex items-center justify-between mt-6 px-2">
+                {steps.map((step, index) => {
+                    const isActive = activeTab === step.id;
+                    const isCompleted = index < currentStepIndex;
+                    
+                    return (
+                        <React.Fragment key={step.id}>
+                            <button
+                                onClick={() => setActiveTab(step.id)}
+                                className={`flex flex-col items-center gap-2 transition-all ${
+                                    isActive ? 'scale-110' : 'hover:scale-105'
+                                }`}
+                            >
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                                    isCompleted 
+                                        ? 'bg-green-500 text-white' 
+                                        : isActive 
+                                        ? 'bg-blue-600 text-white ring-4 ring-blue-100' 
+                                        : 'bg-gray-200 text-gray-500'
+                                }`}>
+                                    {isCompleted ? (
+                                        <CheckCircle className="w-5 h-5" />
+                                    ) : (
+                                        React.createElement(step.icon, { className: "w-5 h-5" })
+                                    )}
+                                </div>
+                                <span className={`text-xs font-medium ${
+                                    isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                                }`}>
+                                    {step.label}
+                                </span>
+                            </button>
+                            {index < steps.length - 1 && (
+                                <div className={`flex-1 h-0.5 mx-2 ${
+                                    index < currentStepIndex ? 'bg-green-500' : 'bg-gray-200'
+                                }`}></div>
+                            )}
+                        </React.Fragment>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    const getStepDescription = (stepId) => {
+        const descriptions = {
+            'basic': 'Enter service name, category, and pricing details',
+            'images': 'Upload up to 3 images for your service',
+            'booking': 'Configure booking capacity and availability',
+            'staff': 'Assign staff members to this service',
+            'settings': 'Set up confirmation and completion rules'
+        };
+        return descriptions[stepId] || '';
+    };
+
     if (storeLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <Loader className="w-8 h-8 animate-spin text-primary mr-3" />
+                <Loader className="w-8 h-8 animate-spin text-blue-600 mr-3" />
                 <span className="text-lg">Loading store information...</span>
             </div>
         );
@@ -652,8 +747,8 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
         switch (activeTab) {
             case 'basic':
                 return (
-                    <div className="h-full">
-                        <div className="grid grid-cols-3 gap-8 h-full">
+                    <div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                             {/* Left Column - Basic Info */}
                             <div className="col-span-1 space-y-6">
                                 {/* Service Name */}
@@ -1044,13 +1139,13 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
 
                 case 'images':
                     return (
-                        <div className="w-full h-full"> {/* Changed from max-w-6xl mx-auto */}
+                        <div className="w-full">
                             <div className="mb-6">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Service Images</h3>
                                 <p className="text-sm text-gray-600">Upload up to 3 high-quality images of your service. The first image will be used as the primary image.</p>
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-8"> {/* Increased gap from gap-6 to gap-8 */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                                 {[0, 1, 2].map((index) => (
                                     <div key={index} className="relative">
                                         {imagePreviews[index] || serviceData.images[index] ? (
@@ -1584,108 +1679,173 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">{editingService ? 'Edit Service' : 'Create New Service'}</h2>
+        <div className="w-full h-full max-h-[90vh] flex flex-col bg-white overflow-hidden rounded-xl">
+            {/* Header */}
+            <div className="p-4 md:p-6 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                    {editingService ? 'Edit Service' : 'Create New Service'}
+                </h2>
                 <button
                     onClick={onClose}
-                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                    className="text-gray-500 hover:text-gray-700 transition-colors p-2"
                 >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
             </div>
 
-            <div className="overflow-visible">
-                {/* Progress Bar - Similar to quiz form */}
-                <div className="border-b border-gray-100 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex-1 grid grid-cols-5 gap-2">
-                            {steps.map((step, index) => (
+            {/* Mobile Progress Stepper */}
+            <div className="md:hidden px-4 pt-4 flex-shrink-0">
+                <MobileProgressStepper />
+            </div>
+
+            {/* Desktop Progress Bar */}
+            <div className="hidden md:block border-b border-gray-100 px-6 py-4 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                    <div className="flex-1 grid grid-cols-5 gap-2">
+                        {steps.map((step, index) => {
+                            const Icon = step.icon;
+                            const isActive = activeTab === step.id;
+                            const isCompleted = index < currentStepIndex;
+                            
+                            return (
                                 <div key={index} className="flex items-center">
-                                    <div
-                                        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center 
-                                        ${activeTab === step.id ? 'bg-primary text-white' :
-                                                (index < steps.findIndex(s => s.id === activeTab) + 1) ?
-                                                    'bg-primary text-white' : 'bg-gray-200 text-gray-500'}`}
+                                    <button
+                                        onClick={() => setActiveTab(step.id)}
+                                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                                            isCompleted 
+                                                ? 'bg-green-500 text-white' 
+                                                : isActive 
+                                                ? 'bg-blue-600 text-white ring-4 ring-blue-100' 
+                                                : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                        }`}
                                     >
-                                        {index + 1}
-                                    </div>
+                                        {isCompleted ? (
+                                            <CheckCircle className="w-5 h-5" />
+                                        ) : (
+                                            React.createElement(Icon, { className: "w-5 h-5" })
+                                        )}
+                                    </button>
                                     {index < 4 && (
-                                        <div className={`flex-1 h-1 ${index < steps.findIndex(s => s.id === activeTab) ?
-                                                'bg-primary' : 'bg-gray-200'
-                                            }`}></div>
+                                        <div className={`flex-1 h-1 mx-2 ${
+                                            index < currentStepIndex ? 'bg-green-500' : 'bg-gray-200'
+                                        }`}></div>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex justify-between mt-1 text-xs text-gray-500 px-1">
-                        {steps.map((step, index) => (
-                            <span key={index}>{step.label}</span>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
-
-                {/* Tab Navigation */}
-                <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
-                    <div className="px-8">
-                        <nav className="flex space-x-2 overflow-x-auto py-4 scrollbar-hide">
-                            {steps.map((tab) => {
-                                const Icon = tab.icon;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`py-3 px-6 text-base font-medium rounded-full flex items-center space-x-2 min-w-fit ${activeTab === tab.id
-                                                ? 'bg-primary text-white shadow-md'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            } transition-all duration-200`}
-                                    >
-                                        <Icon className="w-5 h-5" />
-                                        <span>{tab.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </nav>
-                    </div>
+                <div className="flex justify-between mt-2 text-xs text-gray-600">
+                    {steps.map((step, index) => (
+                        <span key={index} className={`${activeTab === step.id ? 'font-semibold text-blue-600' : ''}`}>
+                            {step.label}
+                        </span>
+                    ))}
                 </div>
+            </div>
 
-                {/* Tab Content */}
-                <div className="flex-1 overflow-y-auto min-h-0">
-                    <div className="p-6 h-full">
-                        {renderTabContent()}
-                    </div>
+            {/* Tab Navigation - Hidden on mobile, shown on desktop */}
+            <div className="hidden lg:block flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+                <div className="px-6">
+                    <nav className="flex space-x-2 overflow-x-auto py-4 scrollbar-hide">
+                        {steps.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`py-3 px-6 text-sm font-medium rounded-xl flex items-center space-x-2 min-w-fit ${
+                                        activeTab === tab.id
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    } transition-all duration-200`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </nav>
                 </div>
+            </div>
 
-                {/* Submit Button */}
-                <div className="flex-shrink-0 bg-white border-t border-gray-200 p-6 shadow-inner flex gap-6">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="flex-1 py-4 px-6 border-2 border-gray-300 rounded-lg text-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
-                    >
-                        <X className="w-6 h-6 mr-2" />
-                        Cancel
-                    </button>
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                <div className="p-4 md:p-6">
+                    {renderTabContent()}
+                </div>
+            </div>
 
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={loading || imageUploading}
-                        className="flex-1 py-4 px-6 bg-primary text-white rounded-lg text-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md"
-                    >
-                        {loading || imageUploading ? (
-                            <>
-                                <Loader className="w-6 h-6 animate-spin mr-3" />
-                                {imageUploading ? 'Uploading Images...' : (editingService ? 'Updating...' : 'Creating...')}
-                            </>
-                        ) : (
-                            <>
-                                <CheckCircle className="w-6 h-6 mr-3" />
-                                {editingService ? 'Update Service' : 'Create Service'}
-                            </>
-                        )}
-                    </button>
+            {/* Submit Button */}
+            <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4 md:p-6 pb-5 md:pb-7 shadow-lg">
+                <div className="flex gap-3">
+                    {/* Back Button - Show on all steps except first */}
+                    {currentStepIndex > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const prevIndex = Math.max(0, currentStepIndex - 1);
+                                setActiveTab(steps[prevIndex].id);
+                            }}
+                            className="flex-1 md:flex-none py-3 md:py-4 px-4 md:px-8 border-2 border-gray-300 rounded-xl text-sm md:text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span>Back</span>
+                        </button>
+                    )}
+
+                    {/* Cancel Button - Show only on first step */}
+                    {currentStepIndex === 0 && (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 md:flex-none py-3 md:py-4 px-4 md:px-8 border-2 border-gray-300 rounded-xl text-sm md:text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <X className="w-4 h-4 md:w-5 md:h-5" />
+                            <span>Cancel</span>
+                        </button>
+                    )}
+
+                    {/* Next Button - Show on all steps except last */}
+                    {currentStepIndex < steps.length - 1 ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const nextIndex = Math.min(steps.length - 1, currentStepIndex + 1);
+                                setActiveTab(steps[nextIndex].id);
+                            }}
+                            className="flex-1 py-3 md:py-4 px-4 md:px-8 bg-blue-600 text-white rounded-xl text-sm md:text-base font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md"
+                        >
+                            <span>Next Step</span>
+                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    ) : (
+                        /* Create/Update Button - Show only on last step */
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={loading || imageUploading}
+                            className="flex-1 py-3 md:py-4 px-4 md:px-8 bg-green-600 text-white rounded-xl text-sm md:text-base font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
+                        >
+                            {loading || imageUploading ? (
+                                <>
+                                    <Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                                    <span>
+                                        {imageUploading ? 'Uploading Images...' : (editingService ? 'Updating Service...' : 'Creating Service...')}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                                    <span>{editingService ? 'Update Service' : 'Create Service'}</span>
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
