@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
+// ✅ FIXED: Changed from dynamic import to static import
+import merchantServiceRequestService from '../../services/merchantServiceRequestService';
 
 // Simple SVG Icons (keeping the same as before)
 const Search = ({ className = "w-4 h-4" }) => (
@@ -158,8 +160,7 @@ export default function MerchantServiceRequestDashboard() {
     try {
       console.log('📊 Loading service requests for merchant...');
 
-      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-
+      // ✅ FIXED: Using static import instead of dynamic import
       const response = await merchantServiceRequestService.getServiceRequestsForMerchant(filters);
 
       if (response && response.success) {
@@ -187,8 +188,7 @@ export default function MerchantServiceRequestDashboard() {
     try {
       console.log('🏪 Loading merchant stores...');
 
-      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-
+      // ✅ FIXED: Using static import instead of dynamic import
       const response = await merchantServiceRequestService.getMerchantStores();
 
       if (response && response.success) {
@@ -211,8 +211,7 @@ export default function MerchantServiceRequestDashboard() {
     try {
       console.log('📊 Loading dashboard statistics...');
 
-      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-
+      // ✅ FIXED: Using static import instead of dynamic import
       const response = await merchantServiceRequestService.getDashboardStats();
 
       if (response && response.success) {
@@ -233,8 +232,7 @@ export default function MerchantServiceRequestDashboard() {
     try {
       console.log('📤 Loading merchant offers...');
 
-      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-
+      // ✅ FIXED: Using static import instead of dynamic import
       const response = await merchantServiceRequestService.getMerchantOffers();
 
       if (response && response.success) {
@@ -353,9 +351,7 @@ export default function MerchantServiceRequestDashboard() {
         throw new Error('Please enter a valid price');
       }
 
-      // Import service dynamically
-      const { default: merchantServiceRequestService } = await import('../../services/merchantServiceRequestService');
-
+      // ✅ FIXED: Using static import instead of dynamic import
       // Validate offer data
       const validationErrors = merchantServiceRequestService.validateOfferData(offerForm);
       if (validationErrors.length > 0) {
