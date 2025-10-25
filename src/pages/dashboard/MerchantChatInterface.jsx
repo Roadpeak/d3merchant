@@ -557,16 +557,18 @@ const MerchantChatInterface = () => {
       title="Customer Chat"
       subtitle={`Store customer support - ${customers.length} conversations`}
       showSearch={false}
+      showMobileGrid={false}
+      className="p-0"
     >
-      {/* Header Card */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+      {/* Desktop Header Card - Hidden on Mobile */}
+      <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6 mx-6 mt-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Store className="w-6 h-6 text-blue-600" />
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-500 rounded-2xl flex items-center justify-center shadow-md">
+              <Store className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900">
                 Store Customer Support
               </h2>
               <div className="flex items-center gap-4 mt-1">
@@ -579,9 +581,9 @@ const MerchantChatInterface = () => {
           </div>
           <div className="flex items-center gap-3">
             {totalUnreadCount > 0 && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-medium text-orange-800">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 rounded-xl border border-orange-100">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
+                <span className="text-sm font-semibold text-orange-800">
                   {totalUnreadCount} unread
                 </span>
               </div>
@@ -589,22 +591,22 @@ const MerchantChatInterface = () => {
             <button
               onClick={handleRefresh}
               disabled={refreshing || !user?.id || user?.userType !== 'merchant'}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium shadow-sm"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </button>
           </div>
         </div>
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
               {error}
             </div>
             <button 
               onClick={() => setError(null)}
-              className="text-red-800 hover:text-red-900"
+              className="text-red-800 hover:text-red-900 text-xl font-bold"
             >
               ×
             </button>
@@ -612,8 +614,17 @@ const MerchantChatInterface = () => {
         )}
       </div>
 
-      {/* Main Chat Interface */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm" style={{ height: '700px' }}>
+      {/* Mobile Error Banner */}
+      {error && (
+        <div className="md:hidden p-3 bg-red-50 border-b border-red-200 text-red-700 text-sm flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">{error}</div>
+          <button onClick={() => setError(null)} className="text-red-800">×</button>
+        </div>
+      )}
+
+      {/* Main Chat Interface - Mobile Optimized */}
+      <div className="md:mx-6 md:mb-6 bg-white md:rounded-2xl md:border border-gray-200 overflow-hidden md:shadow-sm" style={{ height: 'calc(100vh - 240px)', minHeight: '500px' }}>
         <div className="flex h-full">
           {/* Customer List Sidebar */}
           <div className={`${selectedCustomer
@@ -621,45 +632,96 @@ const MerchantChatInterface = () => {
               : 'flex'
             } w-full lg:w-96 flex-col bg-gray-50`}>
             
-            {/* Search and Filter */}
-            <div className="p-4 bg-white border-b border-gray-100">
-              <div className="space-y-3">
+            {/* Mobile-First Search and Filter - WhatsApp Style */}
+            <div className="bg-white border-b border-gray-100">
+              {/* Mobile Header */}
+              <div className="md:hidden px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-between">
+                <h1 className="text-white text-xl font-bold">Chats</h1>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button className="p-2 text-white hover:bg-white/20 rounded-full transition-colors">
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Desktop Header with gradient */}
+              <div className="hidden md:block p-5 bg-gradient-to-r from-blue-600 to-blue-500">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-bold text-lg">Conversations</h3>
+                  <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1.5">
+                    <Users className="w-4 h-4 text-white" />
+                    <span className="text-white text-sm font-semibold">{customers.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search Bar - Mobile Optimized */}
+              <div className="p-3 md:px-5 md:pb-5 bg-gradient-to-r from-blue-600 to-blue-500 md:bg-gradient-to-r md:from-blue-600 md:to-blue-500">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 md:text-blue-200 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Search customers..."
+                    placeholder="Search conversations..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full pl-11 md:pl-12 pr-4 py-2.5 md:py-3 bg-white md:bg-white/20 border-0 md:border md:border-white/30 rounded-lg md:rounded-xl text-gray-900 md:text-white placeholder-gray-500 md:placeholder-blue-100 focus:outline-none focus:ring-0 md:focus:bg-white/30 transition-all"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              </div>
+
+              {/* Filter Tabs - Mobile & Desktop */}
+              <div className="flex bg-white md:bg-white/10 md:mx-5 md:mb-3 md:rounded-xl overflow-hidden">
+                {[
+                  { value: 'all', label: 'All' },
+                  { value: 'unread', label: 'Unread', count: customers.filter(c => c.unreadCount > 0).length },
+                  { value: 'vip', label: 'VIP' },
+                  { value: 'online', label: 'Online' }
+                ].map((filter) => (
+                  <button
+                    key={filter.value}
+                    onClick={() => setFilterStatus(filter.value)}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+                      filterStatus === filter.value
+                        ? 'text-blue-600 md:text-white md:bg-white/20'
+                        : 'text-gray-600 md:text-blue-100'
+                    }`}
                   >
-                    <option value="all">All Customers</option>
-                    <option value="unread">Unread ({customers.filter(c => c.unreadCount > 0).length})</option>
-                    <option value="vip">VIP Customers</option>
-                    <option value="online">Online Now</option>
-                  </select>
-                </div>
+                    {filter.label}
+                    {filter.count !== undefined && filter.count > 0 && (
+                      <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                        filterStatus === filter.value
+                          ? 'bg-blue-100 text-blue-600 md:bg-white/30 md:text-white'
+                          : 'bg-gray-100 text-gray-600 md:bg-white/10 md:text-blue-100'
+                      }`}>
+                        {filter.count}
+                      </span>
+                    )}
+                    {filterStatus === filter.value && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 md:hidden"></div>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Customer List */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Customer List - Mobile Optimized */}
+            <div className="flex-1 overflow-y-auto bg-white">
               {filteredCustomers.length === 0 ? (
-                <div className="flex items-center justify-center h-32 text-gray-500">
+                <div className="flex items-center justify-center h-64 text-gray-500 px-4">
                   <div className="text-center">
-                    <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="font-medium">
-                      {searchTerm || filterStatus !== 'all' ? 'No matching customers' : 'No customer conversations'}
+                    <MessageCircle className="w-16 h-16 mx-auto mb-3 text-gray-300" />
+                    <p className="font-medium text-base mb-1">
+                      {searchTerm || filterStatus !== 'all' ? 'No matching conversations' : 'No conversations yet'}
                     </p>
-                    <p className="text-sm">
-                      {searchTerm || filterStatus !== 'all' ? 'Try adjusting your search or filters' : 'Customer messages will appear here'}
+                    <p className="text-sm text-gray-400">
+                      {searchTerm || filterStatus !== 'all' ? 'Try adjusting your filters' : 'Customer messages will appear here'}
                     </p>
                   </div>
                 </div>
@@ -668,43 +730,49 @@ const MerchantChatInterface = () => {
                   <div
                     key={customer.id}
                     onClick={() => handleCustomerSelect(customer)}
-                    className={`flex items-start p-3 hover:bg-white cursor-pointer transition-all border-b border-gray-100 ${selectedCustomer?.conversationId === customer.id ? 'bg-white border-r-2 border-r-blue-500' : ''
-                      }`}
+                    className={`flex items-center px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100 ${
+                      selectedCustomer?.conversationId === customer.id ? 'bg-blue-50' : ''
+                    }`}
                   >
-                    <div className="relative flex-shrink-0">
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0 mr-3">
                       <img
                         src={customer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.customer?.name || 'Customer')}&background=random`}
                         alt={customer.customer?.name || 'Customer'}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                       {isUserOnline(customer.customer?.id) && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                      )}
-                      {customer.customer?.priority === 'vip' && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                          <Star className="w-2 h-2 text-yellow-800" />
-                        </div>
+                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
                       )}
                     </div>
-                    <div className="ml-3 flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate text-sm">{customer.customer?.name || 'Unknown'}</h3>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs text-gray-400">{customer.lastMessageTime}</span>
-                          {customer.unreadCount > 0 && (
-                            <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                              {customer.unreadCount}
-                            </span>
-                          )}
-                        </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900 truncate text-base">
+                          {customer.customer?.name || 'Unknown'}
+                        </h3>
+                        <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                          {customer.lastMessageTime}
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-600 truncate mb-1">{customer.lastMessage}</p>
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span>{customer.customer?.orderCount || 0} orders</span>
-                        <div className="flex items-center gap-1">
-                          <Store className="w-3 h-3" />
-                          <span className="truncate max-w-20">{customer.store?.name || 'Store'}</span>
-                        </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600 truncate flex-1 mr-2">
+                          {customer.lastMessage}
+                        </p>
+                        
+                        {/* Unread Badge */}
+                        {customer.unreadCount > 0 && (
+                          <span className="bg-green-500 text-white text-xs rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center font-semibold flex-shrink-0">
+                            {customer.unreadCount > 99 ? '99+' : customer.unreadCount}
+                          </span>
+                        )}
+                        
+                        {/* VIP Badge */}
+                        {customer.customer?.priority === 'vip' && customer.unreadCount === 0 && (
+                          <Star className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -720,51 +788,54 @@ const MerchantChatInterface = () => {
             } flex-col`}>
             {selectedCustomer ? (
               <>
-                {/* Customer Chat Header */}
-                <div className="bg-white p-4 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center">
+                {/* Customer Chat Header - Mobile Optimized */}
+                <div className="bg-white px-3 md:px-4 py-3 md:py-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center flex-1 min-w-0">
+                    {/* Back Button - Mobile */}
                     <button
                       onClick={handleBackToSidebar}
-                      className="lg:hidden mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="lg:hidden mr-2 p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors active:bg-gray-200"
                     >
-                      <ArrowLeft className="w-5 h-5 text-gray-600" />
+                      <ArrowLeft className="w-5 h-5 text-gray-700" />
                     </button>
-                    <div className="relative">
+                    
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
                       <img
                         src={selectedCustomer.customer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCustomer.customer?.name || 'Customer')}&background=random`}
                         alt={selectedCustomer.customer?.name || 'Customer'}
                         className="w-10 h-10 rounded-full object-cover"
                       />
-                      {selectedCustomer.customer?.priority === 'vip' && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                          <Star className="w-2 h-2 text-yellow-800" />
-                        </div>
+                      {isUserOnline(selectedCustomer.customer?.id) && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                       )}
                     </div>
-                    <div className="ml-3">
+                    
+                    {/* Name and Status */}
+                    <div className="ml-3 flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h2 className="font-semibold text-gray-900">{selectedCustomer.customer?.name || 'Customer'}</h2>
+                        <h2 className="font-semibold text-gray-900 truncate text-base">
+                          {selectedCustomer.customer?.name || 'Customer'}
+                        </h2>
                         {selectedCustomer.customer?.priority === 'vip' && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">VIP</span>
+                          <Star className="w-4 h-4 text-yellow-500 flex-shrink-0" />
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {isUserOnline(selectedCustomer.customer?.id) ? 'Online' : 'Last seen recently'} • 
-                        {selectedCustomer.customer?.orderCount || 0} orders
+                      <p className="text-xs text-gray-500 truncate">
+                        {isUserOnline(selectedCustomer.customer?.id) ? 'Online' : `Last seen ${selectedCustomer.lastMessageTime}`}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right text-xs text-gray-400">
-                      <div className="font-medium text-blue-500 flex items-center gap-1">
-                        <Store className="w-3 h-3" />
-                        {selectedCustomer.store?.name || user?.storeName || 'Store'}
-                      </div>
-                    </div>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 ml-2">
+                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden md:block">
                       <Phone className="w-5 h-5 text-gray-600" />
                     </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden md:block">
+                      <Video className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                       <MoreVertical className="w-5 h-5 text-gray-600" />
                     </button>
                   </div>

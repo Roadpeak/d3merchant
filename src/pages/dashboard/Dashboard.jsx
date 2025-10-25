@@ -8,7 +8,14 @@ import RecentReviews from './RecentReviews'
 
 const Dashboard = () => {
     return (
-        <Layout title="Dashboard" subtitle="Overview of your business performance">
+        <Layout 
+            title="Dashboard" 
+            subtitle="Overview of your business performance"
+            showMobileGrid={true}
+        >
+            {/* This content won't show when showMobileGrid is true */}
+            {/* If you want to keep this for other pages, set showMobileGrid={false} */}
+            
             {/* Updated Stats Section with new metrics */}
             <UpdatedStatsSection />
             
