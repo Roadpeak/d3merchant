@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Your App Name',
-        short_name: 'App',
-        description: 'Your app description',
+        name: 'discoun3 merchants',
+        short_name: 'discoun3',
+        description: 'Discount merchants platform',
         theme_color: '#4F46E5',
         background_color: '#ffffff',
         display: 'standalone',
@@ -44,6 +44,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // CRITICAL: Increase the file size limit to 3MB
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
