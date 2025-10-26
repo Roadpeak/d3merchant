@@ -50,9 +50,37 @@ const getMerchantStoreId = async () => {
             throw new Error('Merchant information not found. Please log in again.');
         }
 
-        // For now, we'll assume the store ID is available in merchant data
-        // In a real implementation, you might need to fetch this from a stores endpoint
-        return merchant.storeId || merchant.store_id || 'default-store';
+        console.log('🏪 Current merchant data:', merchant);
+
+        // Try multiple possible locations for store ID
+        const storeId = merchant.storeId || 
+                       merchant.store_id || 
+                       merchant.defaultStoreId ||
+                       merchant.default_store_id ||
+                       merchant.store?.id;
+
+        if (!storeId) {
+            console.warn('⚠️ No store ID found in merchant data. Merchant object:', merchant);
+            // Try to fetch from stores API
+            try {
+                const storesResponse = await axiosInstance.get('/merchant/stores', {
+                    headers: getAuthHeaders()
+                });
+                
+                if (storesResponse.data.success && storesResponse.data.stores?.length > 0) {
+                    const firstStore = storesResponse.data.stores[0];
+                    console.log('✅ Retrieved store ID from stores API:', firstStore.id);
+                    return firstStore.id;
+                }
+            } catch (apiError) {
+                console.warn('Could not fetch stores from API:', apiError);
+            }
+            
+            throw new Error('No store ID found. Please ensure you have a store configured.');
+        }
+
+        console.log('✅ Retrieved merchant store ID:', storeId);
+        return storeId;
     } catch (error) {
         console.error('Error getting merchant store ID:', error);
         throw error;
@@ -94,7 +122,8 @@ export const getMerchantServiceBookings = async (params = {}) => {
 
         // Fallback to mock data for development
         if (error.response?.status === 404 || error.response?.status === 501) {
-            return generateMockServiceBookings(params.limit || 20);
+            // ✅ FIXED: Pass storeId to mock generator
+            return generateMockServiceBookings(params.limit || 20, params.storeId);
         }
 
         handleApiError(error, 'fetching service bookings');
@@ -1286,9 +1315,18 @@ export const exportBookingData = async (filters = {}, format = 'csv') => {
 /**
  * Generate mock service bookings for development
  */
-const generateMockServiceBookings = (limit = 20) => {
+const generateMockServiceBookings = (limit = 20, storeId = null) => {
     const mockBookings = [];
     const statuses = ['confirmed', 'pending', 'completed', 'in_progress', 'cancelled'];
+    
+    // ✅ FIXED: Add stores array with different store IDs
+    const stores = [
+        { id: 1, name: 'Downtown Branch' },
+        { id: 2, name: 'Mall Location' },
+        { id: 3, name: 'Airport Terminal' },
+        { id: 4, name: 'Beachfront Office' }
+    ];
+    
     const services = [
         { id: 1, name: 'Hair Cut & Styling', duration: 60, price: 2500 },
         { id: 2, name: 'Massage Therapy', duration: 90, price: 4500 },
@@ -1306,6 +1344,11 @@ const generateMockServiceBookings = (limit = 20) => {
         const service = services[i % services.length];
         const customer = customers[i % customers.length];
         const status = statuses[i % statuses.length];
+        
+        // ✅ FIXED: Assign store - if storeId provided, use only that store, otherwise rotate
+        const store = storeId 
+            ? stores.find(s => s.id === parseInt(storeId)) || stores[0]
+            : stores[i % stores.length];
 
         // Generate random date within last 30 days or next 30 days
         const now = new Date();
@@ -1316,6 +1359,14 @@ const generateMockServiceBookings = (limit = 20) => {
             id: 1000 + i,
             serviceId: service.id,
             userId: 100 + i,
+            // ✅ FIXED: Add store information
+            storeId: store.id,
+            store_id: store.id, // Alternative field name
+            storeName: store.name,
+            Store: {
+                id: store.id,
+                name: store.name
+            },
             startTime: bookingDate.toISOString(),
             endTime: new Date(bookingDate.getTime() + service.duration * 60 * 1000).toISOString(),
             status: status,
@@ -1349,6 +1400,11 @@ const generateMockServiceBookings = (limit = 20) => {
         };
 
         mockBookings.push(booking);
+    }
+
+    console.log(`✅ Generated ${mockBookings.length} mock bookings${storeId ? ` for store ${storeId}` : ' across all stores'}`);
+    if (mockBookings.length > 0) {
+        console.log('Sample booking structure:', mockBookings[0]);
     }
 
     return {
