@@ -10,9 +10,9 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
         name: 'discoun3 merchants',
-        short_name: 'discoun3',
+        short_name: 'D3 merchants',
         description: 'Discount merchants platform',
-        theme_color: '#4F46E5',
+        theme_color: '#2ab8ffff',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
