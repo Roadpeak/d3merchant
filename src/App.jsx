@@ -1,11 +1,11 @@
 import AppRoutes from './routes'
+import InstallPrompt from './components/InstallPrompt'
 
 function App() {
-
   return (
-    
     <>
-     <AppRoutes />
+      <InstallPrompt />
+      <AppRoutes />
     </>
   )
 }
