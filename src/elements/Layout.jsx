@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 const Layout = ({
   children,
   rightContent,
-  title = "",
+  title = "Exploring",
   subtitle = "",
   showSearch = true,
   showNotifications = true,
