@@ -100,10 +100,6 @@ const Socials = () => {
 
             const token = merchantAuthService.getToken();
 
-            // Debug logs
-            console.log('Store Fetch URL:', `${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`);
-            console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`, {
                 method: 'GET',
                 headers: {
@@ -147,11 +143,6 @@ const Socials = () => {
 
             const token = merchantAuthService.getToken();
 
-            // Debug logs
-            console.log('Full URL:', `${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${storeId}`);
-            console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-            console.log('Store ID:', storeId);
-
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${storeId}`, {
                 method: 'GET',
                 headers: {
@@ -161,172 +152,116 @@ const Socials = () => {
                 }
             });
 
-            if (response.status === 404) {
-                return [];
-            }
-
             if (!response.ok) {
-                if (response.status === 401) {
-                    throw new Error('Authentication failed while fetching social links.');
+                if (response.status === 404) {
+                    return [];
                 }
-
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Failed to fetch social links (${response.status})`);
+                throw new Error(`Failed to fetch social links: ${response.status}`);
             }
 
             const data = await response.json();
-            return data.success ? (data.socials || []) : [];
-
+            return data.socials || [];
         } catch (error) {
             console.error('Error fetching social links:', error);
-            return [];
+            throw error;
         }
     };
 
-    // Load data on component mount
+    // Initialize data on component mount
     useEffect(() => {
-        const loadData = async () => {
+        const initializeData = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
-                if (!merchantAuthService.isAuthenticated()) {
-                    throw new Error('Your session has expired. Please log in again.');
-                }
+                const fetchedStoreId = await getMerchantStore();
+                setStoreId(fetchedStoreId);
 
-                const merchantStoreId = await getMerchantStore();
-                setStoreId(merchantStoreId);
-
-                const socials = await fetchSocialLinks(merchantStoreId);
-                setSocialLinks(socials);
-
+                const links = await fetchSocialLinks(fetchedStoreId);
+                setSocialLinks(links);
             } catch (error) {
-                console.error('Error loading socials data:', error);
+                console.error('Initialization error:', error);
                 setError(error.message);
-
-                if (error.message.includes('session has expired') ||
-                    error.message.includes('Authentication failed')) {
-                    setTimeout(() => {
-                        merchantAuthService.logout();
-                    }, 3000);
-                }
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData();
+        initializeData();
     }, []);
 
-    // Show success message temporarily
-    const showSuccess = (message) => {
-        setSuccess(message);
-        setTimeout(() => setSuccess(null), 3000);
-    };
-
-    // Show error message temporarily  
-    const showError = (message) => {
-        setError(message);
-        setTimeout(() => setError(null), 5000);
-    };
-
-    // Open modal to add a new social link
+    // Handle add social
     const handleAddSocial = () => {
-        if (!checkAuthStatus()) return;
-
         setEditing(null);
         setNewSocial({ platform: '', link: '' });
         setIsModalOpen(true);
     };
 
-    // Handle creating a new social media link
-    const handleCreateSocial = async (e) => {
-        e.preventDefault();
-
-        if (!newSocial.platform || !newSocial.link) {
-            showError('Please fill in all fields');
-            return;
-        }
-
-        const urlRegex = /^https?:\/\/.+/;
-        if (!urlRegex.test(newSocial.link)) {
-            showError('Please enter a valid URL starting with http:// or https://');
-            return;
-        }
-
-        if (!storeId) {
-            showError('Store ID not available. Please refresh the page.');
-            return;
-        }
-
-        if (!checkAuthStatus()) return;
-
-        try {
-            setSubmitting(true);
-
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/socials`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify({
-                    store_id: storeId,
-                    platform: newSocial.platform,
-                    link: newSocial.link
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    setError('Authentication failed. Please log in again.');
-                    setTimeout(() => merchantAuthService.logout(), 2000);
-                    return;
-                }
-                throw new Error(data.message || 'Failed to create social link');
-            }
-
-            setSocialLinks([...socialLinks, data.social]);
-            setIsModalOpen(false);
-            setNewSocial({ platform: '', link: '' });
-            showSuccess('Social media link added successfully!');
-        } catch (error) {
-            console.error('Create social error:', error);
-            showError(error.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Handle editing a social media link
+    // Handle edit social
     const handleEditSocial = (social) => {
-        if (!checkAuthStatus()) return;
-
         setEditing(social);
         setNewSocial({ platform: social.platform, link: social.link });
         setIsModalOpen(true);
     };
 
-    // Handle updating the social media link
+    // Handle create social
+    const handleCreateSocial = async (e) => {
+        e.preventDefault();
+
+        if (!newSocial.platform || !newSocial.link) {
+            setError('Please fill in all fields');
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            setError(null);
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    storeId: storeId,
+                    platform: newSocial.platform,
+                    link: newSocial.link
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to add social media link');
+            }
+
+            const data = await response.json();
+
+            setSocialLinks([...socialLinks, data.social]);
+            setSuccess('Social media link added successfully!');
+            setIsModalOpen(false);
+            setNewSocial({ platform: '', link: '' });
+
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (error) {
+            console.error('Error creating social link:', error);
+            setError(error.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // Handle update social
     const handleUpdateSocial = async (e) => {
         e.preventDefault();
 
         if (!editing || !newSocial.platform || !newSocial.link) {
-            showError('Please fill in all fields');
+            setError('Please fill in all fields');
             return;
         }
-
-        const urlRegex = /^https?:\/\/.+/;
-        if (!urlRegex.test(newSocial.link)) {
-            showError('Please enter a valid URL starting with http:// or https://');
-            return;
-        }
-
-        if (!checkAuthStatus()) return;
 
         try {
             setSubmitting(true);
+            setError(null);
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/socials/${editing.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${editing.id}`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -335,68 +270,64 @@ const Socials = () => {
                 })
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                if (response.status === 401) {
-                    setError('Authentication failed. Please log in again.');
-                    setTimeout(() => merchantAuthService.logout(), 2000);
-                    return;
-                }
-                throw new Error(data.message || 'Failed to update social link');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update social media link');
             }
+
+            const data = await response.json();
 
             setSocialLinks(socialLinks.map(social =>
                 social.id === editing.id ? data.social : social
             ));
+
+            setSuccess('Social media link updated successfully!');
             setIsModalOpen(false);
             setEditing(null);
             setNewSocial({ platform: '', link: '' });
-            showSuccess('Social media link updated successfully!');
+
+            setTimeout(() => setSuccess(null), 3000);
         } catch (error) {
-            console.error('Update social error:', error);
-            showError(error.message);
+            console.error('Error updating social link:', error);
+            setError(error.message);
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Handle deleting a social media link
-    const handleDeleteSocial = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this social media link?')) {
+    // Handle delete social
+    const handleDeleteSocial = async (socialId) => {
+        if (!confirm('Are you sure you want to delete this social media link?')) {
             return;
         }
 
-        if (!checkAuthStatus()) return;
-
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/socials/${id}`, {
+            setError(null);
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${socialId}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                if (response.status === 401) {
-                    setError('Authentication failed. Please log in again.');
-                    setTimeout(() => merchantAuthService.logout(), 2000);
-                    return;
-                }
-                throw new Error(data.message || 'Failed to delete social link');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to delete social media link');
             }
 
-            setSocialLinks(socialLinks.filter((social) => social.id !== id));
-            showSuccess('Social media link deleted successfully!');
+            setSocialLinks(socialLinks.filter(social => social.id !== socialId));
+            setSuccess('Social media link deleted successfully!');
+
+            setTimeout(() => setSuccess(null), 3000);
         } catch (error) {
-            console.error('Delete social error:', error);
-            showError(error.message);
+            console.error('Error deleting social link:', error);
+            setError(error.message);
         }
     };
 
-    // Get platform info
+    // Get platform info by ID
     const getPlatformInfo = (platformId) => {
-        return socialMediaPlatforms.find(p => p.id === platformId.toLowerCase()) || {
+        const platform = socialMediaPlatforms.find(p => p.id === platformId);
+        return platform || {
             id: platformId,
             name: platformId.charAt(0).toUpperCase() + platformId.slice(1),
             icon: Globe,
@@ -406,119 +337,110 @@ const Socials = () => {
     };
 
     const LoadingSpinner = () => (
-        <div className="flex items-center justify-center py-16">
+        <div className="flex items-center justify-center py-12 sm:py-16">
             <div className="text-center">
                 <div className="relative">
-                    <div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div>
-                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-gray-200 rounded-full"></div>
+                    <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
                 </div>
-                <p className="mt-4 text-gray-600 font-medium">Loading social media links...</p>
+                <p className="mt-4 text-sm sm:text-base text-gray-600 font-medium">Loading social media links...</p>
             </div>
         </div>
     );
 
     if (loading) {
         return (
-            <Layout
-                title="Social Media Links"
-                subtitle="Connect your social media presence"
-            >
+            <Layout>
                 <LoadingSpinner />
             </Layout>
         );
     }
 
     return (
-        <Layout
-            title="Social Media Links"
-            subtitle="Connect your social media presence to grow your audience"
-        >
-            <div className="space-y-8">
-                {/* Success/Error Messages */}
-                {success && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center space-x-3">
-                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        <span className="text-green-800 font-medium">{success}</span>
+        <Layout>
+            <div className="space-y-6 sm:space-y-8">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+                            Social Media Links
+                        </h1>
+                        <p className="text-sm sm:text-base text-gray-600">
+                            {storeData ? `Managing links for ${storeData.name}` : 'Connect your social media presence'}
+                        </p>
                     </div>
-                )}
-
-                {error && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-3">
-                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                        <span className="text-red-800 font-medium">{error}</span>
-                    </div>
-                )}
-
-                {/* Header Card */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white">
-                    <div className="relative z-10">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-2xl font-bold mb-2">Social Media Presence</h2>
-                                <p className="text-indigo-100">
-                                    {storeData ? `Managing links for ${storeData.name}` : 'Connect your social platforms'}
-                                </p>
-                            </div>
-                            {!error && storeId && (
-                                <button
-                                    onClick={handleAddSocial}
-                                    className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                    Add Platform
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="rounded-lg bg-white bg-opacity-10 p-4">
-                                <div className="text-2xl font-bold">{socialLinks.length}</div>
-                                <div className="text-sm text-indigo-100">Connected Platforms</div>
-                            </div>
-                            <div className="rounded-lg bg-white bg-opacity-10 p-4">
-                                <div className="text-2xl font-bold">24/7</div>
-                                <div className="text-sm text-indigo-100">Always Accessible</div>
-                            </div>
-                            <div className="rounded-lg bg-white bg-opacity-10 p-4">
-                                <div className="text-2xl font-bold">∞</div>
-                                <div className="text-sm text-indigo-100">Reach Potential</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white bg-opacity-10"></div>
-                    <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-white bg-opacity-5"></div>
+                    {!error && storeId && (
+                        <button
+                            onClick={handleAddSocial}
+                            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors w-full sm:w-auto"
+                        >
+                            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                            <span className="text-sm sm:text-base">Add Platform</span>
+                        </button>
+                    )}
                 </div>
 
-                {error ? (
+                {/* Success/Error Messages */}
+                {success && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-start sm:items-center space-x-3">
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+                        <span className="text-sm sm:text-base text-green-800 font-medium">{success}</span>
+                    </div>
+                )}
+
+                {error && !loading && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start sm:items-center space-x-3">
+                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+                        <span className="text-sm sm:text-base text-red-800 font-medium break-words">{error}</span>
+                    </div>
+                )}
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{socialLinks.length}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Connected</div>
+                    </div>
+                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">24/7</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Accessible</div>
+                    </div>
+                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">∞</div>
+                        <div className="text-xs sm:text-sm text-gray-600">Reach</div>
+                    </div>
+                </div>
+
+                {error && (error.includes('No store found') || error.includes('session has expired') || error.includes('Authentication failed')) ? (
                     /* Error State */
                     <div className="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
-                        <div className="p-12 text-center">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <AlertCircle className="w-8 h-8 text-red-600" />
+                        <div className="p-8 sm:p-12 text-center">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" />
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Social Links</h3>
-                            <p className="text-gray-600 mb-6">{error}</p>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Unable to Load Social Links</h3>
+                            <p className="text-sm sm:text-base text-gray-600 mb-6">{error}</p>
 
                             {error.includes('No store found') ? (
                                 <div className="space-y-3">
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-xs sm:text-sm text-gray-500">
                                         You need to create a store before managing social media links.
                                     </p>
                                     <button
                                         onClick={() => window.location.href = '/dashboard/account'}
-                                        className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
+                                        className="bg-blue-600 text-white text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors"
                                     >
                                         Create Your Store
                                     </button>
                                 </div>
                             ) : error.includes('session has expired') || error.includes('Authentication failed') ? (
                                 <div className="space-y-3">
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-xs sm:text-sm text-gray-500">
                                         Your session has expired. Please log in again to continue.
                                     </p>
                                     <button
                                         onClick={() => merchantAuthService.logout()}
-                                        className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition-colors"
+                                        className="bg-red-600 text-white text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-red-700 transition-colors"
                                     >
                                         Go to Login
                                     </button>
@@ -526,7 +448,7 @@ const Socials = () => {
                             ) : (
                                 <button
                                     onClick={() => window.location.reload()}
-                                    className="bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-colors"
+                                    className="bg-gray-600 text-white text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-gray-700 transition-colors"
                                 >
                                     Try Again
                                 </button>
@@ -536,19 +458,19 @@ const Socials = () => {
                 ) : (
                     /* Social Links List */
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-4 sm:px-6 py-4 border-b border-gray-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div className="flex items-center space-x-3">
-                                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                                        <Share2 className="h-5 w-5 text-indigo-600" />
+                                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                        <Share2 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900">Connected Platforms</h3>
-                                        <p className="text-sm text-gray-600">Your social media presence</p>
+                                    <div className="min-w-0">
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Connected Platforms</h3>
+                                        <p className="text-xs sm:text-sm text-gray-600 truncate">Your social media presence</p>
                                     </div>
                                 </div>
                                 {socialLinks.length > 0 && (
-                                    <span className="text-sm text-indigo-600 font-medium">
+                                    <span className="text-xs sm:text-sm text-indigo-600 font-medium">
                                         {socialLinks.length} platform{socialLinks.length !== 1 ? 's' : ''} connected
                                     </span>
                                 )}
@@ -562,46 +484,46 @@ const Socials = () => {
                                     const Icon = platformInfo.icon;
 
                                     return (
-                                        <div key={social.id} className="p-6 hover:bg-gray-50 transition-colors">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-4">
-                                                    <div className={`p-3 ${platformInfo.bgColor} rounded-xl`}>
-                                                        <Icon className={`h-6 w-6 ${platformInfo.color}`} />
+                                        <div key={social.id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-start sm:items-center justify-between gap-3">
+                                                <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                                                    <div className={`p-2 sm:p-3 ${platformInfo.bgColor} rounded-xl flex-shrink-0`}>
+                                                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${platformInfo.color}`} />
                                                     </div>
 
-                                                    <div>
-                                                        <h3 className="text-lg font-semibold text-gray-900">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="text-sm sm:text-lg font-semibold text-gray-900 mb-1">
                                                             {platformInfo.name}
                                                         </h3>
                                                         <a
                                                             href={social.link}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 transition-colors mt-1"
+                                                            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 transition-colors group"
                                                         >
-                                                            <Globe className="h-4 w-4" />
-                                                            <span className="text-sm">
-                                                                {social.link.length > 40 ? social.link.substring(0, 40) + '...' : social.link}
+                                                            <Globe className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                                            <span className="text-xs sm:text-sm truncate">
+                                                                {social.link}
                                                             </span>
-                                                            <ExternalLink className="h-3 w-3" />
+                                                            <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                         </a>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                                                     <button
                                                         onClick={() => handleEditSocial(social)}
-                                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                        className="p-1.5 sm:p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                                         title="Edit link"
                                                     >
-                                                        <Edit3 className="h-4 w-4" />
+                                                        <Edit3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteSocial(social.id)}
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                         title="Delete link"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -610,17 +532,17 @@ const Socials = () => {
                                 })}
                             </div>
                         ) : (
-                            <div className="p-12 text-center">
-                                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Share2 className="w-8 h-8 text-indigo-600" />
+                            <div className="p-8 sm:p-12 text-center">
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Share2 className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No social platforms connected</h3>
-                                <p className="text-gray-600 mb-6">
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No social platforms connected</h3>
+                                <p className="text-sm sm:text-base text-gray-600 mb-6">
                                     Connect your social media accounts to help customers find and follow your business online.
                                 </p>
                                 <button
                                     onClick={handleAddSocial}
-                                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+                                    className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-indigo-600 text-white text-sm sm:text-base font-medium rounded-xl hover:bg-indigo-700 transition-colors"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Add Your First Platform
@@ -632,28 +554,28 @@ const Socials = () => {
 
                 {/* Tips Section */}
                 {!error && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
                         <div className="flex items-start space-x-3">
                             <div className="flex-shrink-0">
-                                <Lightbulb className="h-6 w-6 text-blue-600 mt-1" />
+                                <Lightbulb className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mt-0.5 sm:mt-1" />
                             </div>
-                            <div>
-                                <h3 className="font-semibold text-blue-900 mb-3">Social Media Best Practices</h3>
-                                <ul className="text-blue-800 text-sm space-y-2">
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-sm sm:text-base font-semibold text-blue-900 mb-2 sm:mb-3">Social Media Best Practices</h3>
+                                <ul className="text-blue-800 text-xs sm:text-sm space-y-2">
                                     <li className="flex items-start space-x-2">
-                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                         <span>Use your business page URLs, not personal profiles</span>
                                     </li>
                                     <li className="flex items-start space-x-2">
-                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                         <span>Ensure your profiles are public and actively maintained</span>
                                     </li>
                                     <li className="flex items-start space-x-2">
-                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                         <span>Keep your brand consistent across all platforms</span>
                                     </li>
                                     <li className="flex items-start space-x-2">
-                                        <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                         <span>Regular posting helps maintain customer engagement</span>
                                     </li>
                                 </ul>
@@ -666,9 +588,9 @@ const Socials = () => {
             {/* Add/Edit Social Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                                 {editing ? 'Edit Social Media Link' : 'Add Social Media Link'}
                             </h3>
                             <button
@@ -683,16 +605,16 @@ const Socials = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={editing ? handleUpdateSocial : handleCreateSocial} className="p-6 space-y-6">
+                        <form onSubmit={editing ? handleUpdateSocial : handleCreateSocial} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                             {/* Platform Selection */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">
+                                <label className="text-xs sm:text-sm font-medium text-gray-700">
                                     Platform <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     value={newSocial.platform}
                                     onChange={(e) => setNewSocial({ ...newSocial, platform: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                                     required
                                     disabled={submitting}
                                 >
@@ -707,16 +629,16 @@ const Socials = () => {
 
                             {/* URL Input */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">
+                                <label className="text-xs sm:text-sm font-medium text-gray-700">
                                     Profile URL <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <Globe className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                                     <input
                                         type="url"
                                         value={newSocial.link}
                                         onChange={(e) => setNewSocial({ ...newSocial, link: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                                        className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                                         placeholder="https://facebook.com/yourstore"
                                         required
                                         disabled={submitting}
@@ -729,20 +651,20 @@ const Socials = () => {
 
                             {/* URL Preview */}
                             {newSocial.platform && newSocial.link && (
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <p className="text-sm text-gray-700 mb-2">Preview:</p>
-                                    <div className="flex items-center space-x-3">
+                                <div className="p-3 sm:p-4 bg-gray-50 rounded-xl">
+                                    <p className="text-xs sm:text-sm text-gray-700 mb-2">Preview:</p>
+                                    <div className="flex items-center space-x-2 sm:space-x-3">
                                         {(() => {
                                             const platformInfo = getPlatformInfo(newSocial.platform);
                                             const Icon = platformInfo.icon;
                                             return (
                                                 <>
-                                                    <div className={`p-2 ${platformInfo.bgColor} rounded-lg`}>
-                                                        <Icon className={`h-5 w-5 ${platformInfo.color}`} />
+                                                    <div className={`p-1.5 sm:p-2 ${platformInfo.bgColor} rounded-lg flex-shrink-0`}>
+                                                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${platformInfo.color}`} />
                                                     </div>
-                                                    <span className="font-medium text-gray-900">{platformInfo.name}</span>
-                                                    <span className="text-gray-400">→</span>
-                                                    <span className="text-indigo-600 text-sm truncate">{newSocial.link}</span>
+                                                    <span className="font-medium text-xs sm:text-sm text-gray-900">{platformInfo.name}</span>
+                                                    <span className="text-gray-400 text-xs sm:text-sm">→</span>
+                                                    <span className="text-indigo-600 text-xs sm:text-sm truncate">{newSocial.link}</span>
                                                 </>
                                             );
                                         })()}
@@ -759,7 +681,7 @@ const Socials = () => {
                                         setEditing(null);
                                         setNewSocial({ platform: '', link: '' });
                                     }}
-                                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
                                     disabled={submitting}
                                 >
                                     Cancel
@@ -767,7 +689,7 @@ const Socials = () => {
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-1 px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {submitting ? (
                                         <>
