@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
-import socialsService from '../../services/socialsService'; // ADD THIS IMPORT
 import {
     Plus,
     Edit3,
@@ -59,6 +58,27 @@ const Socials = () => {
         { id: 'flickr', name: 'Flickr', icon: Image, color: 'text-blue-500', bgColor: 'bg-blue-50' }
     ];
 
+    // Get auth headers using existing auth service
+    const getAuthHeaders = () => {
+        const token = merchantAuthService.getToken();
+
+        if (!token) {
+            throw new Error('No authentication token found. Please log in again.');
+        }
+
+        // Check if API key exists
+        if (!import.meta.env.VITE_API_KEY) {
+            console.error('VITE_API_KEY is not defined in environment variables');
+            throw new Error('API configuration error. Please contact support.');
+        }
+
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-api-key': import.meta.env.VITE_API_KEY
+        };
+    };
+
     // Check authentication status
     const checkAuthStatus = () => {
         if (!merchantAuthService.isAuthenticated()) {
@@ -71,52 +91,122 @@ const Socials = () => {
         return true;
     };
 
-    // Initialize data on component mount
-    useEffect(() => {
-        const initializeData = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                if (!checkAuthStatus()) {
-                    throw new Error('Authentication required');
-                }
-
-                // Use socialsService to get merchant store
-                const fetchedStoreId = await socialsService.getMerchantStore();
-                setStoreId(fetchedStoreId);
-
-                // Use socialsService to get social links
-                const links = await socialsService.getMerchantSocials(fetchedStoreId);
-                setSocialLinks(links);
-
-                // Optional: Get store data for display
-                const token = merchantAuthService.getToken();
-                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                        'x-api-key': import.meta.env.VITE_API_KEY
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.stores && data.stores.length > 0) {
-                        setStoreData(data.stores[0]);
-                    }
-                }
-            } catch (error) {
-                console.error('Initialization error:', error);
-                setError(error.message);
-            } finally {
-                setLoading(false);
+    // Get merchant's store
+    const getMerchantStore = async () => {
+        try {
+            if (!checkAuthStatus()) {
+                throw new Error('Authentication required');
             }
-        };
 
-        initializeData();
-    }, []);
+            const token = merchantAuthService.getToken();
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stores/merchant/my-stores`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'x-api-key': import.meta.env.VITE_API_KEY
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Your session may have expired.');
+                } else if (response.status === 404) {
+                    throw new Error('No store found for your merchant account. Please create a store first.');
+                } else {
+                    throw new Error(`Failed to fetch stores: ${response.status}`);
+                }
+            }
+
+            const data = await response.json();
+
+            if (data.success && data.stores && data.stores.length > 0) {
+                const store = data.stores[0];
+                setStoreData(store);
+                return store.id;
+            }
+
+            throw new Error('No store found for your merchant account. Please create a store first.');
+        } catch (error) {
+            console.error('Error fetching merchant store:', error);
+            throw error;
+        }
+    };
+
+    // Fetch social media links for the store
+    const fetchSocialLinks = async (storeId) => {
+        try {
+            if (!checkAuthStatus()) {
+                return [];
+            }
+
+            const token = merchantAuthService.getToken();
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${storeId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'x-api-key': import.meta.env.VITE_API_KEY
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    return [];
+                }
+                throw new Error(`Failed to fetch social links: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.socials || [];
+        } catch (error) {
+            console.error('Error fetching social links:', error);
+            throw error;
+        }
+    };
+
+    // Initialize data on component mount
+  useEffect(() => {
+    const initializeData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            if (!checkAuthStatus()) {
+                throw new Error('Authentication required');
+            }
+
+            // This will now work with proper authentication
+            const fetchedStoreId = await socialsService.getMerchantStore();
+            setStoreId(fetchedStoreId);
+
+            // Get social links
+            const links = await socialsService.getMerchantSocials(fetchedStoreId);
+            setSocialLinks(links);
+
+            // Get store data (optional - you can remove this if not needed)
+            const storesResponse = await axiosInstance.get('/stores/merchant/my-stores', {
+                headers: {
+                    'Authorization': `Bearer ${merchantAuthService.getToken()}`,
+                    'x-api-key': import.meta.env.VITE_API_KEY
+                }
+            });
+
+            if (storesResponse.data?.stores?.length > 0) {
+                setStoreData(storesResponse.data.stores[0]);
+            }
+        } catch (error) {
+            console.error('Initialization error:', error);
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    initializeData();
+}, []);
 
     // Handle add social
     const handleAddSocial = () => {
@@ -132,7 +222,7 @@ const Socials = () => {
         setIsModalOpen(true);
     };
 
-    // Handle create social - FIXED TO USE SERVICE
+    // Handle create social
     const handleCreateSocial = async (e) => {
         e.preventDefault();
 
@@ -141,18 +231,26 @@ const Socials = () => {
             return;
         }
 
-        // Validate URL
-        if (!socialsService.validateSocialUrl(newSocial.platform, newSocial.link)) {
-            setError(`Invalid URL for ${newSocial.platform}. Please check the URL.`);
-            return;
-        }
-
         try {
             setSubmitting(true);
             setError(null);
 
-            // USE socialsService.createSocial instead of direct fetch
-            const data = await socialsService.createSocial(storeId, newSocial.platform, newSocial.link);
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    storeId: storeId,
+                    platform: newSocial.platform,
+                    link: newSocial.link
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to add social media link');
+            }
+
+            const data = await response.json();
 
             setSocialLinks([...socialLinks, data.social]);
             setSuccess('Social media link added successfully!');
@@ -168,7 +266,7 @@ const Socials = () => {
         }
     };
 
-    // Handle update social - FIXED TO USE SERVICE
+    // Handle update social
     const handleUpdateSocial = async (e) => {
         e.preventDefault();
 
@@ -177,18 +275,25 @@ const Socials = () => {
             return;
         }
 
-        // Validate URL
-        if (!socialsService.validateSocialUrl(newSocial.platform, newSocial.link)) {
-            setError(`Invalid URL for ${newSocial.platform}. Please check the URL.`);
-            return;
-        }
-
         try {
             setSubmitting(true);
             setError(null);
 
-            // USE socialsService.updateSocial instead of direct fetch
-            const data = await socialsService.updateSocial(editing.id, newSocial.platform, newSocial.link);
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${editing.id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    platform: newSocial.platform,
+                    link: newSocial.link
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update social media link');
+            }
+
+            const data = await response.json();
 
             setSocialLinks(socialLinks.map(social =>
                 social.id === editing.id ? data.social : social
@@ -208,7 +313,7 @@ const Socials = () => {
         }
     };
 
-    // Handle delete social - FIXED TO USE SERVICE
+    // Handle delete social
     const handleDeleteSocial = async (socialId) => {
         if (!confirm('Are you sure you want to delete this social media link?')) {
             return;
@@ -217,8 +322,15 @@ const Socials = () => {
         try {
             setError(null);
 
-            // USE socialsService.deleteSocial instead of direct fetch
-            await socialsService.deleteSocial(socialId);
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/socials/${socialId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to delete social media link');
+            }
 
             setSocialLinks(socialLinks.filter(social => social.id !== socialId));
             setSuccess('Social media link deleted successfully!');

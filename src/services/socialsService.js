@@ -1,188 +1,279 @@
 // services/socialsService.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import axiosInstance from "./axiosInstance";
+import merchantAuthService from "./merchantAuthService";
 
+// Helper function to get auth headers (consistent with api.js)
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl',
-    'Authorization': `Bearer ${token}`
-  };
+    const token = merchantAuthService.getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return headers;
+};
+
+// Helper function to handle API errors (consistent with api.js)
+const handleApiError = (error, context = '') => {
+    console.error(`API Error ${context}:`, error);
+
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+        merchantAuthService.logout();
+        throw new Error('Session expired. Please log in again.');
+    }
+
+    // Handle other HTTP errors
+    if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+    }
+
+    // Handle network errors
+    if (error.message === 'Network Error') {
+        throw new Error('Network error. Please check your connection.');
+    }
+
+    throw error;
 };
 
 const socialsService = {
-  // Get merchant's store ID using the correct endpoint
-  getMerchantStore: async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/stores/merchant/my-stores`, {
-        headers: getAuthHeaders()
-      });
+    // Get merchant's store ID using axiosInstance (consistent with api.js)
+    getMerchantStore: async () => {
+        try {
+            console.log('Fetching merchant store...');
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch merchant store');
-      }
+            const merchant = merchantAuthService.getCurrentMerchant();
+            if (!merchant) {
+                throw new Error('Merchant information not found. Please log in again.');
+            }
 
-      const data = await response.json();
-      if (data.success && data.stores && data.stores.length > 0) {
-        return data.stores[0].id;
-      }
+            console.log('Getting stores for merchant:', merchant.id);
 
-      throw new Error('No store found for merchant');
-    } catch (error) {
-      console.error('Error fetching merchant store:', error);
-      throw error;
-    }
-  },
+            // Use axiosInstance instead of fetch
+            const response = await axiosInstance.get('/stores/merchant/my-stores', {
+                headers: getAuthHeaders()
+            });
 
-  // Create a new social media link
-  createSocial: async (storeId, platform, link) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/socials`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          store_id: storeId,
-          platform: platform.toLowerCase(),
-          link
-        })
-      });
+            console.log('Store response:', response.data);
 
-      const data = await response.json();
+            const data = response.data;
+            const stores = data?.stores || data || [];
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create social link');
-      }
+            if (stores.length > 0) {
+                console.log('Using store:', stores[0].name, '(' + stores[0].id + ')');
+                return stores[0].id;
+            }
 
-      return data;
-    } catch (error) {
-      console.error('Create social error:', error);
-      throw error;
-    }
-  },
-
-  // Get social links for a store (public access)
-  getSocialsByStore: async (storeId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/socials/store/${storeId}`, {
-        headers: {
-          'Content-Type': 'application/json'
+            throw new Error('No store found for merchant. Please create a store first.');
+        } catch (error) {
+            console.error('Error fetching merchant store:', error);
+            handleApiError(error, 'fetching merchant store');
         }
-      });
+    },
 
-      const data = await response.json();
+    // Create a new social media link
+    createSocial: async (storeId, platform, link) => {
+        try {
+            console.log('Creating social link:', { storeId, platform, link });
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch social links');
-      }
+            const response = await axiosInstance.post('/socials', {
+                store_id: storeId,
+                platform: platform.toLowerCase(),
+                link
+            }, {
+                headers: getAuthHeaders()
+            });
 
-      return data.socials || [];
-    } catch (error) {
-      console.error('Get socials error:', error);
-      return [];
+            console.log('Social link created:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Create social error:', error);
+            handleApiError(error, 'creating social link');
+        }
+    },
+
+    // Get social links for a store (public access)
+    getSocialsByStore: async (storeId) => {
+        try {
+            console.log('Fetching socials for store:', storeId);
+
+            const response = await axiosInstance.get(`/socials/store/${storeId}`, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = response.data;
+            return data.socials || [];
+        } catch (error) {
+            console.error('Get socials error:', error);
+            // Return empty array for public endpoint failures
+            return [];
+        }
+    },
+
+    // Get social links for merchant's store
+    getMerchantSocials: async (storeId) => {
+        try {
+            console.log('Fetching merchant socials for store:', storeId);
+
+            // Try the merchant-specific endpoint first
+            try {
+                const response = await axiosInstance.get(`/merchant/socials/${storeId}`, {
+                    headers: getAuthHeaders()
+                });
+
+                const data = response.data;
+                return data.socials || [];
+            } catch (merchantError) {
+                console.log('Merchant socials endpoint failed, trying general endpoint');
+
+                // Fallback to general socials endpoint
+                const response = await axiosInstance.get(`/socials/store/${storeId}`, {
+                    headers: getAuthHeaders()
+                });
+
+                const data = response.data;
+                return data.socials || [];
+            }
+        } catch (error) {
+            console.error('Get merchant socials error:', error);
+            handleApiError(error, 'fetching merchant social links');
+        }
+    },
+
+    // Update a social media link
+    updateSocial: async (socialId, platform, link) => {
+        try {
+            console.log('Updating social link:', { socialId, platform, link });
+
+            const response = await axiosInstance.put(`/socials/${socialId}`, {
+                platform: platform.toLowerCase(),
+                link
+            }, {
+                headers: getAuthHeaders()
+            });
+
+            console.log('Social link updated:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Update social error:', error);
+            handleApiError(error, 'updating social link');
+        }
+    },
+
+    // Delete a social media link
+    deleteSocial: async (socialId) => {
+        try {
+            console.log('Deleting social link:', socialId);
+
+            const response = await axiosInstance.delete(`/socials/${socialId}`, {
+                headers: getAuthHeaders()
+            });
+
+            console.log('Social link deleted:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Delete social error:', error);
+            handleApiError(error, 'deleting social link');
+        }
+    },
+
+    // Validate social media URL
+    validateSocialUrl: (platform, url) => {
+        const platformDomains = {
+            facebook: ['facebook.com', 'fb.com', 'fb.me'],
+            instagram: ['instagram.com', 'instagr.am'],
+            twitter: ['twitter.com', 'x.com', 't.co'],
+            linkedin: ['linkedin.com', 'lnkd.in'],
+            youtube: ['youtube.com', 'youtu.be'],
+            tiktok: ['tiktok.com', 'vm.tiktok.com'],
+            pinterest: ['pinterest.com', 'pin.it'],
+            snapchat: ['snapchat.com'],
+            whatsapp: ['wa.me', 'whatsapp.com', 'api.whatsapp.com'],
+            discord: ['discord.gg', 'discord.com', 'discordapp.com'],
+            tumblr: ['tumblr.com'],
+            reddit: ['reddit.com', 'redd.it'],
+            vimeo: ['vimeo.com'],
+            github: ['github.com'],
+            flickr: ['flickr.com', 'flic.kr']
+        };
+
+        try {
+            const urlObj = new URL(url);
+            const domain = urlObj.hostname.replace('www.', '');
+
+            if (platformDomains[platform.toLowerCase()]) {
+                return platformDomains[platform.toLowerCase()].some(validDomain =>
+                    domain.includes(validDomain)
+                );
+            }
+
+            // Allow other URLs if platform not in our list
+            return true;
+        } catch (error) {
+            console.error('URL validation error:', error);
+            return false;
+        }
+    },
+
+    // Get all socials across all merchant stores (optional utility)
+    getAllMerchantSocials: async () => {
+        try {
+            console.log('Fetching all merchant socials');
+
+            const merchant = merchantAuthService.getCurrentMerchant();
+            if (!merchant) {
+                throw new Error('Merchant information not found');
+            }
+
+            // Get all merchant stores
+            const storesResponse = await axiosInstance.get('/stores/merchant/my-stores', {
+                headers: getAuthHeaders()
+            });
+
+            const stores = storesResponse.data?.stores || [];
+            
+            if (stores.length === 0) {
+                return [];
+            }
+
+            // Fetch socials for all stores
+            const socialsPromises = stores.map(store => 
+                socialsService.getMerchantSocials(store.id)
+                    .catch(error => {
+                        console.error(`Failed to fetch socials for store ${store.id}:`, error);
+                        return [];
+                    })
+            );
+
+            const socialsArrays = await Promise.all(socialsPromises);
+            
+            // Flatten and return all socials
+            const allSocials = socialsArrays.flat();
+            
+            console.log('All merchant socials:', allSocials);
+            return allSocials;
+
+        } catch (error) {
+            console.error('Get all merchant socials error:', error);
+            handleApiError(error, 'fetching all merchant socials');
+        }
+    },
+
+    // Check if merchant is authenticated
+    isAuthenticated: () => {
+        return merchantAuthService.isAuthenticated();
+    },
+
+    // Get current merchant info
+    getCurrentMerchant: () => {
+        return merchantAuthService.getCurrentMerchant();
     }
-  },
-
-  // Get social links for merchant's store
-  getMerchantSocials: async (storeId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/merchant/socials/${storeId}`, {
-        headers: getAuthHeaders()
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch social links');
-      }
-
-      return data.socials || [];
-    } catch (error) {
-      console.error('Get merchant socials error:', error);
-      throw error;
-    }
-  },
-
-  // Update a social media link
-  updateSocial: async (socialId, platform, link) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/socials/${socialId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          platform: platform.toLowerCase(),
-          link
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update social link');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Update social error:', error);
-      throw error;
-    }
-  },
-
-  // Delete a social media link
-  deleteSocial: async (socialId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/socials/${socialId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete social link');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Delete social error:', error);
-      throw error;
-    }
-  },
-
-  // Validate social media URL
-  validateSocialUrl: (platform, url) => {
-    const platformDomains = {
-      facebook: ['facebook.com', 'fb.com'],
-      instagram: ['instagram.com'],
-      twitter: ['twitter.com', 'x.com'],
-      linkedin: ['linkedin.com'],
-      youtube: ['youtube.com', 'youtu.be'],
-      tiktok: ['tiktok.com'],
-      pinterest: ['pinterest.com'],
-      snapchat: ['snapchat.com'],
-      whatsapp: ['wa.me', 'whatsapp.com'],
-      discord: ['discord.gg', 'discord.com'],
-      tumblr: ['tumblr.com'],
-      reddit: ['reddit.com'],
-      vimeo: ['vimeo.com'],
-      github: ['github.com'],
-      flickr: ['flickr.com']
-    };
-
-    try {
-      const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace('www.', '');
-
-      if (platformDomains[platform.toLowerCase()]) {
-        return platformDomains[platform.toLowerCase()].some(validDomain =>
-          domain.includes(validDomain)
-        );
-      }
-
-      return true; // Allow other URLs
-    } catch (error) {
-      return false;
-    }
-  }
 };
 
 export default socialsService;
