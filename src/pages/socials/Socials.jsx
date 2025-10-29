@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
 import socialsService from '../../services/socialsService';
-import { getMerchantStores } from '../../services/api'; // ADD THIS IMPORT
+import { getMerchantStores } from '../../services/api_service'; 
 import {
     Plus,
     Edit3,
