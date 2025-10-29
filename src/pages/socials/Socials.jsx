@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
-import socialsService from '../../services/socialsService'; 
+import socialsService from '../../services/socialsService';
+import { getMerchantStores } from '../../services/api'; // ADD THIS IMPORT
 import {
     Plus,
     Edit3,
@@ -72,46 +73,45 @@ const Socials = () => {
     };
 
     // Initialize data on component mount
-   // In Socials.jsx - the useEffect should work perfectly now
-useEffect(() => {
-    const initializeData = async () => {
-        try {
-            setLoading(true);
-            setError(null);
+    useEffect(() => {
+        const initializeData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-            if (!checkAuthStatus()) {
-                throw new Error('Authentication required');
-            }
-
-            // This will now work with proper authentication
-            const fetchedStoreId = await socialsService.getMerchantStore();
-            setStoreId(fetchedStoreId);
-
-            // Get social links
-            const links = await socialsService.getMerchantSocials(fetchedStoreId);
-            setSocialLinks(links);
-
-            // Get store data (optional - you can remove this if not needed)
-            const storesResponse = await axiosInstance.get('/stores/merchant/my-stores', {
-                headers: {
-                    'Authorization': `Bearer ${merchantAuthService.getToken()}`,
-                    'x-api-key': import.meta.env.VITE_API_KEY
+                if (!checkAuthStatus()) {
+                    throw new Error('Authentication required');
                 }
-            });
 
-            if (storesResponse.data?.stores?.length > 0) {
-                setStoreData(storesResponse.data.stores[0]);
+                // Use socialsService to get merchant store
+                const fetchedStoreId = await socialsService.getMerchantStore();
+                setStoreId(fetchedStoreId);
+
+                // Use socialsService to get social links
+                const links = await socialsService.getMerchantSocials(fetchedStoreId);
+                setSocialLinks(links);
+
+                // Optional: Get store data for display using getMerchantStores from api.js
+                try {
+                    const storesResponse = await getMerchantStores();
+                    const stores = storesResponse?.stores || storesResponse || [];
+                    if (stores.length > 0) {
+                        setStoreData(stores[0]);
+                    }
+                } catch (storeError) {
+                    console.log('Could not fetch store data:', storeError);
+                    // Non-critical error, continue without store data
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+                setError(error.message);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Initialization error:', error);
-            setError(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
 
-    initializeData();
-}, []);
+        initializeData();
+    }, []);
 
     // Handle add social
     const handleAddSocial = () => {
@@ -127,7 +127,7 @@ useEffect(() => {
         setIsModalOpen(true);
     };
 
-    // Handle create social - FIXED TO USE SERVICE
+    // Handle create social
     const handleCreateSocial = async (e) => {
         e.preventDefault();
 
@@ -146,7 +146,7 @@ useEffect(() => {
             setSubmitting(true);
             setError(null);
 
-            // USE socialsService.createSocial instead of direct fetch
+            // USE socialsService.createSocial
             const data = await socialsService.createSocial(storeId, newSocial.platform, newSocial.link);
 
             setSocialLinks([...socialLinks, data.social]);
@@ -163,7 +163,7 @@ useEffect(() => {
         }
     };
 
-    // Handle update social - FIXED TO USE SERVICE
+    // Handle update social
     const handleUpdateSocial = async (e) => {
         e.preventDefault();
 
@@ -182,7 +182,7 @@ useEffect(() => {
             setSubmitting(true);
             setError(null);
 
-            // USE socialsService.updateSocial instead of direct fetch
+            // USE socialsService.updateSocial
             const data = await socialsService.updateSocial(editing.id, newSocial.platform, newSocial.link);
 
             setSocialLinks(socialLinks.map(social =>
@@ -203,7 +203,7 @@ useEffect(() => {
         }
     };
 
-    // Handle delete social - FIXED TO USE SERVICE
+    // Handle delete social
     const handleDeleteSocial = async (socialId) => {
         if (!confirm('Are you sure you want to delete this social media link?')) {
             return;
@@ -212,7 +212,7 @@ useEffect(() => {
         try {
             setError(null);
 
-            // USE socialsService.deleteSocial instead of direct fetch
+            // USE socialsService.deleteSocial
             await socialsService.deleteSocial(socialId);
 
             setSocialLinks(socialLinks.filter(social => social.id !== socialId));
