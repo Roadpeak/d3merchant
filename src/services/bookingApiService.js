@@ -108,10 +108,9 @@ export const getMerchantServiceBookings = async (params = {}) => {
         // Try multiple endpoints to find the merchant's stores
         let storeId;
         const storeEndpoints = [
-            '/stores/merchant',
-            '/merchant/stores',
+         
             '/stores/my-stores',
-            '/stores'
+            
         ];
 
         for (const endpoint of storeEndpoints) {
