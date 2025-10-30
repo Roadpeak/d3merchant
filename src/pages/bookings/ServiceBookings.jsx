@@ -163,37 +163,37 @@ const ServiceBookings = () => {
 
   // Data loading
   const loadBookings = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    const response = await bookingApiService.getMerchantServiceBookings({
-      limit: 100,
-      offset: 0
-    });
+      const response = await bookingApiService.getMerchantServiceBookings({
+        limit: 100,
+        offset: 0
+      });
 
-    if (response && response.success && response.bookings) {
-      setBookings(response.bookings);
-      setFilteredBookings(response.bookings);
+      if (response && response.success) {
+        setBookings(response.bookings);
+        setFilteredBookings(response.bookings);
 
-      if (response.bookings.length === 0) {
-        toast('No service bookings found');
+        if (response.bookings.length === 0) {
+          toast('No service bookings found');
+        } else {
+          toast.success(`${response.bookings.length} bookings loaded`);
+        }
       } else {
-        toast.success(`${response.bookings.length} bookings loaded`);
+        throw new Error(response?.message || 'Failed to load bookings');
       }
-    } else {
-      throw new Error(response?.message || 'Failed to load bookings');
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message);
+      toast.error("Failed to fetch bookings: " + error.message);
+      setBookings([]);
+      setFilteredBookings([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error:', error);
-    setError(error.message);
-    toast.error("Failed to fetch bookings: " + error.message);
-    setBookings([]);
-    setFilteredBookings([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   // Updated handleRefresh function
   const handleRefresh = async () => {
     try {

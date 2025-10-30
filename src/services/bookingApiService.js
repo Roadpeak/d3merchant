@@ -94,18 +94,33 @@ const getMerchantStoreId = async () => {
  */
 export const getMerchantServiceBookings = async (params = {}) => {
     try {
-        console.log('Fetching merchant service bookings with params:', params);
+        console.log('Fetching merchant service bookings...');
 
-        const response = await axiosInstance.get('/merchant/bookings/services', {
-            headers: getAuthHeaders(),
-            params: {
-                limit: 50,
-                offset: 0,
-                ...params
-            }
+        // Get merchant's stores first
+        const storesResponse = await axiosInstance.get('/stores/merchant/my-stores', {
+            headers: getAuthHeaders()
+        });
+        
+        if (!storesResponse.data.success || !storesResponse.data.stores?.length) {
+            throw new Error('No stores found for this merchant');
+        }
+        
+        const storeId = storesResponse.data.stores[0].id;
+        console.log('Using store ID:', storeId);
+
+        // Build query parameters
+        const queryParams = new URLSearchParams({
+            limit: params.limit || 50,
+            offset: params.offset || 0,
+            ...(params.status && { status: params.status }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate })
         });
 
-        console.log('Service bookings response:', response.data);
+        // Use the correct endpoint
+        const response = await axiosInstance.get(`/bookings/merchant/store/${storeId}?${queryParams}`, {
+            headers: getAuthHeaders()
+        });
 
         if (response.data.success) {
             return {
@@ -120,16 +135,14 @@ export const getMerchantServiceBookings = async (params = {}) => {
     } catch (error) {
         console.error('Error fetching merchant service bookings:', error);
 
-        // Fallback to mock data for development
-        if (error.response?.status === 404 || error.response?.status === 501) {
-            // ✅ FIXED: Pass storeId to mock generator
-            return generateMockServiceBookings(params.limit || 20, params.storeId);
+        // Fallback to mock data
+        if (error.response?.status === 404 || error.response?.status === 501 || error.response?.status === 403) {
+            return generateMockServiceBookings(params.limit || 20, null);
         }
 
         handleApiError(error, 'fetching service bookings');
     }
 };
-
 /**
  * Get specific service booking by ID
  */
