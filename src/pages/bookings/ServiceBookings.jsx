@@ -580,9 +580,9 @@ const ServiceBookings = () => {
     // Apply search
     if (searchTerm) {
       filtered = filtered.filter(booking =>
-        booking.User?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.User?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.User?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.bookingUser?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.bookingUser?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.bookingUser?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -597,8 +597,8 @@ const ServiceBookings = () => {
           bValue = new Date(b.startTime);
           break;
         case 'client':
-          aValue = (a.customerName || `${a.User?.firstName} ${a.User?.lastName}`).toLowerCase();
-          bValue = (b.customerName || `${b.User?.firstName} ${b.User?.lastName}`).toLowerCase();
+          aValue = (a.customerName || `${a.bookingUser?.firstName} ${a.bookingUser?.lastName}`).toLowerCase();
+          bValue = (b.customerName || `${b.bookingUser?.firstName} ${b.bookingUser?.lastName}`).toLowerCase();
           break;
         case 'store':
           aValue = a.storeName?.toLowerCase() || '';
@@ -643,7 +643,7 @@ const ServiceBookings = () => {
 
       const bookingData = {
         id: Date.now(),
-        User: {
+        bookingUser: {
           firstName: newBooking.clientName.split(' ')[0],
           lastName: newBooking.clientName.split(' ').slice(1).join(' '),
           email: newBooking.clientEmail,
@@ -2149,17 +2149,17 @@ const ServiceBookings = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                            {getInitials(booking.User?.firstName, booking.User?.lastName)}
+                            {getInitials(booking.bookingUser?.firstName, booking.bookingUser?.lastName)}
                           </div>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {booking.customerName ||
-                              `${booking.User?.firstName || 'Unknown'} ${booking.User?.lastName || 'User'}`.trim()}
+                              `${booking.bookingUser?.firstName || 'Unknown'} ${booking.bookingUser?.lastName || 'User'}`.trim()}
                           </div>
-                          <div className="text-sm text-gray-500">{booking.User?.email}</div>
-                          {(booking.User?.phoneNumber || booking.User?.phone) && (
-                            <div className="text-sm text-gray-500">{booking.User?.phoneNumber || booking.User?.phone}</div>
+                          <div className="text-sm text-gray-500">{booking.bookingUser?.email}</div>
+                          {(booking.bookingUser?.phoneNumber || booking.bookingUser?.phone) && (
+                            <div className="text-sm text-gray-500">{booking.bookingUser?.phoneNumber || booking.bookingUser?.phone}</div>
                           )}
                         </div>
                       </div>
