@@ -96,17 +96,37 @@ export const getMerchantServiceBookings = async (params = {}) => {
     try {
         console.log('Fetching merchant service bookings...');
 
-        // Get merchant's stores first
-        const storesResponse = await axiosInstance.get('/stores/merchant/my-stores', {
-            headers: getAuthHeaders()
-        });
-        
-        if (!storesResponse.data.success || !storesResponse.data.stores?.length) {
+        // Try multiple possible store endpoints
+        let storeId;
+        const storeEndpoints = [
+            '/stores/merchant/my-stores',
+            '/merchant/my-stores',
+            '/stores/merchant',
+        ];
+
+        for (const endpoint of storeEndpoints) {
+            try {
+                console.log(`Trying stores endpoint: ${endpoint}`);
+                const storesResponse = await axiosInstance.get(endpoint, {
+                    headers: getAuthHeaders()
+                });
+                
+                console.log(`Response from ${endpoint}:`, storesResponse.data);
+                
+                if (storesResponse.data.success && storesResponse.data.stores?.length > 0) {
+                    storeId = storesResponse.data.stores[0].id;
+                    console.log(`✅ Found store ID: ${storeId} from ${endpoint}`);
+                    break;
+                }
+            } catch (endpointError) {
+                console.log(`${endpoint} failed, trying next...`);
+                continue;
+            }
+        }
+
+        if (!storeId) {
             throw new Error('No stores found for this merchant');
         }
-        
-        const storeId = storesResponse.data.stores[0].id;
-        console.log('Using store ID:', storeId);
 
         // Build query parameters
         const queryParams = new URLSearchParams({
@@ -117,10 +137,15 @@ export const getMerchantServiceBookings = async (params = {}) => {
             ...(params.endDate && { endDate: params.endDate })
         });
 
-        // Use the correct endpoint
-        const response = await axiosInstance.get(`/bookings/merchant/store/${storeId}?${queryParams}`, {
+        // Use the correct booking endpoint
+        const endpoint = `/bookings/merchant/store/${storeId}?${queryParams}`;
+        console.log('📞 Calling bookings endpoint:', endpoint);
+
+        const response = await axiosInstance.get(endpoint, {
             headers: getAuthHeaders()
         });
+
+        console.log('✅ Bookings response:', response.data);
 
         if (response.data.success) {
             return {
@@ -133,10 +158,12 @@ export const getMerchantServiceBookings = async (params = {}) => {
 
         return response.data;
     } catch (error) {
-        console.error('Error fetching merchant service bookings:', error);
+        console.error('❌ Error:', error.message);
+        console.error('Error response:', error.response?.data);
 
         // Fallback to mock data
         if (error.response?.status === 404 || error.response?.status === 501 || error.response?.status === 403) {
+            console.log('⚠️ Using mock data fallback');
             return generateMockServiceBookings(params.limit || 20, null);
         }
 
