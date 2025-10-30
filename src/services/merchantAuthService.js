@@ -271,6 +271,24 @@ class MerchantAuthService {
     }
   }
 
+  // Update specific merchant data field
+  updateMerchantData(updates) {
+    try {
+      const authData = this.getAuthData();
+      if (authData && authData.merchant) {
+        authData.merchant = { ...authData.merchant, ...updates };
+        authData.timestamp = Date.now();
+        this.storeAuthData(authData);
+        console.log('✅ Merchant data updated in storage:', updates);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('💥 Error updating merchant data:', error);
+      return false;
+    }
+  }
+
   // Register new merchant
   async register(merchantData) {
     try {

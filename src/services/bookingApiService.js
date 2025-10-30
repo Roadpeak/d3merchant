@@ -52,37 +52,84 @@ const getMerchantStoreId = async () => {
 
         console.log('🏪 Current merchant data:', merchant);
 
-        // Try multiple possible locations for store ID
-        const storeId = merchant.storeId || 
-                       merchant.store_id || 
-                       merchant.defaultStoreId ||
-                       merchant.default_store_id ||
-                       merchant.store?.id;
+        // Try multiple possible locations for store ID in merchant object
+        const storeId = merchant.storeId ||
+            merchant.store_id ||
+            merchant.defaultStoreId ||
+            merchant.default_store_id ||
+            merchant.store?.id ||
+            merchant.id; // Sometimes merchant.id IS the store ID
 
-        if (!storeId) {
-            console.warn('⚠️ No store ID found in merchant data. Merchant object:', merchant);
-            // Try to fetch from stores API
-            try {
-                const storesResponse = await axiosInstance.get('/merchant/stores', {
-                    headers: getAuthHeaders()
-                });
-                
-                if (storesResponse.data.success && storesResponse.data.stores?.length > 0) {
-                    const firstStore = storesResponse.data.stores[0];
-                    console.log('✅ Retrieved store ID from stores API:', firstStore.id);
-                    return firstStore.id;
-                }
-            } catch (apiError) {
-                console.warn('Could not fetch stores from API:', apiError);
-            }
-            
-            throw new Error('No store ID found. Please ensure you have a store configured.');
+        if (storeId) {
+            console.log('✅ Found store ID in merchant data:', storeId);
+            return storeId;
         }
 
-        console.log('✅ Retrieved merchant store ID:', storeId);
-        return storeId;
+        console.warn('⚠️ No store ID found in merchant data. Fetching from profile...');
+
+        // Try to fetch from merchant profile which should have store info
+        try {
+            const profileResponse = await merchantAuthService.getCurrentMerchantProfile();
+
+            console.log('📋 Profile response:', profileResponse);
+
+            if (profileResponse) {
+                // Try different possible locations in profile response
+                const profileStoreId =
+                    profileResponse.storeId ||
+                    profileResponse.store_id ||
+                    profileResponse.merchant?.storeId ||
+                    profileResponse.merchant?.store_id ||
+                    profileResponse.store?.id ||
+                    profileResponse.merchantProfile?.storeId ||
+                    profileResponse.merchantProfile?.store_id;
+
+                if (profileStoreId) {
+                    console.log('✅ Retrieved store ID from profile:', profileStoreId);
+
+                    // Update the stored merchant data with the store ID
+                    const authData = merchantAuthService.getAuthData();
+                    if (authData && authData.merchant) {
+                        authData.merchant.storeId = profileStoreId;
+                        merchantAuthService.storeAuthData(authData);
+                    }
+
+                    return profileStoreId;
+                }
+            }
+        } catch (profileError) {
+            console.warn('⚠️ Could not fetch profile:', profileError.message);
+        }
+
+        // Last resort: try to fetch stores list
+        try {
+            console.warn('⚠️ Trying stores API as last resort...');
+            const storesResponse = await axiosInstance.get('/merchant/stores', {
+                headers: getAuthHeaders()
+            });
+
+            console.log('🏪 Stores response:', storesResponse.data);
+
+            if (storesResponse.data.success && storesResponse.data.stores?.length > 0) {
+                const firstStore = storesResponse.data.stores[0];
+                console.log('✅ Retrieved store ID from stores API:', firstStore.id);
+
+                // Cache it for future use
+                const authData = merchantAuthService.getAuthData();
+                if (authData && authData.merchant) {
+                    authData.merchant.storeId = firstStore.id;
+                    merchantAuthService.storeAuthData(authData);
+                }
+
+                return firstStore.id;
+            }
+        } catch (apiError) {
+            console.warn('⚠️ Could not fetch stores from API:', apiError.message);
+        }
+
+        throw new Error('No store ID found. Please ensure you have a store configured in your account.');
     } catch (error) {
-        console.error('Error getting merchant store ID:', error);
+        console.error('❌ Error getting merchant store ID:', error);
         throw error;
     }
 };
@@ -91,45 +138,65 @@ const getMerchantStoreId = async () => {
 
 /**
  * Get all service bookings for the current merchant
+ * FIXED: Now calls the correct endpoint with storeId
  */
 export const getMerchantServiceBookings = async (params = {}) => {
     try {
-        console.log('Fetching merchant service bookings with params:', params);
+        console.log('🔍 Fetching merchant service bookings with params:', params);
 
-        const response = await axiosInstance.get('/merchant/bookings/services', {
-            headers: getAuthHeaders(),
-            params: {
-                limit: 50,
-                offset: 0,
-                ...params
-            }
+        // Get merchant's store ID
+        const storeId = await getMerchantStoreId();
+
+        if (!storeId) {
+            throw new Error('Store ID not found. Please ensure you have a store configured.');
+        }
+
+        console.log('📍 Using store ID:', storeId);
+
+        // Build query parameters
+        const queryParams = new URLSearchParams({
+            limit: params.limit || 50,
+            offset: params.offset || 0,
+            ...(params.status && { status: params.status }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate })
         });
 
-        console.log('Service bookings response:', response.data);
+        // FIXED: Call the correct endpoint that matches your backend route
+        const endpoint = `/bookings/merchant/store/${storeId}?${queryParams}`;
+        console.log('🌐 Calling endpoint:', endpoint);
+
+        const response = await axiosInstance.get(endpoint, {
+            headers: getAuthHeaders()
+        });
+
+        console.log('✅ Service bookings response:', response.data);
 
         if (response.data.success) {
             return {
                 success: true,
                 bookings: response.data.bookings || [],
                 pagination: response.data.pagination,
-                summary: response.data.summary
+                summary: response.data.summary,
+                storeId: storeId // Include for debugging
             };
         }
 
         return response.data;
     } catch (error) {
-        console.error('Error fetching merchant service bookings:', error);
+        console.error('❌ Error fetching merchant service bookings:', error);
+        console.error('Error response:', error.response?.data);
 
-        // Fallback to mock data for development
+        // Fallback to mock data for development (with correct storeId)
         if (error.response?.status === 404 || error.response?.status === 501) {
-            // ✅ FIXED: Pass storeId to mock generator
-            return generateMockServiceBookings(params.limit || 20, params.storeId);
+            console.log('⚠️ Using mock data fallback');
+            const storeId = await getMerchantStoreId().catch(() => null);
+            return generateMockServiceBookings(params.limit || 20, storeId);
         }
 
         handleApiError(error, 'fetching service bookings');
     }
 };
-
 /**
  * Get specific service booking by ID
  */
@@ -1318,7 +1385,7 @@ export const exportBookingData = async (filters = {}, format = 'csv') => {
 const generateMockServiceBookings = (limit = 20, storeId = null) => {
     const mockBookings = [];
     const statuses = ['confirmed', 'pending', 'completed', 'in_progress', 'cancelled'];
-    
+
     // ✅ FIXED: Add stores array with different store IDs
     const stores = [
         { id: 1, name: 'Downtown Branch' },
@@ -1326,7 +1393,7 @@ const generateMockServiceBookings = (limit = 20, storeId = null) => {
         { id: 3, name: 'Airport Terminal' },
         { id: 4, name: 'Beachfront Office' }
     ];
-    
+
     const services = [
         { id: 1, name: 'Hair Cut & Styling', duration: 60, price: 2500 },
         { id: 2, name: 'Massage Therapy', duration: 90, price: 4500 },
@@ -1344,9 +1411,9 @@ const generateMockServiceBookings = (limit = 20, storeId = null) => {
         const service = services[i % services.length];
         const customer = customers[i % customers.length];
         const status = statuses[i % statuses.length];
-        
+
         // ✅ FIXED: Assign store - if storeId provided, use only that store, otherwise rotate
-        const store = storeId 
+        const store = storeId
             ? stores.find(s => s.id === parseInt(storeId)) || stores[0]
             : stores[i % stores.length];
 
@@ -2435,5 +2502,5 @@ export default {
     getStatusBadgeText,
     calculateBookingEfficiency,
     formatBookingTiming
- 
+
 };
