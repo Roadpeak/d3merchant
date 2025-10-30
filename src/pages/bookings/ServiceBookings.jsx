@@ -162,112 +162,68 @@ const ServiceBookings = () => {
   };
 
  // Data loading
+// Data loading
 const loadBookings = async () => {
   try {
     setLoading(true);
     setError(null);
 
-    console.log('Loading service bookings...');
+    console.log('🔄 Loading service bookings...');
 
-    // 🔍 DEBUG: Call debug endpoint first to get correct merchant info
-    console.log('🔍 Step 1: Fetching debug merchant info...');
-    const debugInfo = await bookingApiService.debugMerchantInfo();
-    console.log('🔍 DEBUG INFO:', debugInfo);
-    
+    // Get store ID
     let storeId = null;
-
-    if (debugInfo && debugInfo.success) {
-      console.log('🏪 Your merchant ID:', debugInfo.debug.merchantId);
-      console.log('🏪 Your stores:', debugInfo.debug.stores);
-      console.log('🏪 Store count:', debugInfo.debug.storeCount);
+    try {
+      storeId = await bookingApiService.getMerchantStoreId();
+      console.log('✅ Retrieved store ID:', storeId);
       
-      if (debugInfo.debug.stores && debugInfo.debug.stores.length > 0) {
-        // Use the first store from the debug info
-        storeId = debugInfo.debug.stores[0].id;
-        console.log('✅ Using store ID from debug:', storeId);
-        
+      if (storeId) {
         setCurrentStoreId(storeId);
-        
-        // Set initial store filter
         setFilters(prev => ({
           ...prev,
           store: storeId.toString()
         }));
-      } else {
-        toast.error('No stores found for your account. Please create a store first.');
-        setLoading(false);
-        return;
       }
-    } else {
-      console.warn('⚠️ Debug endpoint failed, trying fallback method...');
-      
-      // Fallback: Try to get store ID using the existing helper
-      try {
-        storeId = await bookingApiService.getMerchantStoreId();
-        if (storeId) {
-          console.log(`✅ Retrieved merchant store ID from fallback: ${storeId}`);
-          setCurrentStoreId(storeId);
-
-          // Set initial store filter
-          setFilters(prev => ({
-            ...prev,
-            store: storeId.toString()
-          }));
-        }
-      } catch (storeIdError) {
-        console.error('❌ Could not determine store ID:', storeIdError);
-        toast.error('Unable to determine your store. Please contact support.');
-        setLoading(false);
-        return;
-      }
-    }
-
-    if (!storeId) {
-      toast.error('No store ID available. Please ensure you have a store configured.');
+    } catch (storeIdError) {
+      console.error('❌ Could not get store ID:', storeIdError);
+      toast.error('Unable to determine your store: ' + storeIdError.message);
       setLoading(false);
       return;
     }
 
-    // Include store filter
+    if (!storeId) {
+      toast.error('No store ID available');
+      setLoading(false);
+      return;
+    }
+
+    // Fetch bookings
+    console.log('🌐 Fetching bookings for store:', storeId);
     const params = {
       limit: 100,
-      offset: 0,
-      storeId: storeId // Explicitly pass the store ID
+      offset: 0
     };
 
-    console.log('🌐 Step 2: Fetching bookings with parameters:', params);
     const response = await bookingApiService.getMerchantServiceBookings(params);
 
     if (response && response.success && response.bookings) {
-      console.log(`✅ API returned ${response.bookings.length} bookings`);
-
-      // No need for client-side filtering since backend already filtered
-      const allBookings = response.bookings;
+      console.log(`✅ Loaded ${response.bookings.length} bookings`);
       
-      console.log(`📊 Bookings received for store ID ${storeId}:`, allBookings.length);
+      setBookings(response.bookings);
+      setFilteredBookings(response.bookings);
 
-      setBookings(allBookings);
-      setFilteredBookings(allBookings);
-
-      if (allBookings.length === 0) {
+      if (response.bookings.length === 0) {
         toast('No service bookings found for this store');
       } else {
-        toast.success(`${allBookings.length} service bookings loaded for this store`);
+        toast.success(`${response.bookings.length} service bookings loaded`);
       }
     } else {
-      throw new Error(response?.message || 'Failed to load service bookings');
+      throw new Error(response?.message || 'Failed to load bookings');
     }
 
   } catch (error) {
     console.error('❌ Booking load error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
-    
     setError(error.message);
-    toast.error("Failed to fetch service bookings: " + error.message);
+    toast.error("Failed to fetch bookings: " + error.message);
     setBookings([]);
     setFilteredBookings([]);
   } finally {

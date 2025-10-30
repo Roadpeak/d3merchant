@@ -53,81 +53,88 @@ const getMerchantStoreId = async () => {
         console.log('🏪 Current merchant data:', merchant);
 
         // Try multiple possible locations for store ID in merchant object
-        const storeId = merchant.storeId ||
-            merchant.store_id ||
-            merchant.defaultStoreId ||
-            merchant.default_store_id ||
-            merchant.store?.id ||
-            merchant.id; // Sometimes merchant.id IS the store ID
+        let storeId = merchant.storeId || 
+                      merchant.store_id || 
+                      merchant.defaultStoreId ||
+                      merchant.default_store_id ||
+                      merchant.store?.id ||
+                      merchant.id; // Sometimes merchant.id IS the store owner ID
 
         if (storeId) {
             console.log('✅ Found store ID in merchant data:', storeId);
             return storeId;
         }
 
-        console.warn('⚠️ No store ID found in merchant data. Fetching from profile...');
-
-        // Try to fetch from merchant profile which should have store info
+        console.warn('⚠️ No store ID in merchant data. Trying profile endpoint...');
+        
+        // Try to get from merchant profile
         try {
             const profileResponse = await merchantAuthService.getCurrentMerchantProfile();
-
             console.log('📋 Profile response:', profileResponse);
-
+            
             if (profileResponse) {
-                // Try different possible locations in profile response
-                const profileStoreId =
-                    profileResponse.storeId ||
-                    profileResponse.store_id ||
-                    profileResponse.merchant?.storeId ||
-                    profileResponse.merchant?.store_id ||
-                    profileResponse.store?.id ||
-                    profileResponse.merchantProfile?.storeId ||
-                    profileResponse.merchantProfile?.store_id;
-
-                if (profileStoreId) {
-                    console.log('✅ Retrieved store ID from profile:', profileStoreId);
-
-                    // Update the stored merchant data with the store ID
-                    const authData = merchantAuthService.getAuthData();
-                    if (authData && authData.merchant) {
-                        authData.merchant.storeId = profileStoreId;
-                        merchantAuthService.storeAuthData(authData);
-                    }
-
-                    return profileStoreId;
+                storeId = profileResponse.storeId ||
+                         profileResponse.store_id ||
+                         profileResponse.merchant?.storeId ||
+                         profileResponse.merchant?.store_id ||
+                         profileResponse.merchantProfile?.storeId;
+                
+                if (storeId) {
+                    console.log('✅ Found store ID in profile:', storeId);
+                    merchantAuthService.updateMerchantData({ storeId });
+                    return storeId;
                 }
             }
         } catch (profileError) {
-            console.warn('⚠️ Could not fetch profile:', profileError.message);
+            console.warn('⚠️ Profile fetch failed:', profileError.message);
         }
 
-        // Last resort: try to fetch stores list
+        // Try stores endpoint
+        console.warn('⚠️ Trying stores endpoint...');
         try {
-            console.warn('⚠️ Trying stores API as last resort...');
-            const storesResponse = await axiosInstance.get('/merchant/stores', {
-                headers: getAuthHeaders()
-            });
-
-            console.log('🏪 Stores response:', storesResponse.data);
-
-            if (storesResponse.data.success && storesResponse.data.stores?.length > 0) {
-                const firstStore = storesResponse.data.stores[0];
-                console.log('✅ Retrieved store ID from stores API:', firstStore.id);
-
-                // Cache it for future use
-                const authData = merchantAuthService.getAuthData();
-                if (authData && authData.merchant) {
-                    authData.merchant.storeId = firstStore.id;
-                    merchantAuthService.storeAuthData(authData);
+            // Try different possible stores endpoints
+            const endpoints = [
+                '/stores/merchant',
+                '/merchant/stores', 
+                '/stores'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    console.log(`🔍 Trying endpoint: ${endpoint}`);
+                    const response = await axiosInstance.get(endpoint, {
+                        headers: getAuthHeaders()
+                    });
+                    
+                    console.log(`📦 Response from ${endpoint}:`, response.data);
+                    
+                    const stores = response.data?.stores || response.data?.data?.stores || [];
+                    
+                    if (stores && stores.length > 0) {
+                        storeId = stores[0].id;
+                        console.log(`✅ Found store ID from ${endpoint}:`, storeId);
+                        merchantAuthService.updateMerchantData({ storeId });
+                        return storeId;
+                    }
+                } catch (endpointError) {
+                    console.warn(`⚠️ ${endpoint} failed:`, endpointError.message);
+                    continue;
                 }
-
-                return firstStore.id;
             }
-        } catch (apiError) {
-            console.warn('⚠️ Could not fetch stores from API:', apiError.message);
+        } catch (storesError) {
+            console.warn('⚠️ All stores endpoints failed:', storesError.message);
         }
-
-        throw new Error('No store ID found. Please ensure you have a store configured in your account.');
+        
+        // Last resort: use merchant ID as store ID
+        console.warn('⚠️ Using merchant ID as store ID (last resort)');
+        storeId = merchant.id;
+        
+        if (storeId) {
+            console.log('✅ Using merchant ID as store ID:', storeId);
+            return storeId;
+        }
+        
+        throw new Error('Could not determine store ID. Please contact support.');
     } catch (error) {
         console.error('❌ Error getting merchant store ID:', error);
         throw error;
