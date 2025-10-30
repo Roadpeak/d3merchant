@@ -161,67 +161,31 @@ const ServiceBookings = () => {
     });
   };
 
- // Data loading
-// Data loading
-const loadBookings = async () => {
+  // Data loading
+  const loadBookings = async () => {
   try {
     setLoading(true);
     setError(null);
 
-    console.log('🔄 Loading service bookings...');
-
-    // Get store ID
-    let storeId = null;
-    try {
-      storeId = await bookingApiService.getMerchantStoreId();
-      console.log('✅ Retrieved store ID:', storeId);
-      
-      if (storeId) {
-        setCurrentStoreId(storeId);
-        setFilters(prev => ({
-          ...prev,
-          store: storeId.toString()
-        }));
-      }
-    } catch (storeIdError) {
-      console.error('❌ Could not get store ID:', storeIdError);
-      toast.error('Unable to determine your store: ' + storeIdError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!storeId) {
-      toast.error('No store ID available');
-      setLoading(false);
-      return;
-    }
-
-    // Fetch bookings
-    console.log('🌐 Fetching bookings for store:', storeId);
-    const params = {
+    const response = await bookingApiService.getMerchantServiceBookings({
       limit: 100,
       offset: 0
-    };
-
-    const response = await bookingApiService.getMerchantServiceBookings(params);
+    });
 
     if (response && response.success && response.bookings) {
-      console.log(`✅ Loaded ${response.bookings.length} bookings`);
-      
       setBookings(response.bookings);
       setFilteredBookings(response.bookings);
 
       if (response.bookings.length === 0) {
-        toast('No service bookings found for this store');
+        toast('No service bookings found');
       } else {
-        toast.success(`${response.bookings.length} service bookings loaded`);
+        toast.success(`${response.bookings.length} bookings loaded`);
       }
     } else {
       throw new Error(response?.message || 'Failed to load bookings');
     }
-
   } catch (error) {
-    console.error('❌ Booking load error:', error);
+    console.error('Error:', error);
     setError(error.message);
     toast.error("Failed to fetch bookings: " + error.message);
     setBookings([]);
@@ -230,7 +194,6 @@ const loadBookings = async () => {
     setLoading(false);
   }
 };
-
   // Updated handleRefresh function
   const handleRefresh = async () => {
     try {
