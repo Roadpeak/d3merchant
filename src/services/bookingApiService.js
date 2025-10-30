@@ -109,7 +109,7 @@ export const getMerchantServiceBookings = async (params = {}) => {
         let storeId;
         const storeEndpoints = [
          
-            '/stores/my-stores',
+            '/merchant/store/:storeId',
             
         ];
 
