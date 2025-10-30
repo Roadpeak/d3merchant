@@ -2390,6 +2390,26 @@ export const formatBookingTiming = (booking) => {
     return result;
 };
 
+/**
+ * DEBUG: Get merchant info to find correct store ID
+ */
+export const debugMerchantInfo = async () => {
+    try {
+        console.log('🔍 DEBUG: Fetching merchant info...');
+        
+        const response = await axiosInstance.get('/bookings/debug/merchant-info', {
+            headers: getAuthHeaders()
+        });
+        
+        console.log('🔍 DEBUG: Merchant info response:', response.data);
+        
+        return response.data;
+    } catch (error) {
+        console.error('❌ DEBUG: Error fetching merchant info:', error);
+        console.error('Error response:', error.response?.data);
+        return null;
+    }
+};
 
 
 
@@ -2404,6 +2424,7 @@ export default {
     completeServiceBooking,
     confirmServiceBooking,
     cancelServiceBooking,
+      debugMerchantInfo,
 
     // Offer Booking Methods
     getMerchantOfferBookings,
