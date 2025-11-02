@@ -25,7 +25,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import Layout from "../../elements/Layout";
-import { fetchBookings } from "../../services/api_service";
+import { getMerchantOfferBookings } from "../../services/bookingApiService";
 import moment from "moment";
 
 const OfferBookings = () => {
@@ -89,41 +89,66 @@ const OfferBookings = () => {
     "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM"
   ];
 
-  useEffect(() => {
-    const loadBookings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetchBookings();
-        // Filter only offer bookings
-        const offerBookings = response.filter(booking => booking.isOffer);
+ // Around line 55-75:
+useEffect(() => {
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // ✅ Use the specific offer bookings method
+      const response = await getMerchantOfferBookings({
+        limit: 100,
+        status: '' // Get all statuses
+      });
+      
+      console.log('Offer bookings response:', response);
+      
+      if (response.success) {
+        const offerBookings = response.bookings || [];
         setBookings(offerBookings);
         setFilteredBookings(offerBookings);
-      } catch (error) {
-        setError(error.message);
-        toast.error("Failed to fetch offer bookings");
-      } finally {
-        setLoading(false);
+      } else {
+        throw new Error(response.message || 'Failed to load offer bookings');
       }
-    };
-
-    loadBookings();
-  }, []);
-
-  const handleRefresh = async () => {
-    try {
-      setRefreshing(true);
-      const response = await fetchBookings();
-      const offerBookings = response.filter(booking => booking.isOffer);
-      setBookings(offerBookings);
-      toast.success('Data refreshed successfully');
     } catch (error) {
-      toast.error('Failed to refresh data');
+      console.error('Error loading offer bookings:', error);
+      setError(error.message);
+      toast.error("Failed to fetch offer bookings");
     } finally {
-      setRefreshing(false);
+      setLoading(false);
     }
   };
 
+  loadBookings();
+}, []);
+
+// Around line 78-91:
+const handleRefresh = async () => {
+  try {
+    setRefreshing(true);
+    
+    // ✅ Use the specific offer bookings method
+    const response = await getMerchantOfferBookings({
+      limit: 100,
+      status: ''
+    });
+    
+    if (response.success) {
+      const offerBookings = response.bookings || [];
+      setBookings(offerBookings);
+      setFilteredBookings(offerBookings);
+      toast.success('Data refreshed successfully');
+    } else {
+      throw new Error(response.message || 'Failed to refresh offer bookings');
+    }
+  } catch (error) {
+    console.error('Error refreshing offer bookings:', error);
+    toast.error('Failed to refresh data');
+  } finally {
+    setRefreshing(false);
+  }
+};
   const handleSort = (key) => {
     setSortConfig(prev => ({
       key,
