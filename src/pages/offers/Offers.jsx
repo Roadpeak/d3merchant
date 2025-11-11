@@ -4,7 +4,7 @@ import Layout from '../../elements/Layout';
 import Modal from '../../elements/Modal';
 import EnhancedOfferForm from './OfferForm';
 import { createOffer, fetchOffers, updateOffer, deleteOffer, getMerchantStores } from '../../services/api_service';
-import { 
+import {
     Edit, Trash2, Eye, Calendar, Percent, Tag, Users, AlertCircle, Loader2, Store, Plus,
     Calculator, DollarSign, Clock, Zap, Star, HelpCircle, CheckCircle, TrendingUp, Filter,
     Search, RefreshCw, Shield, UserCheck, CreditCard, MessageSquare, Info, Timer, Bell
@@ -30,31 +30,31 @@ const EnhancedOfferPage = () => {
         try {
             setLoading(true);
             setStoreError(null);
-            
+
             console.log('Checking merchant stores...');
-            
+
             try {
                 const storesResponse = await getMerchantStores();
                 const stores = storesResponse?.stores || storesResponse || [];
-                
+
                 if (stores.length === 0) {
                     console.log('No stores found for merchant');
                     setHasStore(false);
                     setOffers([]);
                     return;
                 }
-                
+
                 console.log('Found stores:', stores.length);
                 setHasStore(true);
-                
+
                 await loadOffers();
-                
+
             } catch (storeCheckError) {
                 console.error('Store check failed:', storeCheckError);
                 setStoreError(storeCheckError.message);
                 setHasStore(false);
             }
-            
+
         } catch (error) {
             console.error('Failed to check stores and load offers:', error);
             toast.error('Failed to load page data');
@@ -66,9 +66,9 @@ const EnhancedOfferPage = () => {
     const loadOffers = async () => {
         try {
             console.log('Loading enhanced offers...');
-            
+
             const response = await fetchOffers();
-            
+
             if (response.error) {
                 console.log('Offers API returned error:', response.error);
                 setStoreError(response.error);
@@ -158,7 +158,7 @@ const EnhancedOfferPage = () => {
     // Enhanced filtering function that handles new offer types and service data
     const filteredOffers = offers.filter(offer => {
         // Search filter - now includes service booking settings
-        const matchesSearch = !searchTerm || 
+        const matchesSearch = !searchTerm ||
             offer.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             offer.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             offer.service?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,34 +167,34 @@ const EnhancedOfferPage = () => {
         if (!matchesSearch) return false;
 
         const expired = isOfferExpired(offer.expiration_date);
-        
+
         // Default 'all' filter excludes expired offers
         if (filter === 'all') {
             return !expired;
         }
-        
+
         // Fixed price offers
         if (filter === 'fixed') {
             const isFixed = offer.offer_type === 'fixed' || offer.service?.type === 'fixed';
             return isFixed && !expired;
         }
-        
+
         // Dynamic price offers
         if (filter === 'dynamic') {
             const isDynamic = offer.offer_type === 'dynamic' || offer.service?.type === 'dynamic';
             return isDynamic && !expired;
         }
-        
+
         // Active offers
         if (filter === 'active') {
             return offer.status === 'active' && !expired;
         }
-        
+
         // Expired offers only
         if (filter === 'expired') {
             return expired;
         }
-        
+
         // Featured offers
         if (filter === 'featured') {
             return offer.featured === true && !expired;
@@ -209,14 +209,14 @@ const EnhancedOfferPage = () => {
         if (filter === 'prepayment') {
             return offer.service?.require_prepayment === true && !expired;
         }
-        
+
         return true;
     });
 
     const getStatusBadge = (status, expiration_date) => {
         const expired = isOfferExpired(expiration_date);
         const effectiveStatus = expired ? 'expired' : status;
-        
+
         const statusConfig = {
             active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
             inactive: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' },
@@ -225,7 +225,7 @@ const EnhancedOfferPage = () => {
         };
 
         const config = statusConfig[effectiveStatus] || statusConfig.inactive;
-        
+
         return (
             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
                 {config.label}
@@ -235,16 +235,15 @@ const EnhancedOfferPage = () => {
 
     // Enhanced offer type badge with service info
     const getOfferTypeBadge = (offer) => {
-        const isDynamic = offer.offer_type === 'dynamic' || 
-                         offer.service?.type === 'dynamic' ||
-                         offer.requires_consultation === true;
-        
+        const isDynamic = offer.offer_type === 'dynamic' ||
+            offer.service?.type === 'dynamic' ||
+            offer.requires_consultation === true;
+
         return (
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                isDynamic 
-                    ? 'bg-orange-100 text-orange-800' 
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${isDynamic
+                    ? 'bg-orange-100 text-orange-800'
                     : 'bg-blue-100 text-blue-800'
-            }`}>
+                }`}>
                 {isDynamic ? (
                     <>
                         <Calculator className="w-3 h-3 mr-1" />
@@ -317,51 +316,51 @@ const EnhancedOfferPage = () => {
     const calculateStats = () => {
         const total = offers.length;
         const nonExpired = offers.filter(offer => !isOfferExpired(offer.expiration_date));
-        const active = offers.filter(offer => 
+        const active = offers.filter(offer =>
             offer.status === 'active' && !isOfferExpired(offer.expiration_date)
         ).length;
         const expired = offers.filter(offer => isOfferExpired(offer.expiration_date)).length;
-        
+
         const dynamic = offers.filter(offer => {
-            const isDynamic = offer.offer_type === 'dynamic' || 
-                             offer.service?.type === 'dynamic' ||
-                             offer.requires_consultation === true;
+            const isDynamic = offer.offer_type === 'dynamic' ||
+                offer.service?.type === 'dynamic' ||
+                offer.requires_consultation === true;
             return isDynamic && !isOfferExpired(offer.expiration_date);
         }).length;
-        
+
         const fixed = offers.filter(offer => {
-            const isFixed = offer.offer_type === 'fixed' || 
-                           offer.service?.type === 'fixed';
+            const isFixed = offer.offer_type === 'fixed' ||
+                offer.service?.type === 'fixed';
             return isFixed && !isOfferExpired(offer.expiration_date);
         }).length;
-        
-        const featured = offers.filter(offer => 
+
+        const featured = offers.filter(offer =>
             offer.featured === true && !isOfferExpired(offer.expiration_date)
         ).length;
 
         // NEW: Booking settings stats
-        const autoConfirm = offers.filter(offer => 
+        const autoConfirm = offers.filter(offer =>
             offer.service?.auto_confirm_bookings === true && !isOfferExpired(offer.expiration_date)
         ).length;
 
-        const requirePrepayment = offers.filter(offer => 
+        const requirePrepayment = offers.filter(offer =>
             offer.service?.require_prepayment === true && !isOfferExpired(offer.expiration_date)
         ).length;
-        
-        const avgDiscount = nonExpired.length > 0 
-            ? Math.round(nonExpired.reduce((sum, offer) => sum + (parseFloat(offer.discount) || 0), 0) / nonExpired.length) 
+
+        const avgDiscount = nonExpired.length > 0
+            ? Math.round(nonExpired.reduce((sum, offer) => sum + (parseFloat(offer.discount) || 0), 0) / nonExpired.length)
             : 0;
 
-        return { 
+        return {
             total: nonExpired.length,
-            active, 
-            expired, 
-            dynamic, 
-            fixed, 
+            active,
+            expired,
+            dynamic,
+            fixed,
             featured,
             autoConfirm,
             requirePrepayment,
-            avgDiscount 
+            avgDiscount
         };
     };
 
@@ -392,7 +391,7 @@ const EnhancedOfferPage = () => {
                         </div>
                         <h3 className="text-xl font-semibold text-gray-900 mb-3">No Store Found</h3>
                         <p className="text-gray-600 mb-6">
-                            You need to create a store and services before you can manage offers. 
+                            You need to create a store and services before you can manage offers.
                             Offers are created from existing services.
                         </p>
                         {storeError && (
@@ -428,16 +427,6 @@ const EnhancedOfferPage = () => {
             showSearch={false}
             showMobileGrid={false}
             className="p-0"
-            rightContent={
-                <button
-                    onClick={() => setModalOpen(true)}
-                    className="bg-blue-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-                >
-                    <Plus className="w-5 h-5" />
-                    <span className="hidden sm:inline">Create Offer</span>
-                    <span className="sm:hidden">Create</span>
-                </button>
-            }
         >
             {/* Header Stats Card */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-6 mb-6 mx-6 mt-6 text-white shadow-lg">
@@ -463,6 +452,17 @@ const EnhancedOfferPage = () => {
                 </div>
             </div>
 
+            {/* Quick Action Button - MOVED FROM NAVBAR */}
+            <div className="mx-6 mb-6">
+                <button
+                    onClick={() => setModalOpen(true)}
+                    className="bg-gradient-to-br from-pink-500 to-pink-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2 shadow-md"
+                >
+                    <Plus className="w-5 h-5" />
+                    Create New Offer
+                </button>
+            </div>
+
             {/* Enhanced Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 mx-6">
                 <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
@@ -477,7 +477,7 @@ const EnhancedOfferPage = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6">
                     <div className="flex items-center justify-between">
                         <div>
@@ -552,7 +552,7 @@ const EnhancedOfferPage = () => {
                         </button>
                     </div>
                 </div>
-                
+
                 <div className="space-y-4">
                     {/* Search Bar */}
                     <div className="relative max-w-lg">
@@ -581,11 +581,10 @@ const EnhancedOfferPage = () => {
                             <button
                                 key={key}
                                 onClick={() => setFilter(key)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    filter === key
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === key
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
+                                    }`}
                             >
                                 <Icon className="w-4 h-4" />
                                 {label} ({count})
@@ -617,227 +616,227 @@ const EnhancedOfferPage = () => {
                         </div>
 
                         <div className="grid gap-6">
-                        {filteredOffers.map((offer) => {
-                            const expired = isOfferExpired(offer.expiration_date);
-                            const isDynamic = offer.offer_type === 'dynamic' || 
-                                             offer.service?.type === 'dynamic' ||
-                                             offer.requires_consultation === true;
-                            const bookingBadges = getBookingSettingsBadges(offer.service);
-                            
-                            return (
-                                <div key={offer.id} className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6 hover:shadow-lg transition-all duration-200">
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                                        {/* Enhanced Offer Details */}
-                                        <div className="flex-1 space-y-4">
-                                            {/* Header with enhanced badges */}
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-3 mb-2">
-                                                        <h3 className="text-lg font-semibold text-gray-900">
-                                                            {offer.title || offer.service?.name || 'Special Offer'}
-                                                        </h3>
-                                                        {offer.featured && (
-                                                            <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                                                        )}
-                                                    </div>
-                                                    <p className="text-gray-600 text-sm">
-                                                        {offer.description}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-col gap-2">
-                                                    {getStatusBadge(offer.status, offer.expiration_date)}
-                                                    {getOfferTypeBadge(offer)}
-                                                </div>
-                                            </div>
+                            {filteredOffers.map((offer) => {
+                                const expired = isOfferExpired(offer.expiration_date);
+                                const isDynamic = offer.offer_type === 'dynamic' ||
+                                    offer.service?.type === 'dynamic' ||
+                                    offer.requires_consultation === true;
+                                const bookingBadges = getBookingSettingsBadges(offer.service);
 
-                                            {/* Service Details with enhanced booking info */}
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Store className="w-4 h-4 text-gray-500" />
-                                                    <span className="text-sm font-medium text-gray-900">
-                                                        {offer.service?.name || 'Unknown Service'}
-                                                    </span>
-                                                </div>
-                                                
-                                                {offer.service && (
-                                                    <div className="text-sm text-gray-600">
-                                                        {isDynamic ? (
-                                                            <span>{offer.service.price_range || 'Price varies'}</span>
-                                                        ) : (
-                                                            <>
-                                                                <span>KES {offer.service.price || 'N/A'}</span>
-                                                                {offer.service.duration && (
-                                                                    <span> • {offer.service.duration}min</span>
-                                                                )}
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {offer.requires_consultation && (
-                                                    <div className="flex items-center gap-1">
-                                                        <Users className="w-4 h-4 text-purple-600" />
-                                                        <span className="text-sm text-purple-600 font-medium">Consultation Required</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* NEW: Booking Settings Display */}
-                                            {bookingBadges.length > 0 && (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {bookingBadges.map((badge, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
-                                                        >
-                                                            <badge.icon className={`w-3 h-3 ${badge.iconColor}`} />
-                                                            {badge.label}
+                                return (
+                                    <div key={offer.id} className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow p-6 hover:shadow-lg transition-all duration-200">
+                                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                            {/* Enhanced Offer Details */}
+                                            <div className="flex-1 space-y-4">
+                                                {/* Header with enhanced badges */}
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h3 className="text-lg font-semibold text-gray-900">
+                                                                {offer.title || offer.service?.name || 'Special Offer'}
+                                                            </h3>
+                                                            {offer.featured && (
+                                                                <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                                                            )}
                                                         </div>
-                                                    ))}
-                                                    {offer.service?.confirmation_message && (
-                                                        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700">
-                                                            <MessageSquare className="w-3 h-3 text-gray-600" />
-                                                            Custom Message
+                                                        <p className="text-gray-600 text-sm">
+                                                            {offer.description}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2">
+                                                        {getStatusBadge(offer.status, offer.expiration_date)}
+                                                        {getOfferTypeBadge(offer)}
+                                                    </div>
+                                                </div>
+
+                                                {/* Service Details with enhanced booking info */}
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Store className="w-4 h-4 text-gray-500" />
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {offer.service?.name || 'Unknown Service'}
+                                                        </span>
+                                                    </div>
+
+                                                    {offer.service && (
+                                                        <div className="text-sm text-gray-600">
+                                                            {isDynamic ? (
+                                                                <span>{offer.service.price_range || 'Price varies'}</span>
+                                                            ) : (
+                                                                <>
+                                                                    <span>KES {offer.service.price || 'N/A'}</span>
+                                                                    {offer.service.duration && (
+                                                                        <span> • {offer.service.duration}min</span>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {offer.requires_consultation && (
+                                                        <div className="flex items-center gap-1">
+                                                            <Users className="w-4 h-4 text-purple-600" />
+                                                            <span className="text-sm text-purple-600 font-medium">Consultation Required</span>
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
 
-                                            {/* Enhanced Discount Info */}
-                                            <div className="bg-green-50 rounded-lg p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-lg font-bold text-green-700">
-                                                            {offer.discount}% OFF
-                                                        </p>
-                                                        {!isDynamic && offer.service?.price && (
-                                                            <p className="text-sm text-green-600">
-                                                                Save KES {((offer.service.price * offer.discount) / 100).toFixed(2)}
-                                                            </p>
-                                                        )}
-                                                        {isDynamic && offer.discount_explanation && (
-                                                            <p className="text-sm text-orange-600">
-                                                                {offer.discount_explanation}
-                                                            </p>
-                                                        )}
-                                                        {isDynamic && !offer.discount_explanation && (
-                                                            <p className="text-sm text-orange-600">
-                                                                Off final quoted price
-                                                            </p>
+                                                {/* NEW: Booking Settings Display */}
+                                                {bookingBadges.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {bookingBadges.map((badge, index) => (
+                                                            <div
+                                                                key={index}
+                                                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+                                                            >
+                                                                <badge.icon className={`w-3 h-3 ${badge.iconColor}`} />
+                                                                {badge.label}
+                                                            </div>
+                                                        ))}
+                                                        {offer.service?.confirmation_message && (
+                                                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700">
+                                                                <MessageSquare className="w-3 h-3 text-gray-600" />
+                                                                Custom Message
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="flex items-center text-gray-600">
-                                                            <Calendar className="w-4 h-4 mr-1" />
-                                                            <span className={`text-sm ${expired ? 'text-red-600 font-medium' : ''}`}>
-                                                                Expires {formatDate(offer.expiration_date)}
-                                                            </span>
+                                                )}
+
+                                                {/* Enhanced Discount Info */}
+                                                <div className="bg-green-50 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <p className="text-lg font-bold text-green-700">
+                                                                {offer.discount}% OFF
+                                                            </p>
+                                                            {!isDynamic && offer.service?.price && (
+                                                                <p className="text-sm text-green-600">
+                                                                    Save KES {((offer.service.price * offer.discount) / 100).toFixed(2)}
+                                                                </p>
+                                                            )}
+                                                            {isDynamic && offer.discount_explanation && (
+                                                                <p className="text-sm text-orange-600">
+                                                                    {offer.discount_explanation}
+                                                                </p>
+                                                            )}
+                                                            {isDynamic && !offer.discount_explanation && (
+                                                                <p className="text-sm text-orange-600">
+                                                                    Off final quoted price
+                                                                </p>
+                                                            )}
                                                         </div>
-                                                        {expired && (
-                                                            <p className="text-sm text-red-500 mt-1 font-medium">Expired</p>
-                                                        )}
+                                                        <div className="text-right">
+                                                            <div className="flex items-center text-gray-600">
+                                                                <Calendar className="w-4 h-4 mr-1" />
+                                                                <span className={`text-sm ${expired ? 'text-red-600 font-medium' : ''}`}>
+                                                                    Expires {formatDate(offer.expiration_date)}
+                                                                </span>
+                                                            </div>
+                                                            {expired && (
+                                                                <p className="text-sm text-red-500 mt-1 font-medium">Expired</p>
+                                                            )}
+                                                        </div>
                                                     </div>
+
+                                                    {/* NEW: Service-specific booking info */}
+                                                    {offer.service && (
+                                                        <div className="mt-3 pt-3 border-t border-green-200">
+                                                            <div className="flex flex-wrap gap-3 text-xs">
+                                                                {offer.service.auto_confirm_bookings && (
+                                                                    <div className="flex items-center gap-1 text-green-700">
+                                                                        <CheckCircle className="w-3 h-3" />
+                                                                        <span>Instant confirmation</span>
+                                                                    </div>
+                                                                )}
+                                                                {offer.service.require_prepayment && (
+                                                                    <div className="flex items-center gap-1 text-blue-700">
+                                                                        <CreditCard className="w-3 h-3" />
+                                                                        <span>Prepayment required</span>
+                                                                    </div>
+                                                                )}
+                                                                {offer.service.allow_early_checkin && (
+                                                                    <div className="flex items-center gap-1 text-purple-700">
+                                                                        <UserCheck className="w-3 h-3" />
+                                                                        <span>Early check-in: {offer.service.early_checkin_minutes || 15}min</span>
+                                                                    </div>
+                                                                )}
+                                                                {offer.service.min_cancellation_hours && (
+                                                                    <div className="flex items-center gap-1 text-orange-700">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        <span>Cancel: {offer.service.min_cancellation_hours}h notice</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Terms and conditions */}
+                                                    {offer.terms_conditions && (
+                                                        <div className="mt-3 pt-3 border-t border-green-200">
+                                                            <div className="flex items-start gap-2">
+                                                                <Info className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-green-900">Terms & Conditions</p>
+                                                                    <p className="text-sm text-green-700 mt-1">{offer.terms_conditions}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
+                                            </div>
 
-                                                {/* NEW: Service-specific booking info */}
-                                                {offer.service && (
-                                                    <div className="mt-3 pt-3 border-t border-green-200">
-                                                        <div className="flex flex-wrap gap-3 text-xs">
-                                                            {offer.service.auto_confirm_bookings && (
-                                                                <div className="flex items-center gap-1 text-green-700">
-                                                                    <CheckCircle className="w-3 h-3" />
-                                                                    <span>Instant confirmation</span>
-                                                                </div>
-                                                            )}
-                                                            {offer.service.require_prepayment && (
-                                                                <div className="flex items-center gap-1 text-blue-700">
-                                                                    <CreditCard className="w-3 h-3" />
-                                                                    <span>Prepayment required</span>
-                                                                </div>
-                                                            )}
-                                                            {offer.service.allow_early_checkin && (
-                                                                <div className="flex items-center gap-1 text-purple-700">
-                                                                    <UserCheck className="w-3 h-3" />
-                                                                    <span>Early check-in: {offer.service.early_checkin_minutes || 15}min</span>
-                                                                </div>
-                                                            )}
-                                                            {offer.service.min_cancellation_hours && (
-                                                                <div className="flex items-center gap-1 text-orange-700">
-                                                                    <Clock className="w-3 h-3" />
-                                                                    <span>Cancel: {offer.service.min_cancellation_hours}h notice</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Terms and conditions */}
-                                                {offer.terms_conditions && (
-                                                    <div className="mt-3 pt-3 border-t border-green-200">
-                                                        <div className="flex items-start gap-2">
-                                                            <Info className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                                            <div>
-                                                                <p className="text-sm font-medium text-green-900">Terms & Conditions</p>
-                                                                <p className="text-sm text-green-700 mt-1">{offer.terms_conditions}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                            {/* Actions */}
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => handleEditClick(offer)}
+                                                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteClick(offer)}
+                                                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete
+                                                </button>
                                             </div>
                                         </div>
 
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => handleEditClick(offer)}
-                                                className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteClick(offer)}
-                                                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
-                                            </button>
-                                        </div>
+                                        {/* NEW: Advanced service info expandable section */}
+                                        {(offer.service?.confirmation_message || offer.service?.cancellation_policy) && (
+                                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {offer.service.confirmation_message && (
+                                                        <div className="bg-blue-50 p-3 rounded-lg">
+                                                            <div className="flex items-start gap-2">
+                                                                <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-blue-900">Confirmation Message</p>
+                                                                    <p className="text-xs text-blue-700 mt-1">{offer.service.confirmation_message}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {offer.service.cancellation_policy && (
+                                                        <div className="bg-orange-50 p-3 rounded-lg">
+                                                            <div className="flex items-start gap-2">
+                                                                <Info className="w-4 h-4 text-orange-600 mt-0.5" />
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-orange-900">Cancellation Policy</p>
+                                                                    <p className="text-xs text-orange-700 mt-1">{offer.service.cancellation_policy}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {/* NEW: Advanced service info expandable section */}
-                                    {(offer.service?.confirmation_message || offer.service?.cancellation_policy) && (
-                                        <div className="mt-4 pt-4 border-t border-gray-100">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {offer.service.confirmation_message && (
-                                                    <div className="bg-blue-50 p-3 rounded-lg">
-                                                        <div className="flex items-start gap-2">
-                                                            <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5" />
-                                                            <div>
-                                                                <p className="text-sm font-medium text-blue-900">Confirmation Message</p>
-                                                                <p className="text-xs text-blue-700 mt-1">{offer.service.confirmation_message}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {offer.service.cancellation_policy && (
-                                                    <div className="bg-orange-50 p-3 rounded-lg">
-                                                        <div className="flex items-start gap-2">
-                                                            <Info className="w-4 h-4 text-orange-600 mt-0.5" />
-                                                            <div>
-                                                                <p className="text-sm font-medium text-orange-900">Cancellation Policy</p>
-                                                                <p className="text-xs text-orange-700 mt-1">{offer.service.cancellation_policy}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
                         </div>
                     </>
                 ) : (
@@ -849,7 +848,7 @@ const EnhancedOfferPage = () => {
                             {filter === 'all' ? 'No Offers Yet' : `No ${filter} Offers Found`}
                         </h3>
                         <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                            {filter === 'all' 
+                            {filter === 'all'
                                 ? 'Create your first offer to attract more customers with special promotions'
                                 : 'Try adjusting your filters or create a new offer'}
                         </p>
@@ -867,14 +866,14 @@ const EnhancedOfferPage = () => {
             </div>
 
             {/* Create/Edit Enhanced Offer Modal */}
-            <Modal 
-                isOpen={isModalOpen} 
-                onClose={closeModal} 
+            <Modal
+                isOpen={isModalOpen}
+                onClose={closeModal}
                 title={editingOffer ? 'Edit Enhanced Offer' : 'Create Enhanced Offer'}
                 size="xl"
             >
-                <EnhancedOfferForm 
-                    onClose={closeModal} 
+                <EnhancedOfferForm
+                    onClose={closeModal}
                     onOfferCreated={editingOffer ? handleUpdateOffer : handleCreateOffer}
                     editingOffer={editingOffer}
                 />
@@ -882,9 +881,9 @@ const EnhancedOfferPage = () => {
 
             {/* Delete Confirmation Modal */}
             {deleteConfirm && (
-                <Modal 
-                    isOpen={true} 
-                    onClose={() => setDeleteConfirm(null)} 
+                <Modal
+                    isOpen={true}
+                    onClose={() => setDeleteConfirm(null)}
                     title="Delete Enhanced Offer"
                 >
                     <div className="p-6">
@@ -893,7 +892,7 @@ const EnhancedOfferPage = () => {
                             <span className="font-medium">Are you sure?</span>
                         </div>
                         <p className="text-gray-600 mb-4">
-                            This will permanently delete the offer "{deleteConfirm.title || deleteConfirm.service?.name}". 
+                            This will permanently delete the offer "{deleteConfirm.title || deleteConfirm.service?.name}".
                             This action cannot be undone and will affect any existing bookings.
                         </p>
                         {deleteConfirm.service && (

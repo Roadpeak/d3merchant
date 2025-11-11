@@ -293,7 +293,7 @@ const ServicesPage = () => {
                                 <Shield className="w-5 h-5 text-purple-600" />
                                 Booking Settings
                             </h3>
-                            
+
                             <div className="grid grid-cols-2 gap-4 mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-full ${selectedService.auto_confirm_bookings ? 'bg-green-100' : 'bg-yellow-100'}`}>
@@ -332,7 +332,7 @@ const ServicesPage = () => {
                                             Early Check-in
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            {selectedService.allow_early_checkin 
+                                            {selectedService.allow_early_checkin
                                                 ? `Up to ${selectedService.early_checkin_minutes || 15} min early`
                                                 : 'Not allowed'
                                             }
@@ -349,7 +349,7 @@ const ServicesPage = () => {
                                             Auto-Complete
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            {selectedService.auto_complete_on_duration 
+                                            {selectedService.auto_complete_on_duration
                                                 ? 'After service duration'
                                                 : 'Manual completion'
                                             }
@@ -708,16 +708,6 @@ const ServicesPage = () => {
             showSearch={false}
             showMobileGrid={false}
             className="p-0"
-            rightContent={
-                <button
-                    onClick={() => setModalOpen(true)}
-                    className="bg-blue-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-                >
-                    <Plus className="w-5 h-5" />
-                    <span className="hidden sm:inline">Add Service</span>
-                    <span className="sm:hidden">Add</span>
-                </button>
-            }
         >
             {/* Header Stats Card */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-6 mb-6 mx-6 mt-6 text-white shadow-lg">
@@ -741,6 +731,17 @@ const ServicesPage = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Quick Action Button - MOVED FROM NAVBAR */}
+            <div className="mx-6 mb-6">
+                <button
+                    onClick={() => setModalOpen(true)}
+                    className="bg-gradient-to-br from-green-500 to-green-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2 shadow-md"
+                >
+                    <Plus className="w-5 h-5" />
+                    Add New Service
+                </button>
             </div>
 
             {/* Search and Filter Bar */}
@@ -832,7 +833,7 @@ const ServicesPage = () => {
                                 Showing <span className="font-semibold text-gray-900">{filteredServices.length}</span> of <span className="font-semibold text-gray-900">{services.length}</span> services
                             </p>
                         </div>
-                        
+
                         {/* Services Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredServices.map((service) => (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Settings, User, ChevronDown, X, LayoutDashboard, MessageSquare, Layers, HandHeart, TrendingUp, Calendar, Users as UsersIcon, BookOpen, MessageCircle, Share2, CreditCard, LogOut } from 'lucide-react';
+import { Search, Settings, User, ChevronDown, X, LayoutDashboard, MessageSquare, Layers, HandHeart, TrendingUp, Calendar, Users as UsersIcon, BookOpen, MessageCircle, Share2, CreditCard, LogOut, Moon, Sun, ArrowLeft } from 'lucide-react';
 import NotificationButton from '../components/NotificationButton';
 import merchantAuthService from '../services/merchantAuthService';
 import { toast } from 'react-hot-toast';
@@ -16,7 +16,8 @@ const Layout = ({
   showCreateButton = false,
   createButtonText = "Create New Order",
   onCreateClick,
-  showMobileGrid = false
+  showMobileGrid = false,
+  showBackButton = true
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -25,11 +26,36 @@ const Layout = ({
   const [loading, setLoading] = useState(true);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [isLoadingChatCount, setIsLoadingChatCount] = useState(false);
-  
+  const [darkMode, setDarkMode] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Grid Menu Items (matching your existing sidebar menu)
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    if (savedDarkMode) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  // Grid Menu Items
   const menuItems = [
     {
       name: 'Dashboard',
@@ -124,7 +150,7 @@ const Layout = ({
     const initializeMerchant = async () => {
       try {
         setLoading(true);
-        
+
         if (!merchantAuthService.isAuthenticated()) {
           navigate('/accounts/sign-in');
           return;
@@ -215,7 +241,6 @@ const Layout = ({
     };
 
     loadChatCount();
-    // Refresh count every 30 seconds
     const interval = setInterval(loadChatCount, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -245,6 +270,29 @@ const Layout = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  // Handle navbar visibility on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY < 10) {
+        // Always show navbar at the top
+        setShowNavbar(true);
+      } else if (currentScrollY > lastScrollY) {
+        // Scrolling down - hide navbar
+        setShowNavbar(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - show navbar
+        setShowNavbar(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -264,12 +312,16 @@ const Layout = ({
     }
   };
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   const UserMenu = () => {
     if (!currentMerchant) return null;
 
-    const merchantInitials = currentMerchant.first_name && currentMerchant.last_name 
+    const merchantInitials = currentMerchant.first_name && currentMerchant.last_name
       ? `${currentMerchant.first_name.charAt(0)}${currentMerchant.last_name.charAt(0)}`
-      : currentMerchant.first_name 
+      : currentMerchant.first_name
         ? currentMerchant.first_name.charAt(0)
         : 'D';
 
@@ -283,42 +335,42 @@ const Layout = ({
       <div className="user-menu relative">
         <button
           onClick={() => setShowUserMenu(!showUserMenu)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors"
           aria-label="User menu"
         >
-          <span className="text-sm text-gray-700 hidden sm:block">{merchantName}</span>
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+          <span className="text-sm text-gray-700 dark:text-gray-200 hidden sm:block">{merchantName}</span>
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-500 rounded-full flex items-center justify-center shadow-sm">
             <span className="text-white text-sm font-medium">{merchantInitials}</span>
           </div>
           <ChevronDown
             size={14}
-            className={`text-gray-500 transition-transform hidden sm:block ${showUserMenu ? 'rotate-180' : ''}`}
+            className={`text-gray-500 dark:text-gray-400 transition-transform hidden sm:block ${showUserMenu ? 'rotate-180' : ''}`}
           />
         </button>
 
         {showUserMenu && (
           <>
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-25 z-40 sm:hidden"
               onClick={() => setShowUserMenu(false)}
             />
-            
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-              <div className="px-4 py-3 border-b border-gray-100">
+
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-500 rounded-full flex items-center justify-center shadow-sm">
                     <span className="text-white font-medium">{merchantInitials}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{merchantName}</p>
-                    <p className="text-xs text-gray-500 truncate">{merchantEmail}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{merchantName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{merchantEmail}</p>
                   </div>
                 </div>
               </div>
 
               <div className="py-2">
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   onClick={() => {
                     setShowUserMenu(false);
                     navigate('/dashboard/account');
@@ -329,7 +381,7 @@ const Layout = ({
                 </button>
 
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   onClick={() => {
                     setShowUserMenu(false);
                     navigate('/dashboard/settings');
@@ -340,9 +392,9 @@ const Layout = ({
                 </button>
               </div>
 
-              <div className="border-t border-gray-100 pt-2">
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   onClick={() => {
                     setShowUserMenu(false);
                     handleLogout();
@@ -361,17 +413,17 @@ const Layout = ({
   // Mobile Search Overlay
   const MobileSearchOverlay = () => (
     showMobileSearch && (
-      <div className="fixed inset-0 bg-white z-50 flex flex-col sm:hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Search</h2>
+      <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col sm:hidden">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Search</h2>
           <button
             onClick={() => setShowMobileSearch(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
           >
-            <X size={20} className="text-gray-500" />
+            <X size={20} className="text-gray-500 dark:text-gray-400" />
           </button>
         </div>
-        
+
         <div className="p-6">
           <div className="relative">
             <Search
@@ -388,7 +440,7 @@ const Layout = ({
                   handleSearch(e);
                 }
               }}
-              className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full pl-12 pr-4 py-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               autoFocus
             />
           </div>
@@ -397,59 +449,81 @@ const Layout = ({
     )
   );
 
-  // Grid Navigation Component (both mobile and desktop)
+  // Grid Navigation Component
   const GridNavigation = () => (
-    <div className="relative min-h-screen">
-      {/* Subtle Professional Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Enhanced Background with Multiple Layers */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-cyan-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
+        {/* Animated Gradient Orbs */}
+        <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 dark:bg-purple-900/30 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 dark:bg-yellow-900/30 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 dark:bg-pink-900/30 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+
+        {/* Subtle Grid Pattern */}
+        <div className="absolute inset-0 opacity-30 dark:opacity-20" style={{
+          backgroundImage: `
+            linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px'
+        }}></div>
+
+        {/* Decorative Dots Pattern */}
         <div className="absolute inset-0" style={{
           backgroundImage: `
-            radial-gradient(circle at 20px 20px, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-            radial-gradient(circle at 60px 60px, rgba(99, 102, 241, 0.05) 1px, transparent 1px)
+            radial-gradient(circle at 20px 20px, rgba(59, 130, 246, ${darkMode ? '0.15' : '0.1'}) 2px, transparent 2px),
+            radial-gradient(circle at 60px 60px, rgba(139, 92, 246, ${darkMode ? '0.15' : '0.1'}) 2px, transparent 2px)
           `,
           backgroundSize: '80px 80px'
         }}></div>
       </div>
 
+      {/* Decorative Elements */}
+      <div className="absolute top-20 right-10 w-20 h-20 border-2 border-blue-200/30 dark:border-blue-700/30 rounded-full"></div>
+      <div className="absolute bottom-40 left-10 w-16 h-16 border-2 border-purple-200/30 dark:border-purple-700/30 rounded-lg rotate-45"></div>
+      <div className="absolute top-1/2 right-20 w-12 h-12 bg-gradient-to-br from-cyan-200/20 to-blue-200/20 dark:from-cyan-700/20 dark:to-blue-700/20 rounded-full blur-sm"></div>
+
       {/* Content */}
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
-        {/* Greeting Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        {/* Greeting Section with Enhanced Card */}
+        <div className="mb-8 bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg rounded-3xl p-6 border border-white/20 dark:border-gray-700/20 shadow-xl">
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
             Welcome back, {currentMerchant?.first_name || 'Merchant'}! 👋
           </h2>
-          <p className="text-base text-gray-600">
-            Here's what's happening with your business today
-          </p>
         </div>
 
-        {/* Tiled Grid Menu - Balanced layout similar to Discoun3ree */}
+        {/* Tiled Grid Menu */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 lg:gap-6">
           {menuItems.map((item, index) => {
             const isActive = location.pathname === item.path;
-            
+
             return (
               <button
                 key={index}
                 onClick={() => navigate(item.path)}
                 className={`
-                  relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200
-                  transition-all duration-200 hover:shadow-lg active:scale-98
+                  relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl p-6 
+                  border border-white/20 dark:border-gray-700/20
+                  transition-all duration-200 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-98
                   aspect-square flex flex-col items-center justify-center
-                  ${isActive ? 'ring-2 ring-blue-500 border-blue-500 bg-white' : 'hover:border-gray-300 hover:bg-white'}
+                  ${isActive ? 'ring-2 ring-blue-500 shadow-blue-500/50 shadow-xl' : 'shadow-lg hover:border-blue-200 dark:hover:border-blue-700'}
                 `}
+                style={{
+                  animation: `fadeIn 0.5s ease-out ${index * 0.05}s both`
+                }}
               >
-                {/* Badge for notifications (like chat count) */}
+                {/* Badge for notifications */}
                 {item.badge && (
                   <div className={`absolute top-2 right-2 min-w-[24px] h-6 px-2 bg-red-500 rounded-full flex items-center justify-center shadow-md ${item.showPulse ? 'animate-pulse' : ''}`}>
                     <span className="text-xs font-bold text-white">{item.badge}</span>
                   </div>
                 )}
 
-                {/* Icon with gradient background */}
+                {/* Icon with gradient background and glow effect */}
                 <div className={`
                   w-16 h-16 lg:w-20 lg:h-20 rounded-2xl mb-4 flex items-center justify-center
-                  bg-gradient-to-br ${item.color} shadow-md
+                  bg-gradient-to-br ${item.color} shadow-lg
+                  transform transition-transform hover:rotate-6
                 `}>
                   <div className="text-white">
                     {React.cloneElement(item.icon, { size: 28 })}
@@ -458,66 +532,125 @@ const Layout = ({
 
                 {/* Label */}
                 <div className="text-center w-full">
-                  <h3 className="text-sm lg:text-base font-bold text-gray-900 mb-1 line-clamp-2">
+                  <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-white mb-1 line-clamp-2">
                     {item.name}
                   </h3>
-                  <p className="text-xs text-gray-500 line-clamp-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                     {item.description}
                   </p>
                 </div>
 
-                {/* Active Indicator */}
+                {/* Active Indicator with pulse */}
                 {isActive && !item.badge && (
-                  <div className="absolute top-3 right-3 w-3 h-3 bg-blue-500 rounded-full shadow-sm"></div>
+                  <div className="absolute top-3 right-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm"></div>
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
+                  </div>
                 )}
               </button>
             );
           })}
-          </div>
+        </div>
 
-        {/* Logout Button */}
+        {/* Logout Button with Enhanced Styling */}
         <button
           onClick={handleLogout}
-          className="w-full max-w-md mx-auto mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-gray-200 flex items-center gap-3 hover:bg-white hover:shadow-lg hover:border-red-200 transition-all"
+          className="w-full max-w-md mx-auto mt-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border border-white/20 dark:border-gray-700/20 flex items-center gap-3 hover:shadow-2xl hover:scale-105 hover:border-red-200 dark:hover:border-red-900 transition-all"
         >
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
             <LogOut size={24} className="text-white" />
           </div>
           <div className="text-left flex-1">
-            <h3 className="text-sm font-semibold text-gray-900">Logout</h3>
-            <p className="text-xs text-gray-500">Sign out of your account</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Logout</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Sign out of your account</p>
           </div>
         </button>
       </div>
+
+      {/* Add animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 px-6 py-4 z-50">
-        <div className="flex items-center justify-between">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Floating Header with Rounded Corners - Auto-hide on scroll */}
+      <header className={`fixed top-4 left-4 right-4 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-gray-800 dark:to-gray-800 backdrop-blur-md border border-blue-200 dark:border-gray-700 rounded-2xl px-6 py-4 z-50 shadow-lg shadow-blue-200/50 dark:shadow-gray-900/50 transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-28'
+        }`}>
+        <div className="flex items-center justify-between max-w-[1400px] mx-auto">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg relative">
               <span className="text-white font-bold text-lg">D3</span>
+              <div className="absolute bottom-1.5 w-6 h-1 bg-yellow-400 rounded-full" style={{ clipPath: 'ellipse(50% 100% at 50% 0%)' }}></div>
             </div>
-            <span className="text-xl font-bold text-gray-900">Merchants</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Merchants</span>
           </div>
 
-          {/* Right side - Notifications and User Menu */}
+          {/* Right side - Dark Mode, Notifications and User Menu */}
           <div className="flex items-center gap-3">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? (
+                <Sun size={20} className="text-gray-700 dark:text-gray-200" />
+              ) : (
+                <Moon size={20} className="text-gray-700" />
+              )}
+            </button>
+
             {rightContent}
 
             {showNotifications && <NotificationButton />}
@@ -527,42 +660,43 @@ const Layout = ({
         </div>
       </header>
 
-      {/* Scrolling Text Banner */}
-      <div className="fixed top-[72px] left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2 overflow-hidden z-40">
-        <div className="animate-scroll whitespace-nowrap">
-          <span className="inline-block px-4 text-sm font-medium">
-            Get discovered when you list with us, get more bookings, get service requests and chat directly with your clients as you manage your business with D3. Give more offers to get more visibility and bookings
-          </span>
-          <span className="inline-block px-4 text-sm font-medium">
-            Get discovered when you list with us, get more bookings, get service requests and chat directly with your clients as you manage your business with D3. Give more offers to get more visibility and bookings
-          </span>
-        </div>
-      </div>
-
-      {/* Add padding to account for fixed header and banner */}
-      <div className="pt-[112px]"></div>
+      {/* Add padding to account for fixed floating header */}
+      <div className="pt-24"></div>
 
       {/* Title Bar */}
       {!showMobileGrid && (
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <div className="bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-gray-800 dark:to-gray-800 border border-blue-200 dark:border-gray-700 rounded-2xl mx-4 mb-4 px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-              {subtitle && <p className="text-gray-600 mt-1">{subtitle}</p>}
+            <div className="flex items-center gap-3">
+              {/* Back Button */}
+              {showBackButton && (
+                <button
+                  onClick={handleBack}
+                  className="p-2 hover:bg-white/70 dark:hover:bg-gray-700/70 rounded-xl transition-colors flex items-center justify-center"
+                  aria-label="Go back"
+                >
+                  <ArrowLeft size={20} className="text-gray-700 dark:text-gray-200" />
+                </button>
+              )}
+
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
+                {subtitle && <p className="text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>}
+              </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               {showCreateButton && (
-                <button 
+                <button
                   onClick={onCreateClick}
-                  className="bg-black text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
+                  className="bg-gradient-to-br from-blue-600 to-blue-500 text-white px-4 py-2.5 rounded-xl hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2 shadow-sm"
                 >
                   <span className="text-xl">+</span>
                   {createButtonText}
                 </button>
               )}
-              
-              <select className="px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+
+              <select className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                 <option>Newest</option>
                 <option>Oldest</option>
                 <option>Most Recent</option>
@@ -571,37 +705,21 @@ const Layout = ({
           </div>
         </div>
       )}
-      
+
       {/* Main Content */}
       <div className={`flex-1 overflow-y-auto ${className}`}>
         {/* Grid Navigation */}
         {showMobileGrid && <GridNavigation />}
-        
+
         {/* Regular Content */}
         {!showMobileGrid && (
-          <div className="p-6 max-w-full">
+          <div className="px-4 pb-6 max-w-full">
             {children}
           </div>
         )}
       </div>
 
       <MobileSearchOverlay />
-
-      {/* Add scrolling animation styles */}
-      <style jsx>{`
-        @keyframes scroll {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
-        }
-      `}</style>
     </div>
   );
 };
