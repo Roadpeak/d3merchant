@@ -8,7 +8,7 @@ const getAuthHeaders = () => {
     const token = merchantAuthService.getToken();
     const headers = {
         'Content-Type': 'application/json',
-        'x-api-key': import.meta.env.VITE_API_KEY || ''
+        'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
     };
 
     if (token) {
