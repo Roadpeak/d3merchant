@@ -7,6 +7,226 @@ import { toast } from 'react-hot-toast';
 import notificationService from '../services/notificationService';
 import merchantAuthService from '../services/merchantAuthService';
 import merchantNotificationSocket from '../services/merchantNotificationSocket';
+import { getTokenFromCookie } from '../config/api'; // Import token helper
+
+// ============================================
+// WEB PUSH HOOK FOR MERCHANTS
+// ============================================
+const useWebPush = (isAuthenticated) => {
+  const [pushPermission, setPushPermission] = useState('default');
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+
+  const VAPID_PUBLIC_KEY = 'BKejhBqZqa4GnoAc7nFnQXtCTTbQBpMXjABBS_cMyk4RRpRkgOB6_52y2VQxObMi9XBvRyim7seUpvUm1HaoFms';
+  const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://api.discoun3ree.com/api/v1';
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setPushPermission(Notification.permission);
+      checkPushSubscription();
+    }
+  }, [isAuthenticated]);
+
+  // Register service worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator && isAuthenticated) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => {
+          console.log('✅ Service Worker registered:', reg);
+        })
+        .catch(err => {
+          console.error('❌ Service Worker registration failed:', err);
+        });
+    }
+  }, [isAuthenticated]);
+
+  const checkPushSubscription = async () => {
+    try {
+      if (!isAuthenticated) return;
+
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      setIsPushSubscribed(!!subscription);
+
+      console.log('📊 Push subscription status:', !!subscription);
+
+      // Show prompt if not subscribed and permission not denied
+      if (!subscription && Notification.permission !== 'denied') {
+        setTimeout(() => {
+          setShowPushPrompt(true);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error checking push subscription:', error);
+    }
+  };
+
+  const enablePushNotifications = async () => {
+    try {
+      console.log('🔔 Starting merchant push notification subscription...');
+
+      // Request permission
+      const result = await Notification.requestPermission();
+      setPushPermission(result);
+      console.log('📋 Notification permission:', result);
+
+      if (result !== 'granted') {
+        alert('Please allow notifications to stay updated');
+        return false;
+      }
+
+      // Get service worker registration
+      const registration = await navigator.serviceWorker.ready;
+      console.log('✅ Service Worker ready');
+
+      // Subscribe to push
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+
+      console.log('✅ Push subscription created:', subscription);
+
+      // Get auth token
+      const token = getTokenFromCookie();
+
+      if (!token) {
+        console.error('❌ No auth token found');
+        alert('Authentication error. Please log in again.');
+        return false;
+      }
+
+      console.log('✅ Auth token found');
+
+      // Send subscription to backend
+      const response = await fetch(`${API_BASE}/notifications/push/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-api-key': process.env.REACT_APP_API_KEY || ''
+        },
+        credentials: 'include',
+        body: JSON.stringify(subscription)
+      });
+
+      console.log('📡 Backend response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Backend response:', result);
+
+        setIsPushSubscribed(true);
+        setShowPushPrompt(false);
+        console.log('🎉 Merchant push notifications enabled successfully!');
+
+        toast.success('Push notifications enabled! You\'ll receive instant customer updates.', {
+          duration: 4000,
+          icon: '🔔'
+        });
+
+        return true;
+      } else {
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { message: errorText };
+        }
+
+        console.error('❌ Failed to save subscription:', response.status, errorData);
+
+        if (response.status === 401) {
+          alert('Authentication failed. Please log in again.');
+        } else if (response.status === 403) {
+          alert('You do not have permission to enable notifications.');
+        } else {
+          alert(`Failed to enable push notifications: ${errorData.message || 'Unknown error'}`);
+        }
+
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error enabling push notifications:', error);
+
+      let userMessage = 'Error enabling push notifications: ';
+
+      if (error.name === 'NotAllowedError') {
+        userMessage += 'Permission denied. Please allow notifications in your browser settings.';
+      } else if (error.name === 'NotSupportedError') {
+        userMessage += 'Your browser does not support push notifications.';
+      } else {
+        userMessage += error.message;
+      }
+
+      alert(userMessage);
+      return false;
+    }
+  };
+
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  return {
+    pushPermission,
+    isPushSubscribed,
+    showPushPrompt,
+    setShowPushPrompt,
+    enablePushNotifications
+  };
+};
+
+// ============================================
+// PUSH NOTIFICATION PROMPT COMPONENT
+// ============================================
+const PushNotificationPrompt = ({ onEnable, onDismiss }) => (
+  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 p-4">
+    <div className="flex items-start space-x-3">
+      <div className="flex-shrink-0">
+        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+          <Bell className="w-6 h-6 text-white" />
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="text-sm font-semibold text-gray-900 mb-1">
+          Stay Updated with Push Notifications
+        </h4>
+        <p className="text-xs text-gray-600 mb-3">
+          Get instant alerts for customer messages, bookings, and reviews even when the dashboard is closed
+        </p>
+        <div className="flex space-x-2">
+          <button
+            onClick={onEnable}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            Enable Notifications
+          </button>
+          <button
+            onClick={onDismiss}
+            className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg border border-gray-200 transition-colors"
+          >
+            Maybe Later
+          </button>
+        </div>
+      </div>
+      <button
+        onClick={onDismiss}
+        className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+      >
+        <X className="w-5 h-5" />
+      </button>
+    </div>
+  </div>
+);
 
 // Enhanced Debug Component
 const DebugPanel = ({ show, debugInfo, onClose }) => {
@@ -143,7 +363,7 @@ const NotificationSettingsModal = ({ isOpen, onClose }) => {
 };
 
 // Enhanced Main Dropdown Component - NOW CENTERED!
-const NotificationDropdown = ({ onClose, debugInfo, setDebugInfo }) => {
+const NotificationDropdown = ({ onClose, debugInfo, setDebugInfo, showPushPrompt, isPushSubscribed, onEnablePush, onDismissPushPrompt }) => {
   const [notifications, setNotifications] = useState([]);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -385,6 +605,14 @@ const NotificationDropdown = ({ onClose, debugInfo, setDebugInfo }) => {
           className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[600px] flex flex-col pointer-events-auto animate-slideUp"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* WEB PUSH PROMPT */}
+          {showPushPrompt && !isPushSubscribed && (
+            <PushNotificationPrompt
+              onEnable={onEnablePush}
+              onDismiss={onDismissPushPrompt}
+            />
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -443,8 +671,8 @@ const NotificationDropdown = ({ onClose, debugInfo, setDebugInfo }) => {
                   key={option.key}
                   onClick={() => setActiveFilter(option.key)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${activeFilter === option.key
-                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                     }`}
                 >
                   {option.label}
@@ -632,6 +860,15 @@ const NotificationButton = () => {
   const [debugInfo, setDebugInfo] = useState({});
   const [showDebug, setShowDebug] = useState(false);
 
+  // WEB PUSH HOOK
+  const {
+    pushPermission,
+    isPushSubscribed,
+    showPushPrompt,
+    setShowPushPrompt,
+    enablePushNotifications
+  } = useWebPush(merchantAuthService.isAuthenticated());
+
   const loadCounts = useCallback(async () => {
     if (!merchantAuthService.isAuthenticated()) {
       console.log('Not authenticated for notification counts');
@@ -666,6 +903,14 @@ const NotificationButton = () => {
   useEffect(() => {
     loadCounts();
   }, [loadCounts]);
+
+  // Handle push enable
+  const handleEnablePush = async () => {
+    const success = await enablePushNotifications();
+    if (success) {
+      console.log('🎉 Merchant push notifications enabled successfully!');
+    }
+  };
 
   // Real-time updates with socket integration
   useEffect(() => {
@@ -825,6 +1070,10 @@ const NotificationButton = () => {
           onClose={() => setIsOpen(false)}
           debugInfo={debugInfo}
           setDebugInfo={setDebugInfo}
+          showPushPrompt={showPushPrompt}
+          isPushSubscribed={isPushSubscribed}
+          onEnablePush={handleEnablePush}
+          onDismissPushPrompt={() => setShowPushPrompt(false)}
         />
       )}
 
@@ -837,4 +1086,4 @@ const NotificationButton = () => {
   );
 };
 
-export default NotificationButton;
+export default NotificationButton; 
