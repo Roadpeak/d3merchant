@@ -422,7 +422,94 @@ class NotificationService {
             return { success: false, error: error.message };
         }
     }
+
+
+    // ===== WEB PUSH NOTIFICATION METHODS =====
+
+    /**
+     * Subscribe to push notifications
+     * @param {PushSubscription} subscription - The push subscription object from the browser
+     * @returns {Promise<Object>} Response from the server
+     */
+    async subscribeToPush(subscription) {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('📱 Subscribing to push notifications...');
+            console.log('Subscription object:', subscription);
+
+            const response = await axiosInstance.post(`${this.baseURL}/push/subscribe`, subscription, {
+                headers: getAuthHeaders(),
+                timeout: 10000
+            });
+
+            console.log('✅ Push subscription response:', response.data);
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error subscribing to push notifications:', error);
+            handleApiError(error, 'subscribing to push notifications');
+        }
+    }
+
+    /**
+     * Unsubscribe from push notifications
+     * @param {string} endpoint - The push subscription endpoint to unsubscribe
+     * @returns {Promise<Object>} Response from the server
+     */
+    async unsubscribeFromPush(endpoint) {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('🔕 Unsubscribing from push notifications...');
+
+            const response = await axiosInstance.post(`${this.baseURL}/push/unsubscribe`,
+                { endpoint },
+                {
+                    headers: getAuthHeaders(),
+                    timeout: 5000
+                }
+            );
+
+            console.log('✅ Push unsubscribe response:', response.data);
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error unsubscribing from push notifications:', error);
+            handleApiError(error, 'unsubscribing from push notifications');
+        }
+    }
+
+    /**
+     * Get current push subscription status
+     * @returns {Promise<Object>} Current subscription status
+     */
+    async getPushSubscriptionStatus() {
+        try {
+            if (!this.isAuthenticated()) {
+                return { success: false, subscribed: false };
+            }
+
+            const response = await axiosInstance.get(`${this.baseURL}/push/status`, {
+                headers: getAuthHeaders(),
+                timeout: 5000
+            });
+
+            return response.data;
+
+        } catch (error) {
+            console.error('Error getting push subscription status:', error);
+            return { success: false, subscribed: false };
+        }
+    }
+
 }
+
+
 
 // Create and export singleton instance
 const notificationService = new NotificationService();

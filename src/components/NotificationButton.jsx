@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import notificationService from '../services/notificationService';
 import merchantAuthService from '../services/merchantAuthService';
 import merchantNotificationSocket from '../services/merchantNotificationSocket';
-import { getTokenFromCookie } from '../config/api'; // Import token helper
+
 
 // ============================================
 // WEB PUSH HOOK FOR MERCHANTS
@@ -87,8 +87,8 @@ const useWebPush = (isAuthenticated) => {
 
       console.log('✅ Push subscription created:', subscription);
 
-      // Get auth token
-      const token = getTokenFromCookie();
+      // Get auth token from merchant auth service
+      const token = merchantAuthService.getToken();
 
       if (!token) {
         console.error('❌ No auth token found');
@@ -98,8 +98,10 @@ const useWebPush = (isAuthenticated) => {
 
       console.log('✅ Auth token found');
 
+      console.log('✅ Auth token found');
+
       // Send subscription to backend
-      const response = await fetch(`${API_BASE}/notifications/push/subscribe`, {
+      const response = await fetch(`${API_BASE}/api/v1/notifications/push/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
