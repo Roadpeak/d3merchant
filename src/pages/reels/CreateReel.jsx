@@ -49,13 +49,17 @@ const CreateReel = () => {
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/services`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
                 }
             });
 
             if (response.ok) {
                 const data = await response.json();
-                setServices(data.data || []);
+                setServices(data.data || data.services || []);
+            } else {
+                console.error('Failed to load services:', response.status);
+                toast.error('Failed to load services');
             }
         } catch (error) {
             console.error('Error loading services:', error);
@@ -97,6 +101,9 @@ const CreateReel = () => {
                 toast.error('Reels must be 60 seconds or less');
                 setVideoFile(null);
                 setVideoPreview(null);
+                setVideoDuration(0);
+            } else {
+                toast.success(`Video loaded: ${formatDuration(duration)}`);
             }
         };
         video.src = url;
@@ -114,10 +121,14 @@ const CreateReel = () => {
         setThumbnailFile(file);
         const url = URL.createObjectURL(file);
         setThumbnailPreview(url);
+        toast.success('Thumbnail selected');
     };
 
     const generateThumbnail = () => {
-        if (!videoPreviewRef.current) return;
+        if (!videoPreviewRef.current) {
+            toast.error('Please wait for video to load');
+            return;
+        }
 
         const video = videoPreviewRef.current;
         const canvas = document.createElement('canvas');
@@ -138,6 +149,7 @@ const CreateReel = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validation
         if (!videoFile) {
             toast.error('Please select a video file');
             return;
@@ -153,6 +165,21 @@ const CreateReel = () => {
             return;
         }
 
+        if (videoDuration === 0) {
+            toast.error('Please wait for video to load completely');
+            return;
+        }
+
+        console.log('🚀 Starting upload with data:', {
+            title: formData.title,
+            description: formData.description,
+            serviceId: formData.serviceId,
+            status: formData.status,
+            duration: videoDuration,
+            videoSize: (videoFile.size / (1024 * 1024)).toFixed(2) + ' MB',
+            hasThumbnail: !!thumbnailFile
+        });
+
         try {
             setUploading(true);
             setUploadProgress(0);
@@ -164,31 +191,71 @@ const CreateReel = () => {
                 uploadFormData.append('thumbnail', thumbnailFile);
             }
 
-            uploadFormData.append('title', formData.title);
-            uploadFormData.append('description', formData.description);
+            uploadFormData.append('title', formData.title.trim());
+            uploadFormData.append('description', formData.description.trim());
             uploadFormData.append('serviceId', formData.serviceId);
             uploadFormData.append('status', formData.status);
-            uploadFormData.append('duration', videoDuration);
+            uploadFormData.append('duration', videoDuration.toString());
+
+            // Log FormData contents for debugging
+            console.log('📦 FormData contents:');
+            for (let pair of uploadFormData.entries()) {
+                if (pair[1] instanceof File) {
+                    console.log(pair[0], `File: ${pair[1].name} (${pair[1].type})`);
+                } else {
+                    console.log(pair[0], pair[1]);
+                }
+            }
 
             // Upload using merchantReelService
+            console.log('📤 Uploading to server...');
             const response = await merchantReelService.uploadReel(
                 uploadFormData,
                 (progress) => {
+                    console.log('⏳ Upload progress:', progress + '%');
                     setUploadProgress(progress);
                 }
             );
 
-            if (response.success) {
+            console.log('✅ Upload response:', response);
+
+            // Handle response
+            if (response && response.success) {
                 toast.success('Reel uploaded successfully!');
-                navigate('/dashboard/reels');
+
+                // Wait a bit to show success message
+                setTimeout(() => {
+                    navigate('/dashboard/reels');
+                }, 1000);
             } else {
-                toast.error(response.message || 'Failed to upload reel');
+                console.error('❌ Upload failed:', response);
+                toast.error(response?.message || 'Failed to upload reel');
                 setUploading(false);
+                setUploadProgress(0);
             }
         } catch (error) {
-            console.error('Error uploading reel:', error);
-            toast.error(error.message || 'Error uploading reel');
+            console.error('💥 Upload error:', error);
+
+            // Detailed error handling
+            if (error.response) {
+                // Server responded with error
+                console.error('Server error response:', error.response);
+                const errorMessage = error.response.data?.message ||
+                    error.response.data?.error ||
+                    `Server error: ${error.response.status}`;
+                toast.error(errorMessage);
+            } else if (error.request) {
+                // Request made but no response
+                console.error('No response from server:', error.request);
+                toast.error('No response from server. Please check your connection.');
+            } else {
+                // Something else happened
+                console.error('Error details:', error.message);
+                toast.error(error.message || 'Error uploading reel');
+            }
+
             setUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -197,6 +264,14 @@ const CreateReel = () => {
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (videoPreview) URL.revokeObjectURL(videoPreview);
+            if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+        };
+    }, [videoPreview, thumbnailPreview]);
 
     return (
         <Layout
@@ -293,7 +368,7 @@ const CreateReel = () => {
                             >
                                 <Image className="mx-auto h-10 w-10 text-gray-400 dark:text-gray-500 mb-3" />
                                 <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                    Upload thumbnail
+                                    Upload thumbnail (optional)
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                     JPG, PNG (recommended: 1080x1920)
@@ -344,6 +419,7 @@ const CreateReel = () => {
                                 placeholder="Give your reel a catchy title"
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 maxLength={100}
+                                required
                             />
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                 {formData.title.length}/100 characters
@@ -377,6 +453,7 @@ const CreateReel = () => {
                                 value={formData.serviceId}
                                 onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required
                             >
                                 <option value="">Select a service</option>
                                 {services.map((service) => (
@@ -385,6 +462,11 @@ const CreateReel = () => {
                                     </option>
                                 ))}
                             </select>
+                            {services.length === 0 && (
+                                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                    No services found. Please create a service first.
+                                </p>
+                            )}
                         </div>
 
                         {/* Status */}
@@ -432,6 +514,9 @@ const CreateReel = () => {
                                     style={{ width: `${uploadProgress}%` }}
                                 />
                             </div>
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
+                                Please don't close this window
+                            </p>
                         </div>
                     )}
 
@@ -447,10 +532,10 @@ const CreateReel = () => {
                         </button>
                         <button
                             type="submit"
-                            disabled={uploading || !videoFile}
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={uploading || !videoFile || !formData.title || !formData.serviceId || videoDuration === 0}
+                            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                         >
-                            {uploading ? 'Uploading...' : 'Upload Reel'}
+                            {uploading ? `Uploading... ${uploadProgress}%` : 'Upload Reel'}
                         </button>
                     </div>
                 </form>

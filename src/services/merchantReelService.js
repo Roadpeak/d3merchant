@@ -1,12 +1,9 @@
-// services/merchantReelService.js - Merchant Reel API Service
+// services/merchantReelService.js - CORRECTED
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
 class MerchantReelService {
-    /**
-     * Get authentication headers
-     */
     getAuthHeaders() {
         const token = localStorage.getItem('merchantToken') || localStorage.getItem('token');
         return {
@@ -17,24 +14,20 @@ class MerchantReelService {
         };
     }
 
-    /**
-     * Get all reels for merchant
-     */
     async getReels(params = {}) {
         try {
             const { status, limit = 50, offset = 0 } = params;
-
             const queryParams = new URLSearchParams({
                 limit: limit.toString(),
                 offset: offset.toString(),
                 ...(status && { status }),
             });
 
+            // ✅ FIXED: Changed from /reels/merchant to /merchant/reels
             const response = await axios.get(
-                `${API_BASE_URL}/reels/merchant?${queryParams}`,
+                `${API_BASE_URL}/merchant/reels?${queryParams}`,
                 { headers: this.getAuthHeaders() }
             );
-
             return response.data;
         } catch (error) {
             console.error('Error fetching reels:', error);
@@ -42,16 +35,13 @@ class MerchantReelService {
         }
     }
 
-    /**
-     * Get single reel by ID
-     */
     async getReel(reelId) {
         try {
+            // ✅ FIXED
             const response = await axios.get(
-                `${API_BASE_URL}/reels/merchant/${reelId}`,
+                `${API_BASE_URL}/merchant/reels/${reelId}`,
                 { headers: this.getAuthHeaders() }
             );
-
             return response.data;
         } catch (error) {
             console.error('Error fetching reel:', error);
@@ -59,21 +49,20 @@ class MerchantReelService {
         }
     }
 
-    /**
-     * Upload new reel
-     */
     async uploadReel(formData, onUploadProgress) {
         try {
             const token = localStorage.getItem('merchantToken') || localStorage.getItem('token');
 
+            // ✅ FIXED
             const response = await axios.post(
-                `${API_BASE_URL}/reels/merchant`,
+                `${API_BASE_URL}/merchant/reels`,
                 formData,
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                         'Authorization': `Bearer ${token}`,
                         'User-Type': 'merchant',
+                        'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
                     },
                     onUploadProgress: (progressEvent) => {
                         if (onUploadProgress) {
@@ -85,7 +74,6 @@ class MerchantReelService {
                     },
                 }
             );
-
             return response.data;
         } catch (error) {
             console.error('Error uploading reel:', error);
@@ -93,17 +81,14 @@ class MerchantReelService {
         }
     }
 
-    /**
-     * Update reel
-     */
     async updateReel(reelId, updates) {
         try {
+            // ✅ FIXED
             const response = await axios.put(
-                `${API_BASE_URL}/reels/merchant/${reelId}`,
+                `${API_BASE_URL}/merchant/reels/${reelId}`,
                 updates,
                 { headers: this.getAuthHeaders() }
             );
-
             return response.data;
         } catch (error) {
             console.error('Error updating reel:', error);
@@ -111,16 +96,13 @@ class MerchantReelService {
         }
     }
 
-    /**
-     * Delete reel
-     */
     async deleteReel(reelId) {
         try {
+            // ✅ FIXED
             const response = await axios.delete(
-                `${API_BASE_URL}/reels/merchant/${reelId}`,
+                `${API_BASE_URL}/merchant/reels/${reelId}`,
                 { headers: this.getAuthHeaders() }
             );
-
             return response.data;
         } catch (error) {
             console.error('Error deleting reel:', error);
@@ -128,16 +110,13 @@ class MerchantReelService {
         }
     }
 
-    /**
-     * Get reel analytics
-     */
     async getAnalytics(reelId) {
         try {
+            // ✅ FIXED
             const response = await axios.get(
-                `${API_BASE_URL}/reels/merchant/${reelId}/analytics`,
+                `${API_BASE_URL}/merchant/reels/${reelId}/analytics`,
                 { headers: this.getAuthHeaders() }
             );
-
             return response.data;
         } catch (error) {
             console.error('Error fetching analytics:', error);
