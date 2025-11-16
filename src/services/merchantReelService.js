@@ -13,6 +13,7 @@ class MerchantReelService {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
             'User-Type': 'merchant',
+            'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
         };
     }
 
