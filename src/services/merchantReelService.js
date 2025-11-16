@@ -1,4 +1,4 @@
-// services/merchantReelService.js - CORRECTED
+// services/merchantReelService.js - CORRECTED ROUTES
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
@@ -23,9 +23,9 @@ class MerchantReelService {
                 ...(status && { status }),
             });
 
-            // ✅ FIXED: Changed from /reels/merchant to /merchant/reels
+            // ✅ FIXED: /reels/merchant not /merchant/reels
             const response = await axios.get(
-                `${API_BASE_URL}/merchant/reels?${queryParams}`,
+                `${API_BASE_URL}/reels/merchant?${queryParams}`,
                 { headers: this.getAuthHeaders() }
             );
             return response.data;
@@ -39,7 +39,7 @@ class MerchantReelService {
         try {
             // ✅ FIXED
             const response = await axios.get(
-                `${API_BASE_URL}/merchant/reels/${reelId}`,
+                `${API_BASE_URL}/reels/merchant/${reelId}`,
                 { headers: this.getAuthHeaders() }
             );
             return response.data;
@@ -53,9 +53,9 @@ class MerchantReelService {
         try {
             const token = localStorage.getItem('merchantToken') || localStorage.getItem('token');
 
-            // ✅ FIXED
+            // ✅ FIXED: /reels/merchant not /merchant/reels
             const response = await axios.post(
-                `${API_BASE_URL}/merchant/reels`,
+                `${API_BASE_URL}/reels/merchant`,
                 formData,
                 {
                     headers: {
@@ -85,7 +85,7 @@ class MerchantReelService {
         try {
             // ✅ FIXED
             const response = await axios.put(
-                `${API_BASE_URL}/merchant/reels/${reelId}`,
+                `${API_BASE_URL}/reels/merchant/${reelId}`,
                 updates,
                 { headers: this.getAuthHeaders() }
             );
@@ -100,7 +100,7 @@ class MerchantReelService {
         try {
             // ✅ FIXED
             const response = await axios.delete(
-                `${API_BASE_URL}/merchant/reels/${reelId}`,
+                `${API_BASE_URL}/reels/merchant/${reelId}`,
                 { headers: this.getAuthHeaders() }
             );
             return response.data;
@@ -114,7 +114,7 @@ class MerchantReelService {
         try {
             // ✅ FIXED
             const response = await axios.get(
-                `${API_BASE_URL}/merchant/reels/${reelId}/analytics`,
+                `${API_BASE_URL}/reels/merchant/${reelId}/analytics`,
                 { headers: this.getAuthHeaders() }
             );
             return response.data;
