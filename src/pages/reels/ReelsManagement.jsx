@@ -19,10 +19,12 @@ import {
     Clock,
     CheckCircle,
     XCircle,
-    AlertCircle
+    AlertCircle,
+    Loader
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import merchantReelService from '../../services/merchantReelService';
+import merchantAuthService from '../../services/merchantAuthService';
 
 const ReelsManagement = () => {
     const [reels, setReels] = useState([]);
@@ -38,28 +40,62 @@ const ReelsManagement = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        // Check if merchant is authenticated
+        if (!merchantAuthService.isAuthenticated()) {
+            toast.error('Please log in to view reels');
+            navigate('/login');
+            return;
+        }
+
         loadReels();
-    }, []);
+    }, [navigate]);
 
     const loadReels = async () => {
         try {
             setLoading(true);
+            console.log('🎬 Loading reels...');
 
             const response = await merchantReelService.getReels({
                 limit: 100,
                 offset: 0
             });
 
-            if (response.success) {
-                const reelsData = response.data.reels || [];
-                setReels(reelsData);
-                calculateStats(reelsData);
+            console.log('📋 Reels response:', response);
+
+            // Handle different response structures
+            let reelsData = [];
+
+            if (response && response.success) {
+                // Response has success field
+                reelsData = response.data?.reels || response.data || response.reels || [];
+            } else if (response && response.data) {
+                // Response has data field
+                reelsData = response.data.reels || response.data || [];
+            } else if (Array.isArray(response)) {
+                // Response is directly an array
+                reelsData = response;
+            } else if (response && response.reels) {
+                // Response has reels field directly
+                reelsData = response.reels;
+            }
+
+            console.log('✅ Reels loaded:', reelsData.length);
+
+            setReels(reelsData);
+            calculateStats(reelsData);
+
+            if (reelsData.length === 0) {
+                toast.info('No reels found. Upload your first reel!');
             } else {
-                toast.error(response.message || 'Failed to load reels');
+                toast.success(`${reelsData.length} reel${reelsData.length !== 1 ? 's' : ''} loaded`);
             }
         } catch (error) {
-            console.error('Error loading reels:', error);
+            console.error('💥 Error loading reels:', error);
             toast.error(error.message || 'Error loading reels');
+
+            // Set empty array on error
+            setReels([]);
+            calculateStats([]);
         } finally {
             setLoading(false);
         }
@@ -90,16 +126,20 @@ const ReelsManagement = () => {
         if (!window.confirm('Are you sure you want to delete this reel?')) return;
 
         try {
+            console.log('🗑️ Deleting reel:', reelId);
+
             const response = await merchantReelService.deleteReel(reelId);
 
-            if (response.success) {
+            console.log('Delete response:', response);
+
+            if (response && (response.success || response.message?.includes('success'))) {
                 toast.success('Reel deleted successfully');
-                loadReels();
+                loadReels(); // Reload the list
             } else {
-                toast.error(response.message || 'Failed to delete reel');
+                toast.error(response?.message || 'Failed to delete reel');
             }
         } catch (error) {
-            console.error('Error deleting reel:', error);
+            console.error('💥 Error deleting reel:', error);
             toast.error(error.message || 'Error deleting reel');
         }
     };
@@ -121,6 +161,18 @@ const ReelsManagement = () => {
                 {badge.label}
             </span>
         );
+    };
+
+    const formatDuration = (duration) => {
+        if (!duration) return '0:00';
+
+        // If duration is already a string (like "0:45"), return it
+        if (typeof duration === 'string') return duration;
+
+        // If duration is a number (seconds)
+        const mins = Math.floor(duration / 60);
+        const secs = duration % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
     const filteredReels = activeTab === 'all'
@@ -149,7 +201,7 @@ const ReelsManagement = () => {
             <Layout title="Reels Management" showBackButton={true}>
                 <div className="flex items-center justify-center py-20">
                     <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                        <Loader className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
                         <p className="text-gray-600 dark:text-gray-400">Loading reels...</p>
                     </div>
                 </div>
@@ -251,7 +303,7 @@ const ReelsManagement = () => {
                                 {activeTab === 'all' && (
                                     <button
                                         onClick={() => navigate('/dashboard/reels/create')}
-                                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                         <Upload size={18} />
                                         Upload Your First Reel
@@ -267,11 +319,21 @@ const ReelsManagement = () => {
                                     >
                                         {/* Thumbnail */}
                                         <div className="relative aspect-[9/16] bg-gray-200 dark:bg-gray-800">
-                                            <img
-                                                src={reel.thumbnail_url || reel.thumbnail || '/placeholder-video.jpg'}
-                                                alt={reel.title}
-                                                className="w-full h-full object-cover"
-                                            />
+                                            {reel.thumbnail_url || reel.thumbnail ? (
+                                                <img
+                                                    src={reel.thumbnail_url || reel.thumbnail}
+                                                    alt={reel.title}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = '/placeholder-video.jpg';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-gray-300 dark:bg-gray-700">
+                                                    <Video className="text-gray-500 dark:text-gray-400" size={48} />
+                                                </div>
+                                            )}
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <Play className="text-white" size={48} />
                                             </div>
@@ -279,7 +341,7 @@ const ReelsManagement = () => {
                                                 {getStatusBadge(reel.status)}
                                             </div>
                                             <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded text-white text-xs">
-                                                {reel.duration || '0:00'}
+                                                {formatDuration(reel.duration)}
                                             </div>
                                         </div>
 
@@ -291,6 +353,13 @@ const ReelsManagement = () => {
                                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
                                                 {reel.description || reel.caption || 'No description'}
                                             </p>
+
+                                            {/* Service Info */}
+                                            {reel.service && (
+                                                <div className="mb-4 text-xs text-gray-600 dark:text-gray-400">
+                                                    <span className="font-medium">Service:</span> {reel.service.name}
+                                                </div>
+                                            )}
 
                                             {/* Stats */}
                                             <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
@@ -320,12 +389,14 @@ const ReelsManagement = () => {
                                                 <button
                                                     onClick={() => navigate(`/dashboard/reels/${reel.id}/edit`)}
                                                     className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                                    title="Edit reel"
                                                 >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteReel(reel.id)}
                                                     className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                    title="Delete reel"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
