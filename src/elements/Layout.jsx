@@ -452,41 +452,14 @@ const Layout = ({
   // Grid Navigation Component
   const GridNavigation = () => (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Enhanced Background with Multiple Layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-cyan-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-        {/* Animated Gradient Orbs */}
-        <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 dark:bg-purple-900/30 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 dark:bg-yellow-900/30 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 dark:bg-pink-900/30 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-
-        {/* Subtle Grid Pattern */}
-        <div className="absolute inset-0 opacity-30 dark:opacity-20" style={{
-          backgroundImage: `
-            linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}></div>
-
-        {/* Decorative Dots Pattern */}
-        <div className="absolute inset-0" style={{
-          backgroundImage: `
-            radial-gradient(circle at 20px 20px, rgba(59, 130, 246, ${darkMode ? '0.15' : '0.1'}) 2px, transparent 2px),
-            radial-gradient(circle at 60px 60px, rgba(139, 92, 246, ${darkMode ? '0.15' : '0.1'}) 2px, transparent 2px)
-          `,
-          backgroundSize: '80px 80px'
-        }}></div>
+      {/* Clean background - white in light mode, dark gradient in dark mode */}
+      <div className="absolute inset-0 bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
       </div>
-
-      {/* Decorative Elements */}
-      <div className="absolute top-20 right-10 w-20 h-20 border-2 border-blue-200/30 dark:border-blue-700/30 rounded-full"></div>
-      <div className="absolute bottom-40 left-10 w-16 h-16 border-2 border-purple-200/30 dark:border-purple-700/30 rounded-lg rotate-45"></div>
-      <div className="absolute top-1/2 right-20 w-12 h-12 bg-gradient-to-br from-cyan-200/20 to-blue-200/20 dark:from-cyan-700/20 dark:to-blue-700/20 rounded-full blur-sm"></div>
 
       {/* Content */}
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
-        {/* Greeting Section with Enhanced Card */}
-        <div className="mb-8 bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg rounded-3xl p-6 border border-white/20 dark:border-gray-700/20 shadow-xl">
+        {/* Greeting Section */}
+        <div className="mb-8 bg-white dark:bg-gray-800/60 dark:backdrop-blur-lg rounded-3xl p-6 border border-gray-200 dark:border-gray-700/20 shadow-sm">
           <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
             Welcome back, {currentMerchant?.first_name || 'Merchant'}! 👋
           </h2>
@@ -502,15 +475,12 @@ const Layout = ({
                 key={index}
                 onClick={() => navigate(item.path)}
                 className={`
-                  relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl p-6 
-                  border border-white/20 dark:border-gray-700/20
+                  relative bg-white dark:bg-gray-800/90 dark:backdrop-blur-md rounded-2xl p-6 
+                  border border-gray-200 dark:border-gray-700/20
                   transition-all duration-200 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 active:scale-98
                   aspect-square flex flex-col items-center justify-center
                   ${isActive ? 'ring-2 ring-blue-500 shadow-blue-500/50 shadow-xl' : 'shadow-lg hover:border-blue-200 dark:hover:border-blue-700'}
                 `}
-                style={{
-                  animation: `fadeIn 0.5s ease-out ${index * 0.05}s both`
-                }}
               >
                 {/* Badge for notifications */}
                 {item.badge && (
@@ -519,7 +489,7 @@ const Layout = ({
                   </div>
                 )}
 
-                {/* Icon with gradient background and glow effect */}
+                {/* Icon with gradient background */}
                 <div className={`
                   w-16 h-16 lg:w-20 lg:h-20 rounded-2xl mb-4 flex items-center justify-center
                   bg-gradient-to-br ${item.color} shadow-lg
@@ -540,7 +510,7 @@ const Layout = ({
                   </p>
                 </div>
 
-                {/* Active Indicator with pulse */}
+                {/* Active Indicator */}
                 {isActive && !item.badge && (
                   <div className="absolute top-3 right-3">
                     <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm"></div>
@@ -552,10 +522,10 @@ const Layout = ({
           })}
         </div>
 
-        {/* Logout Button with Enhanced Styling */}
+        {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full max-w-md mx-auto mt-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border border-white/20 dark:border-gray-700/20 flex items-center gap-3 hover:shadow-2xl hover:scale-105 hover:border-red-200 dark:hover:border-red-900 transition-all"
+          className="w-full max-w-md mx-auto mt-8 bg-white dark:bg-gray-800/90 dark:backdrop-blur-md rounded-2xl p-4 shadow-lg border border-gray-200 dark:border-gray-700/20 flex items-center gap-3 hover:shadow-2xl hover:scale-105 hover:border-red-200 dark:hover:border-red-900 transition-all"
         >
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
             <LogOut size={24} className="text-white" />
@@ -566,47 +536,6 @@ const Layout = ({
           </div>
         </button>
       </div>
-
-      {/* Add animations */}
-      <style jsx>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 
@@ -663,46 +592,17 @@ const Layout = ({
       {/* Add padding to account for fixed floating header */}
       <div className="pt-24"></div>
 
-      {/* Title Bar */}
-      {!showMobileGrid && (
-        <div className="bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-gray-800 dark:to-gray-800 border border-blue-200 dark:border-gray-700 rounded-2xl mx-4 mb-4 px-6 py-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Back Button */}
-              {showBackButton && (
-                <button
-                  onClick={handleBack}
-                  className="p-2 hover:bg-white/70 dark:hover:bg-gray-700/70 rounded-xl transition-colors flex items-center justify-center"
-                  aria-label="Go back"
-                >
-                  <ArrowLeft size={20} className="text-gray-700 dark:text-gray-200" />
-                </button>
-              )}
-
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
-                {subtitle && <p className="text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {showCreateButton && (
-                <button
-                  onClick={onCreateClick}
-                  className="bg-gradient-to-br from-blue-600 to-blue-500 text-white px-4 py-2.5 rounded-xl hover:shadow-lg transition-all duration-200 font-medium flex items-center gap-2 shadow-sm"
-                >
-                  <span className="text-xl">+</span>
-                  {createButtonText}
-                </button>
-              )}
-
-              <select className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
-                <option>Newest</option>
-                <option>Oldest</option>
-                <option>Most Recent</option>
-              </select>
-            </div>
-          </div>
+      {/* Minimal Back Button */}
+      {!showMobileGrid && showBackButton && (
+        <div className="px-4 mb-4">
+          <button
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </button>
         </div>
       )}
 
