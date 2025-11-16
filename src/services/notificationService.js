@@ -1,4 +1,4 @@
-// services/notificationService.js - Fixed for merchant authentication
+// services/notificationService.js - Complete with Push Notification Support
 import axiosInstance from "./axiosInstance";
 import merchantAuthService from "./merchantAuthService";
 
@@ -49,7 +49,7 @@ const handleApiError = (error, context = '') => {
 
 class NotificationService {
     constructor() {
-        this.baseURL = '/notifications'; // Fixed: Added full path
+        this.baseURL = '/notifications';
         this.cache = new Map();
         this.cacheTimeout = 30000;
         this.wsConnected = false;
@@ -59,13 +59,13 @@ class NotificationService {
     isAuthenticated() {
         const isAuth = merchantAuthService.isAuthenticated();
         const merchant = merchantAuthService.getCurrentMerchant();
-        
+
         console.log('Notification service auth check:', {
             isAuthenticated: isAuth,
             hasMerchant: !!merchant,
             merchantId: merchant?.id
         });
-        
+
         // Simplified check - if merchant auth service says we're authenticated and we have merchant data, we're good
         return isAuth && !!merchant && !!merchant.id;
     }
@@ -137,7 +137,7 @@ class NotificationService {
 
         } catch (error) {
             console.error('Error fetching notifications:', error);
-            
+
             // Return empty data instead of throwing for better UX
             return {
                 success: false,
@@ -159,7 +159,7 @@ class NotificationService {
             }
 
             const cacheKey = `counts_${storeId || 'all'}`;
-            
+
             // Check cache first
             if (this.cache.has(cacheKey)) {
                 const cached = this.cache.get(cacheKey);
@@ -343,9 +343,9 @@ class NotificationService {
             // Enhanced fields with better fallbacks
             sender: notification.sender ? {
                 id: notification.sender.id,
-                name: notification.sender.name || 
-                     `${notification.sender.firstName || ''} ${notification.sender.lastName || ''}`.trim() ||
-                     notification.sender.firstName || 'Unknown User',
+                name: notification.sender.name ||
+                    `${notification.sender.firstName || ''} ${notification.sender.lastName || ''}`.trim() ||
+                    notification.sender.firstName || 'Unknown User',
                 avatar: notification.sender.avatar,
                 userType: notification.sender.userType
             } : null,
@@ -363,10 +363,9 @@ class NotificationService {
         };
     }
 
-    // Rest of the methods remain the same...
     formatTimeAgo(timestamp) {
         if (!timestamp) return 'Unknown';
-        
+
         const now = new Date();
         const time = new Date(timestamp);
         const diffInMinutes = Math.floor((now - time) / (1000 * 60));
@@ -385,7 +384,7 @@ class NotificationService {
 
     isNewNotification(timestamp) {
         if (!timestamp) return false;
-        
+
         const now = new Date();
         const time = new Date(timestamp);
         const diffInMinutes = Math.floor((now - time) / (1000 * 60));
@@ -408,21 +407,20 @@ class NotificationService {
             }
 
             console.log('Testing notification service connection...');
-            
+
             const response = await axiosInstance.get(`${this.baseURL}/health`, {
                 headers: getAuthHeaders(),
                 timeout: 5000
             });
-            
+
             console.log('Notification service test successful:', response.data);
             return { success: true, data: response.data };
-            
+
         } catch (error) {
             console.error('Notification service test failed:', error);
             return { success: false, error: error.message };
         }
     }
-
 
     // ===== WEB PUSH NOTIFICATION METHODS =====
 
@@ -507,11 +505,197 @@ class NotificationService {
         }
     }
 
+    /**
+     * Test push notification (sends a test notification)
+     * @returns {Promise<Object>} Test notification result
+     */
+    async sendTestPushNotification() {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('🧪 Sending test push notification...');
+
+            const response = await axiosInstance.post(`${this.baseURL}/push/test`, {}, {
+                headers: getAuthHeaders(),
+                timeout: 5000
+            });
+
+            console.log('✅ Test notification sent:', response.data);
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error sending test notification:', error);
+            handleApiError(error, 'sending test push notification');
+        }
+    }
+
+    // ===== NOTIFICATION SETTINGS METHODS =====
+
+    /**
+     * Get notification settings/preferences
+     * @returns {Promise<Object>} User's notification settings
+     */
+    async getNotificationSettings() {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('📋 Fetching notification settings...');
+
+            const response = await axiosInstance.get(`${this.baseURL}/settings`, {
+                headers: getAuthHeaders(),
+                timeout: 5000
+            });
+
+            console.log('Notification settings:', response.data);
+            return response.data;
+
+        } catch (error) {
+            console.error('Error fetching notification settings:', error);
+
+            // Return default settings on error
+            return {
+                success: true,
+                data: {
+                    email: true,
+                    push: true,
+                    messages: true,
+                    bookings: true,
+                    reviews: true
+                }
+            };
+        }
+    }
+
+    /**
+     * Update notification settings/preferences
+     * @param {Object} settings - New notification settings
+     * @returns {Promise<Object>} Updated settings
+     */
+    async updateNotificationSettings(settings) {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('💾 Updating notification settings:', settings);
+
+            const response = await axiosInstance.put(`${this.baseURL}/settings`, settings, {
+                headers: getAuthHeaders(),
+                timeout: 5000
+            });
+
+            console.log('✅ Settings updated:', response.data);
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error updating notification settings:', error);
+            handleApiError(error, 'updating notification settings');
+        }
+    }
+
+    // ===== BULK NOTIFICATION OPERATIONS =====
+
+    /**
+     * Delete notification
+     * @param {string} notificationId - ID of notification to delete
+     * @returns {Promise<Object>} Deletion result
+     */
+    async deleteNotification(notificationId) {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('🗑️ Deleting notification:', notificationId);
+
+            const response = await axiosInstance.delete(`${this.baseURL}/${notificationId}`, {
+                headers: getAuthHeaders(),
+                timeout: 5000
+            });
+
+            console.log('✅ Notification deleted');
+            this.clearCountsCache();
+
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error deleting notification:', error);
+            handleApiError(error, 'deleting notification');
+        }
+    }
+
+    /**
+     * Delete multiple notifications
+     * @param {Array<string>} notificationIds - Array of notification IDs to delete
+     * @returns {Promise<Object>} Bulk deletion result
+     */
+    async deleteMultipleNotifications(notificationIds) {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('🗑️ Bulk deleting notifications:', notificationIds.length);
+
+            const response = await axiosInstance.post(`${this.baseURL}/bulk-delete`,
+                { notificationIds },
+                {
+                    headers: getAuthHeaders(),
+                    timeout: 10000
+                }
+            );
+
+            console.log('✅ Notifications deleted');
+            this.clearCountsCache();
+
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error bulk deleting notifications:', error);
+            handleApiError(error, 'bulk deleting notifications');
+        }
+    }
+
+    /**
+     * Clear all read notifications
+     * @returns {Promise<Object>} Clear result
+     */
+    async clearReadNotifications() {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('Not authenticated');
+            }
+
+            console.log('🧹 Clearing all read notifications...');
+
+            const response = await axiosInstance.delete(`${this.baseURL}/clear-read`, {
+                headers: getAuthHeaders(),
+                timeout: 10000
+            });
+
+            console.log('✅ Read notifications cleared');
+            this.clearCountsCache();
+
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error clearing read notifications:', error);
+            handleApiError(error, 'clearing read notifications');
+        }
+    }
 }
-
-
 
 // Create and export singleton instance
 const notificationService = new NotificationService();
 
+// Export both default and named exports for flexibility
 export default notificationService;
+
+export {
+    notificationService,
+    getAuthHeaders // Export for use in other services if needed
+};
