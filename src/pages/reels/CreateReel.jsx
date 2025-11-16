@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import merchantAuthService from '../../services/merchantAuthService';
+import merchantReelService from '../../services/merchantReelService';
 
 const CreateReel = () => {
     const [formData, setFormData] = useState({
@@ -58,6 +59,7 @@ const CreateReel = () => {
             }
         } catch (error) {
             console.error('Error loading services:', error);
+            toast.error('Failed to load services');
         }
     };
 
@@ -71,7 +73,7 @@ const CreateReel = () => {
             return;
         }
 
-        // Validate file size (max 100MB for free hosting)
+        // Validate file size (max 100MB)
         const maxSize = 100 * 1024 * 1024; // 100MB
         if (file.size > maxSize) {
             toast.error('Video file too large. Maximum size is 100MB');
@@ -155,51 +157,37 @@ const CreateReel = () => {
             setUploading(true);
             setUploadProgress(0);
 
-            const token = merchantAuthService.getToken();
             const uploadFormData = new FormData();
-
             uploadFormData.append('video', videoFile);
+
             if (thumbnailFile) {
                 uploadFormData.append('thumbnail', thumbnailFile);
             }
+
             uploadFormData.append('title', formData.title);
             uploadFormData.append('description', formData.description);
             uploadFormData.append('serviceId', formData.serviceId);
             uploadFormData.append('status', formData.status);
             uploadFormData.append('duration', videoDuration);
 
-            // Upload with progress tracking
-            const xhr = new XMLHttpRequest();
-
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const progress = Math.round((e.loaded / e.total) * 100);
+            // Upload using merchantReelService
+            const response = await merchantReelService.uploadReel(
+                uploadFormData,
+                (progress) => {
                     setUploadProgress(progress);
                 }
-            });
+            );
 
-            xhr.addEventListener('load', () => {
-                if (xhr.status === 200 || xhr.status === 201) {
-                    toast.success('Reel uploaded successfully!');
-                    navigate('/dashboard/reels');
-                } else {
-                    toast.error('Failed to upload reel');
-                    setUploading(false);
-                }
-            });
-
-            xhr.addEventListener('error', () => {
-                toast.error('Error uploading reel');
+            if (response.success) {
+                toast.success('Reel uploaded successfully!');
+                navigate('/dashboard/reels');
+            } else {
+                toast.error(response.message || 'Failed to upload reel');
                 setUploading(false);
-            });
-
-            xhr.open('POST', `${import.meta.env.VITE_API_BASE_URL}/merchant/reels`);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            xhr.send(uploadFormData);
-
+            }
         } catch (error) {
             console.error('Error uploading reel:', error);
-            toast.error('Error uploading reel');
+            toast.error(error.message || 'Error uploading reel');
             setUploading(false);
         }
     };

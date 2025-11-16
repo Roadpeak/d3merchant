@@ -22,7 +22,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import merchantAuthService from '../../services/merchantAuthService';
+import merchantReelService from '../../services/merchantReelService';
 
 const ReelsManagement = () => {
     const [reels, setReels] = useState([]);
@@ -44,25 +44,22 @@ const ReelsManagement = () => {
     const loadReels = async () => {
         try {
             setLoading(true);
-            const token = merchantAuthService.getToken();
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/reels`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await merchantReelService.getReels({
+                limit: 100,
+                offset: 0
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                setReels(data.data || []);
-                calculateStats(data.data || []);
+            if (response.success) {
+                const reelsData = response.data.reels || [];
+                setReels(reelsData);
+                calculateStats(reelsData);
             } else {
-                toast.error('Failed to load reels');
+                toast.error(response.message || 'Failed to load reels');
             }
         } catch (error) {
             console.error('Error loading reels:', error);
-            toast.error('Error loading reels');
+            toast.error(error.message || 'Error loading reels');
         } finally {
             setLoading(false);
         }
@@ -71,9 +68,9 @@ const ReelsManagement = () => {
     const calculateStats = (reelsData) => {
         const stats = reelsData.reduce((acc, reel) => ({
             totalReels: acc.totalReels + 1,
-            totalViews: acc.totalViews + (reel.views || 0),
-            totalLikes: acc.totalLikes + (reel.likes || 0),
-            totalShares: acc.totalShares + (reel.shares || 0)
+            totalViews: acc.totalViews + (reel.views_count || reel.views || 0),
+            totalLikes: acc.totalLikes + (reel.likes_count || reel.likes || 0),
+            totalShares: acc.totalShares + (reel.shares_count || reel.shares || 0)
         }), {
             totalReels: 0,
             totalViews: 0,
@@ -93,24 +90,17 @@ const ReelsManagement = () => {
         if (!window.confirm('Are you sure you want to delete this reel?')) return;
 
         try {
-            const token = merchantAuthService.getToken();
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/reels/${reelId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+            const response = await merchantReelService.deleteReel(reelId);
 
-            if (response.ok) {
+            if (response.success) {
                 toast.success('Reel deleted successfully');
                 loadReels();
             } else {
-                toast.error('Failed to delete reel');
+                toast.error(response.message || 'Failed to delete reel');
             }
         } catch (error) {
             console.error('Error deleting reel:', error);
-            toast.error('Error deleting reel');
+            toast.error(error.message || 'Error deleting reel');
         }
     };
 
@@ -231,8 +221,8 @@ const ReelsManagement = () => {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                                         }`}
                                 >
                                     {tab.label}
@@ -278,7 +268,7 @@ const ReelsManagement = () => {
                                         {/* Thumbnail */}
                                         <div className="relative aspect-[9/16] bg-gray-200 dark:bg-gray-800">
                                             <img
-                                                src={reel.thumbnail || '/placeholder-video.jpg'}
+                                                src={reel.thumbnail_url || reel.thumbnail || '/placeholder-video.jpg'}
                                                 alt={reel.title}
                                                 className="w-full h-full object-cover"
                                             />
@@ -299,22 +289,22 @@ const ReelsManagement = () => {
                                                 {reel.title || 'Untitled Reel'}
                                             </h3>
                                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                                                {reel.description || 'No description'}
+                                                {reel.description || reel.caption || 'No description'}
                                             </p>
 
                                             {/* Stats */}
                                             <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
                                                 <div className="flex items-center gap-1">
                                                     <Eye size={16} />
-                                                    <span>{reel.views || 0}</span>
+                                                    <span>{reel.views_count || reel.views || 0}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <Heart size={16} />
-                                                    <span>{reel.likes || 0}</span>
+                                                    <span>{reel.likes_count || reel.likes || 0}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <MessageCircle size={16} />
-                                                    <span>{reel.chats || 0}</span>
+                                                    <span>{reel.chats_count || reel.chats || 0}</span>
                                                 </div>
                                             </div>
 
