@@ -1,11 +1,18 @@
-// services/merchantReelService.js - CORRECTED ROUTES
+// services/merchantReelService.js
 import axios from 'axios';
+import merchantAuthService from './merchantAuthService'; // Add this import
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
 class MerchantReelService {
     getAuthHeaders() {
-        const token = localStorage.getItem('merchantToken') || localStorage.getItem('token');
+        // ✅ Use merchantAuthService to get the token correctly
+        const token = merchantAuthService.getToken();
+
+        if (!token) {
+            console.warn('No merchant token found');
+        }
+
         return {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -23,7 +30,6 @@ class MerchantReelService {
                 ...(status && { status }),
             });
 
-            // ✅ FIXED: /reels/merchant not /merchant/reels
             const response = await axios.get(
                 `${API_BASE_URL}/reels/merchant?${queryParams}`,
                 { headers: this.getAuthHeaders() }
@@ -37,7 +43,6 @@ class MerchantReelService {
 
     async getReel(reelId) {
         try {
-            // ✅ FIXED
             const response = await axios.get(
                 `${API_BASE_URL}/reels/merchant/${reelId}`,
                 { headers: this.getAuthHeaders() }
@@ -51,9 +56,13 @@ class MerchantReelService {
 
     async uploadReel(formData, onUploadProgress) {
         try {
-            const token = localStorage.getItem('merchantToken') || localStorage.getItem('token');
+            // ✅ Use merchantAuthService for token
+            const token = merchantAuthService.getToken();
 
-            // ✅ FIXED: /reels/merchant not /merchant/reels
+            if (!token) {
+                throw new Error('No authentication token found. Please log in again.');
+            }
+
             const response = await axios.post(
                 `${API_BASE_URL}/reels/merchant`,
                 formData,
@@ -83,7 +92,6 @@ class MerchantReelService {
 
     async updateReel(reelId, updates) {
         try {
-            // ✅ FIXED
             const response = await axios.put(
                 `${API_BASE_URL}/reels/merchant/${reelId}`,
                 updates,
@@ -98,7 +106,6 @@ class MerchantReelService {
 
     async deleteReel(reelId) {
         try {
-            // ✅ FIXED
             const response = await axios.delete(
                 `${API_BASE_URL}/reels/merchant/${reelId}`,
                 { headers: this.getAuthHeaders() }
@@ -112,7 +119,6 @@ class MerchantReelService {
 
     async getAnalytics(reelId) {
         try {
-            // ✅ FIXED
             const response = await axios.get(
                 `${API_BASE_URL}/reels/merchant/${reelId}/analytics`,
                 { headers: this.getAuthHeaders() }
