@@ -28,6 +28,7 @@ const CreateReel = () => {
     const [videoPreview, setVideoPreview] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState(null);
     const [services, setServices] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [videoDuration, setVideoDuration] = useState(0);
@@ -45,25 +46,54 @@ const CreateReel = () => {
 
     const loadServices = async () => {
         try {
+            setLoading(true);
             const token = merchantAuthService.getToken();
+
+            if (!token) {
+                toast.error('Please log in to continue');
+                navigate('/login');
+                return;
+            }
+
+            console.log('🔍 Loading services for reels...');
+
+            // Use the same API endpoint pattern as EnhancedOfferForm
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/services`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
+                    'User-Type': 'merchant',
                     'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
                 }
             });
 
+            console.log('📡 Services response status:', response.status);
+
             if (response.ok) {
                 const data = await response.json();
-                setServices(data.data || data.services || []);
+                console.log('📋 Services response data:', data);
+
+                // Handle different response structures
+                const servicesList = data?.services || data?.data?.services || data?.data || [];
+
+                console.log('✅ Available services:', servicesList.length);
+
+                if (servicesList.length === 0) {
+                    toast.error('No services available. Please create services first before adding reels.');
+                } else {
+                    setServices(servicesList);
+                    toast.success(`${servicesList.length} services loaded`);
+                }
             } else {
-                console.error('Failed to load services:', response.status);
-                toast.error('Failed to load services');
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ Failed to load services:', response.status, errorData);
+                toast.error(errorData.message || 'Failed to load services');
             }
         } catch (error) {
-            console.error('Error loading services:', error);
-            toast.error('Failed to load services');
+            console.error('💥 Error loading services:', error);
+            toast.error('Failed to load services. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -280,6 +310,41 @@ const CreateReel = () => {
             showBackButton={true}
         >
             <div className="max-w-4xl mx-auto">
+                {/* Loading Services State */}
+                {loading && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6 mb-6">
+                        <div className="flex items-center gap-3">
+                            <Loader className="animate-spin text-blue-600" size={20} />
+                            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                Loading services...
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* No Services Warning */}
+                {!loading && services.length === 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-6 mb-6">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                                    No Services Available
+                                </h3>
+                                <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                                    You need to create at least one service before you can upload reels.
+                                </p>
+                                <button
+                                    onClick={() => navigate('/dashboard/services/create')}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                                >
+                                    Create Service
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Video Upload Section */}
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
@@ -454,15 +519,18 @@ const CreateReel = () => {
                                 onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 required
+                                disabled={loading || services.length === 0}
                             >
-                                <option value="">Select a service</option>
+                                <option value="">
+                                    {loading ? 'Loading services...' : services.length === 0 ? 'No services available' : 'Select a service'}
+                                </option>
                                 {services.map((service) => (
                                     <option key={service.id} value={service.id}>
                                         {service.name} - KSh {service.price}
                                     </option>
                                 ))}
                             </select>
-                            {services.length === 0 && (
+                            {services.length === 0 && !loading && (
                                 <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                                     No services found. Please create a service first.
                                 </p>
@@ -532,7 +600,7 @@ const CreateReel = () => {
                         </button>
                         <button
                             type="submit"
-                            disabled={uploading || !videoFile || !formData.title || !formData.serviceId || videoDuration === 0}
+                            disabled={uploading || !videoFile || !formData.title || !formData.serviceId || videoDuration === 0 || services.length === 0}
                             className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                         >
                             {uploading ? `Uploading... ${uploadProgress}%` : 'Upload Reel'}
