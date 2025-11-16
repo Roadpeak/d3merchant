@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Settings, User, ChevronDown, X, LayoutDashboard, MessageSquare, Layers, HandHeart, TrendingUp, Calendar, Users as UsersIcon, BookOpen, MessageCircle, Share2, CreditCard, LogOut, Moon, Sun, ArrowLeft } from 'lucide-react';
+import { Search, Settings, User, ChevronDown, X, LayoutDashboard, MessageSquare, Layers, HandHeart, TrendingUp, Calendar, Users as UsersIcon, BookOpen, MessageCircle, Share2, CreditCard, LogOut, Moon, Sun, ArrowLeft, Video } from 'lucide-react';
 import NotificationButton from '../components/NotificationButton';
 import merchantAuthService from '../services/merchantAuthService';
 import { toast } from 'react-hot-toast';
@@ -55,7 +55,7 @@ const Layout = ({
     }
   };
 
-  // Grid Menu Items
+  // Grid Menu Items - UPDATED WITH REELS
   const menuItems = [
     {
       name: 'Dashboard',
@@ -72,6 +72,13 @@ const Layout = ({
       description: 'Customer messages',
       badge: chatUnreadCount > 0 ? (chatUnreadCount > 99 ? '99+' : chatUnreadCount.toString()) : null,
       showPulse: chatUnreadCount > 0
+    },
+    {
+      name: 'Reels',
+      icon: <Video size={24} />,
+      path: '/dashboard/reels',
+      color: 'from-red-500 to-pink-600',
+      description: 'Video content'
     },
     {
       name: 'Services',
@@ -276,13 +283,10 @@ const Layout = ({
       const currentScrollY = window.scrollY;
 
       if (currentScrollY < 10) {
-        // Always show navbar at the top
         setShowNavbar(true);
       } else if (currentScrollY > lastScrollY) {
-        // Scrolling down - hide navbar
         setShowNavbar(false);
       } else if (currentScrollY < lastScrollY) {
-        // Scrolling up - show navbar
         setShowNavbar(true);
       }
 

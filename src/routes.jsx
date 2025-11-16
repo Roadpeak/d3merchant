@@ -5,7 +5,6 @@ import LoginPage from './pages/auth/Login'
 import ServicesPage from './pages/services/Service'
 import OfferPage from './pages/offers/Offers'
 import CreateStore from './pages/stores/CreateStore'
-// import Calendar from './pages/Calendar'
 import Page404 from './pages/Page404'
 import ServiceBookings from './pages/bookings/ServiceBookings'
 import OfferBookings from './pages/bookings/OfferBookings'
@@ -19,14 +18,16 @@ import DynamicFormPage from './pages/services/DynamicFormPage'
 import Analytics from './pages/analytics/Analytics'
 import BillingPage from './pages/account/Billings'
 import Invoice from './pages/clients'
-// import clients from './pages/account/Invoice'
 import MerchantChatInterface from './pages/dashboard/MerchantChatInterface';
 import ClientsPage from './pages/clients';
 import ServiceRequests from './pages/servicereq/serviceRequests';
-import BookingView from './pages/bookings/BookingView'; 
+import BookingView from './pages/bookings/BookingView';
 
-// In your dashboard
-
+// Reels Management
+import ReelsManagement from './pages/reels/ReelsManagement';
+import CreateReel from './pages/reels/CreateReel';
+// import ReelAnalytics from './pages/reels/ReelAnalytics';
+// import EditReel from './pages/reels/EditReel';
 
 const AppRoutes = () => {
   return (
@@ -40,7 +41,6 @@ const AppRoutes = () => {
       <Route path='/dashboard/dynamic-form/:id' element={<DynamicFormPage />} />
       <Route path='/dashboard/analytics' element={<Analytics />} />
       <Route path='/dashboard/offers' element={<OfferPage />} />
-      {/* <Route path='/dashboard/calendar' element={<Calendar />} /> */}
       <Route path='/stores/create' element={<CreateStore />} />
       <Route path="/dashboard/service-bookings" element={<ServiceBookings />} />
       <Route path="/dashboard/offer-bookings" element={<OfferBookings />} />
@@ -54,6 +54,13 @@ const AppRoutes = () => {
       <Route path="/Clients" element={<ClientsPage />} />
       <Route path="/dashboard/serviceRequests" element={<ServiceRequests />} />
       <Route path="/dashboard/bookings/:id/view" element={<BookingView />} />
+
+      {/* Reels Routes */}
+      <Route path="/dashboard/reels" element={<ReelsManagement />} />
+      <Route path="/dashboard/reels/create" element={<CreateReel />} />
+      {/* <Route path="/dashboard/reels/:id/edit" element={<EditReel />} />
+      <Route path="/dashboard/reels/:id/analytics" element={<ReelAnalytics />} /> */}
+
       <Route path="*" element={<Page404 />} />
     </Routes>
   )
