@@ -15,6 +15,7 @@ import {
 import { toast } from 'react-hot-toast';
 import merchantAuthService from '../../services/merchantAuthService';
 import merchantReelService from '../../services/merchantReelService';
+import { fetchServices } from '../../services/api_service';
 
 const CreateReel = () => {
     const [formData, setFormData] = useState({
@@ -57,46 +58,29 @@ const CreateReel = () => {
 
             console.log('🔍 Loading services for reels...');
 
-            // Use the same API endpoint pattern as EnhancedOfferForm
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/merchant/services`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'User-Type': 'merchant',
-                    'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
-                }
-            });
+            // Use the fetchServices function from api_service which handles multiple endpoints
+            const response = await fetchServices();
 
-            console.log('📡 Services response status:', response.status);
+            console.log('📋 Services response:', response);
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('📋 Services response data:', data);
+            // Handle the response structure from fetchServices
+            const servicesList = response?.services || [];
 
-                // Handle different response structures
-                const servicesList = data?.services || data?.data?.services || data?.data || [];
+            console.log('✅ Available services:', servicesList.length);
 
-                console.log('✅ Available services:', servicesList.length);
-
-                if (servicesList.length === 0) {
-                    toast.error('No services available. Please create services first before adding reels.');
-                } else {
-                    setServices(servicesList);
-                    toast.success(`${servicesList.length} services loaded`);
-                }
+            if (servicesList.length === 0) {
+                toast.error('No services available. Please create services first before adding reels.');
             } else {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('❌ Failed to load services:', response.status, errorData);
-                toast.error(errorData.message || 'Failed to load services');
+                setServices(servicesList);
+                toast.success(`${servicesList.length} services loaded`);
             }
         } catch (error) {
             console.error('💥 Error loading services:', error);
-            toast.error('Failed to load services. Please try again.');
+            toast.error(error.message || 'Failed to load services. Please try again.');
         } finally {
             setLoading(false);
         }
     };
-
     const handleVideoSelect = (e) => {
         const file = e.target.files[0];
         if (!file) return;
