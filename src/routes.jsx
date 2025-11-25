@@ -26,8 +26,8 @@ import BookingView from './pages/bookings/BookingView';
 // Reels Management
 import ReelsManagement from './pages/reels/ReelsManagement';
 import CreateReel from './pages/reels/CreateReel';
-// import ReelAnalytics from './pages/reels/ReelAnalytics';
-// import EditReel from './pages/reels/EditReel';
+import ReelAnalytics from './pages/reels/ReelAnalytics';
+import EditReel from './pages/reels/EditReel';
 
 const AppRoutes = () => {
   return (
@@ -58,8 +58,8 @@ const AppRoutes = () => {
       {/* Reels Routes */}
       <Route path="/dashboard/reels" element={<ReelsManagement />} />
       <Route path="/dashboard/reels/create" element={<CreateReel />} />
-      {/* <Route path="/dashboard/reels/:id/edit" element={<EditReel />} />
-      <Route path="/dashboard/reels/:id/analytics" element={<ReelAnalytics />} /> */}
+      <Route path="/dashboard/reels/:reelId/edit" element={<EditReel />} />
+      <Route path="/dashboard/reels/:reelId/analytics" element={<ReelAnalytics />} />
 
       <Route path="*" element={<Page404 />} />
     </Routes>

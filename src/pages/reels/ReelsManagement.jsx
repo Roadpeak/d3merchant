@@ -37,6 +37,8 @@ const ReelsManagement = () => {
         engagement: 0
     });
     const [activeTab, setActiveTab] = useState('all'); // all, published, draft, pending
+    const [selectedReel, setSelectedReel] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -179,22 +181,94 @@ const ReelsManagement = () => {
         ? reels
         : reels.filter(reel => reel.status === activeTab);
 
+    const handlePlayReel = (reel) => {
+        setSelectedReel(reel);
+        setIsPlaying(true);
+    };
+
+    const handleClosePlayer = () => {
+        setSelectedReel(null);
+        setIsPlaying(false);
+    };
+
     const StatCard = ({ icon: Icon, label, value, color, change }) => (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
-                    <Icon className="text-white" size={24} />
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg ${color} flex items-center justify-center`}>
+                    <Icon className="text-white" size={20} />
                 </div>
                 {change && (
-                    <span className={`text-sm font-medium ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-xs sm:text-sm font-medium ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {change >= 0 ? '+' : ''}{change}%
                     </span>
                 )}
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{value}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">{value}</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{label}</p>
         </div>
     );
+
+    const VideoPlayerModal = () => {
+        if (!selectedReel) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 dark:bg-black/95 p-4 sm:p-6">
+                {/* Close button */}
+                <button
+                    onClick={handleClosePlayer}
+                    className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                >
+                    <XCircle size={24} />
+                </button>
+
+                {/* Video container */}
+                <div className="relative w-full max-w-md mx-auto">
+                    <div className="relative aspect-[9/16] bg-black rounded-2xl overflow-hidden shadow-2xl">
+                        {selectedReel.video_url ? (
+                            <video
+                                src={selectedReel.video_url}
+                                className="w-full h-full object-contain"
+                                controls
+                                autoPlay
+                                playsInline
+                                onError={(e) => {
+                                    console.error('Video error:', e);
+                                    toast.error('Error loading video');
+                                }}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-white p-6">
+                                <Video size={48} className="mb-4 opacity-50" />
+                                <p className="text-center">Video not available</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Reel info */}
+                    <div className="mt-4 text-white">
+                        <h3 className="font-semibold text-lg mb-2">{selectedReel.title}</h3>
+                        <p className="text-sm text-gray-300 mb-4">{selectedReel.description || selectedReel.caption}</p>
+
+                        {/* Stats */}
+                        <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                                <Eye size={16} />
+                                <span>{selectedReel.views_count || selectedReel.views || 0} views</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Heart size={16} />
+                                <span>{selectedReel.likes_count || selectedReel.likes || 0} likes</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <MessageCircle size={16} />
+                                <span>{selectedReel.chats_count || selectedReel.chats || 0} comments</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     if (loading) {
         return (
@@ -261,8 +335,8 @@ const ReelsManagement = () => {
 
                 {/* Tabs */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <div className="border-b border-gray-200 dark:border-gray-700 px-6">
-                        <nav className="flex gap-6 -mb-px">
+                    <div className="border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 overflow-x-auto">
+                        <nav className="flex gap-4 sm:gap-6 -mb-px min-w-max">
                             {[
                                 { id: 'all', label: 'All', count: reels.length },
                                 { id: 'published', label: 'Published', count: reels.filter(r => r.status === 'published').length },
@@ -272,7 +346,7 @@ const ReelsManagement = () => {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                                    className={`py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
                                         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                                         }`}
@@ -289,12 +363,12 @@ const ReelsManagement = () => {
                     </div>
 
                     {/* Reels List */}
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                         {filteredReels.length === 0 ? (
-                            <div className="text-center py-12">
+                            <div className="text-center py-12 px-4">
                                 <Video className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No reels yet</h3>
-                                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                                <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">No reels yet</h3>
+                                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6">
                                     {activeTab === 'all'
                                         ? 'Get started by creating your first reel'
                                         : `No ${activeTab} reels found`
@@ -303,7 +377,7 @@ const ReelsManagement = () => {
                                 {activeTab === 'all' && (
                                     <button
                                         onClick={() => navigate('/dashboard/reels/create')}
-                                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white text-sm sm:text-base rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                         <Upload size={18} />
                                         Upload Your First Reel
@@ -311,14 +385,17 @@ const ReelsManagement = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                                 {filteredReels.map((reel) => (
                                     <div
                                         key={reel.id}
                                         className="bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all group"
                                     >
                                         {/* Thumbnail */}
-                                        <div className="relative aspect-[9/16] bg-gray-200 dark:bg-gray-800">
+                                        <div
+                                            className="relative aspect-[9/16] bg-gray-200 dark:bg-gray-800 cursor-pointer"
+                                            onClick={() => handlePlayReel(reel)}
+                                        >
                                             {reel.thumbnail_url || reel.thumbnail ? (
                                                 <img
                                                     src={reel.thumbnail_url || reel.thumbnail}
@@ -335,12 +412,14 @@ const ReelsManagement = () => {
                                                 </div>
                                             )}
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                <Play className="text-white" size={48} />
+                                                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                    <Play className="text-white fill-white ml-1" size={32} />
+                                                </div>
                                             </div>
                                             <div className="absolute top-2 left-2">
                                                 {getStatusBadge(reel.status)}
                                             </div>
-                                            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded text-white text-xs">
+                                            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded text-white text-xs font-medium">
                                                 {formatDuration(reel.duration)}
                                             </div>
                                         </div>
@@ -381,10 +460,10 @@ const ReelsManagement = () => {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => navigate(`/dashboard/reels/${reel.id}/analytics`)}
-                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                    className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                                                 >
                                                     <BarChart3 size={16} />
-                                                    <span className="text-sm font-medium">Analytics</span>
+                                                    <span className="text-xs sm:text-sm font-medium">Analytics</span>
                                                 </button>
                                                 <button
                                                     onClick={() => navigate(`/dashboard/reels/${reel.id}/edit`)}
@@ -408,6 +487,9 @@ const ReelsManagement = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Video Player Modal */}
+                <VideoPlayerModal />
             </div>
         </Layout>
     );
