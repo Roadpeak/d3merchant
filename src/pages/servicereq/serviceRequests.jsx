@@ -77,21 +77,27 @@ const AlertCircle = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
+const Phone = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+  </svg>
+);
+
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 dark:border-red-400"></div>
   </div>
 );
 
 const InfoBox = ({ type, message, onClose }) => (
-  <div className={`border rounded-lg p-4 mb-6 ${type === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
-      type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-        'bg-blue-50 border-blue-200 text-blue-700'
+  <div className={`border rounded-lg p-4 mb-6 ${type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' :
+      type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300' :
+        'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300'
     }`}>
     <div className="flex justify-between items-start">
       <p>{message}</p>
       {onClose && (
-        <button onClick={onClose} className="ml-4 text-gray-500 hover:text-gray-700">
+        <button onClick={onClose} className="ml-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
           ×
         </button>
       )}
@@ -579,27 +585,27 @@ export default function MerchantServiceRequestDashboard() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
-        <div className="bg-white shadow-sm border-b">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+          <div className="container mx-auto px-4 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Merchant Dashboard</h1>
-                <p className="text-gray-600">Manage service requests and offers for your stores</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Merchant Dashboard</h1>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Manage service requests and offers for your stores</p>
 
                 {currentMerchant && (
-                  <div className="mt-2 text-sm text-gray-500">
+                  <div className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     Welcome, {currentMerchant.first_name} {currentMerchant.last_name} ({currentMerchant.email_address})
                   </div>
                 )}
               </div>
               <div className="flex items-center space-x-4">
                 {merchantStores.length > 0 && (
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     <Store className="w-4 h-4" />
                     <span>{merchantStores.length} store{merchantStores.length !== 1 ? 's' : ''}</span>
-                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
                       {[...new Set(merchantStores.map(s => s.category))].join(', ')}
                     </span>
                   </div>
@@ -611,55 +617,55 @@ export default function MerchantServiceRequestDashboard() {
 
         {/* Dashboard Stats */}
         <div className="container mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <MessageSquare className="h-8 w-8 text-blue-600" />
+                  <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Available Requests</p>
-                  <p className="text-2xl font-bold text-gray-900">{serviceRequests.length}</p>
-                  <p className="text-xs text-gray-500">Matching your store categories</p>
+                <div className="ml-3 sm:ml-4">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Available Requests</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{serviceRequests.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">Matching your store categories</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <AlertCircle className="h-8 w-8 text-yellow-600" />
+                  <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 dark:text-yellow-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Your Store Offers</p>
-                  <p className="text-2xl font-bold text-gray-900">{merchantOffers.length}</p>
-                  <p className="text-xs text-gray-500">Total sent</p>
+                <div className="ml-3 sm:ml-4">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Your Store Offers</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{merchantOffers.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">Total sent</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardStats.acceptanceRate || 0}%</p>
-                  <p className="text-xs text-gray-500">Offer acceptance</p>
+                <div className="ml-3 sm:ml-4">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{dashboardStats.acceptanceRate || 0}%</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">Offer acceptance</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <TrendingUp className="h-8 w-8 text-red-600" />
+                  <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                  <p className="text-2xl font-bold text-gray-900">KSH {dashboardStats.totalEarnings?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-gray-500">From completed services</p>
+                <div className="ml-3 sm:ml-4">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Total Earnings</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">KSH {dashboardStats.totalEarnings?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">From completed services</p>
                 </div>
               </div>
             </div>
@@ -667,14 +673,14 @@ export default function MerchantServiceRequestDashboard() {
 
           {/* Store Categories Info */}
           {merchantStores.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
               <div className="flex items-center space-x-2">
-                <Store className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-900">
+                <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-blue-900 dark:text-blue-300">
                   Your Store Categories: {[...new Set(merchantStores.map(s => s.category))].join(', ')}
                 </span>
               </div>
-              <p className="text-sm text-blue-700 mt-1">
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                 Only showing service requests that match your store categories. Total requests: {pagination.totalCount}
               </p>
             </div>
@@ -690,16 +696,16 @@ export default function MerchantServiceRequestDashboard() {
 
           {/* Tabs */}
           <div className="flex justify-between items-center mb-6">
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleTabChange('requests')}
-                className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'requests' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
+                className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-colors ${activeTab === 'requests' ? 'bg-red-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600'}`}
               >
                 Available Requests ({serviceRequests.length})
               </button>
               <button
                 onClick={() => handleTabChange('offers')}
-                className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'offers' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 border'}`}
+                className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition-colors ${activeTab === 'offers' ? 'bg-red-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600'}`}
               >
                 My Store Offers ({merchantOffers.length})
               </button>
@@ -708,17 +714,17 @@ export default function MerchantServiceRequestDashboard() {
 
           {/* Filter Bar */}
           {activeTab === 'requests' && (
-            <div className="bg-white rounded-lg p-4 mb-6">
-              <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 sm:gap-4">
                 <div className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium">Filters:</span>
+                  <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Filters:</span>
                 </div>
 
                 <select
                   value={filters.budget}
                   onChange={(e) => handleFilterChange('budget', e.target.value)}
-                  className="border border-gray-200 rounded px-3 py-1 text-sm"
+                  className="w-full sm:w-auto border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                 >
                   <option value="0-1000">KSH 0 - 1000</option>
                   <option value="1000-10000">KSH 1000 - 10000</option>
@@ -729,7 +735,7 @@ export default function MerchantServiceRequestDashboard() {
                 <select
                   value={filters.timeline}
                   onChange={(e) => handleFilterChange('timeline', e.target.value)}
-                  className="border border-gray-200 rounded px-3 py-1 text-sm"
+                  className="w-full sm:w-auto border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                 >
                   <option value="all">All Timelines</option>
                   <option value="urgent">ASAP/Urgent</option>
@@ -744,7 +750,7 @@ export default function MerchantServiceRequestDashboard() {
                   placeholder="Filter by location..."
                   value={filters.location}
                   onChange={(e) => handleFilterChange('location', e.target.value)}
-                  className="border border-gray-200 rounded px-3 py-1 text-sm w-48"
+                  className="w-full sm:w-48 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                 />
               </div>
             </div>
@@ -752,11 +758,11 @@ export default function MerchantServiceRequestDashboard() {
 
           {/* Content based on active tab */}
           {activeTab === 'requests' && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {serviceRequests.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-xl mb-4">No service requests available</div>
-                  <p className="text-gray-600 mb-6">
+                  <div className="text-gray-400 dark:text-gray-500 text-lg sm:text-xl mb-4">No service requests available</div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">
                     {merchantStores.length === 0
                       ? 'Create stores first to start receiving service requests that match your business categories.'
                       : 'Check back later for new service requests matching your store categories.'
@@ -768,42 +774,42 @@ export default function MerchantServiceRequestDashboard() {
                   {serviceRequests.map((request) => {
                     const eligibleStores = getEligibleStores(request.category);
                     return (
-                      <div key={request.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-                        <div className="p-6">
+                      <div key={request.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                        <div className="p-4 sm:p-6">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <h3 className="text-xl font-semibold">{request.title}</h3>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                                    request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                      'bg-green-100 text-green-800'
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">{request.title}</h3>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.priority === 'urgent' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                                    request.priority === 'high' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300' :
+                                      'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                                   }`}>
                                   {request.priority}
                                 </span>
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                                   {request.status.toUpperCase()}
                                 </span>
                                 {request.verified && (
-                                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                  <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full">
                                     ✓ Verified User
                                   </span>
                                 )}
                                 {request.merchantOffered && (
-                                  <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                                  <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs px-2 py-1 rounded-full">
                                     Store Already Offered
                                   </span>
                                 )}
                               </div>
-                              <p className="text-gray-600 mb-3">{request.description}</p>
+                              <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm sm:text-base">{request.description}</p>
 
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-3">
+                              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3">
                                 <div className="flex items-center space-x-1">
                                   <MapPin className="w-4 h-4" />
                                   <span>{request.location}</span>
                                 </div>
                                 <div className="flex items-center space-x-1">
                                   <DollarSign className="w-4 h-4" />
-                                  <span className="font-medium text-green-600">{request.budget}</span>
+                                  <span className="font-medium text-green-600 dark:text-green-400">{request.budget}</span>
                                 </div>
                                 <div className="flex items-center space-x-1">
                                   <Clock className="w-4 h-4" />
@@ -815,23 +821,23 @@ export default function MerchantServiceRequestDashboard() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <span className="text-sm text-gray-500">{request.postedTime}</span>
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                                  <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{request.postedTime}</span>
                                   <div className="flex items-center space-x-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-red-600">
+                                    <MessageSquare className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                    <span className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400">
                                       {request.offers} offer{request.offers !== 1 ? 's' : ''} received
                                     </span>
                                   </div>
-                                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                                  <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
                                     {request.category}
                                   </span>
                                 </div>
 
-                                <div className="flex space-x-2">
+                                <div className="flex flex-wrap gap-2">
                                   <button
-                                    className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 font-medium"
+                                    className="px-3 sm:px-4 py-2 border border-red-500 dark:border-red-400 text-red-500 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 font-medium text-sm transition-colors"
                                     onClick={() => {
                                       alert('View Details functionality would show full request details');
                                     }}
@@ -849,14 +855,14 @@ export default function MerchantServiceRequestDashboard() {
                                         }));
                                         setShowOfferForm(true);
                                       }}
-                                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+                                      className="px-3 sm:px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium text-sm transition-colors"
                                       disabled={request.status !== 'open'}
                                     >
                                       Send Store Offer
                                     </button>
                                   )}
                                   {eligibleStores.length === 0 && (
-                                    <span className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
+                                    <span className="px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg text-sm">
                                       No eligible stores
                                     </span>
                                   )}
@@ -866,10 +872,10 @@ export default function MerchantServiceRequestDashboard() {
                           </div>
 
                           {request.requirements && request.requirements.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-                              <span className="text-sm text-gray-600 mr-2">Requirements:</span>
+                            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mr-2">Requirements:</span>
                               {request.requirements.map((req, index) => (
-                                <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
                                   {req}
                                 </span>
                               ))}
@@ -878,11 +884,11 @@ export default function MerchantServiceRequestDashboard() {
 
                           {/* ✅ NEW: Show eligible stores for this request */}
                           {eligibleStores.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-100">
-                              <span className="text-sm text-gray-600 mr-2">Your eligible stores:</span>
+                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mr-2">Your eligible stores:</span>
                               <div className="flex flex-wrap gap-2 mt-1">
                                 {eligibleStores.map((store) => (
-                                  <span key={store.id} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                  <span key={store.id} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded-full">
                                     🏪 {store.name}
                                   </span>
                                 ))}
@@ -896,21 +902,21 @@ export default function MerchantServiceRequestDashboard() {
 
                   {/* Pagination */}
                   {pagination.totalPages > 1 && (
-                    <div className="flex justify-center items-center space-x-4 mt-8">
+                    <div className="flex justify-center items-center space-x-4 mt-6 sm:mt-8">
                       <button
                         onClick={() => handlePageChange(pagination.currentPage - 1)}
                         disabled={!pagination.hasPrev}
-                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors"
                       >
                         Previous
                       </button>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         Page {pagination.currentPage} of {pagination.totalPages}
                       </span>
                       <button
                         onClick={() => handlePageChange(pagination.currentPage + 1)}
                         disabled={!pagination.hasNext}
-                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-sm transition-colors"
                       >
                         Next
                       </button>
@@ -923,33 +929,33 @@ export default function MerchantServiceRequestDashboard() {
 
           {/* My Store Offers Tab */}
           {activeTab === 'offers' && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {merchantOffers.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-xl mb-4">No store offers yet</div>
-                  <p className="text-gray-600 mb-6">Your store offers will appear here once you start submitting them.</p>
+                  <div className="text-gray-400 dark:text-gray-500 text-lg sm:text-xl mb-4">No store offers yet</div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">Your store offers will appear here once you start submitting them.</p>
                   <button
                     onClick={() => handleTabChange('requests')}
-                    className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 font-medium"
+                    className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 font-medium transition-colors"
                   >
                     Browse Requests
                   </button>
                 </div>
               ) : (
                 merchantOffers.map((offer) => (
-                  <div key={offer.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-                    <div className="p-6">
+                  <div key={offer.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <div className="p-4 sm:p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="text-lg font-semibold">{offer.requestTitle}</h3>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{offer.requestTitle}</h3>
                             {getStatusBadge(offer.status)}
-                            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
                               {offer.requestCategory}
                             </span>
                           </div>
 
-                          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3">
                             <div className="flex items-center space-x-1">
                               <Store className="w-4 h-4" />
                               <span className="font-medium">🏪 {offer.storeName}</span>
@@ -964,39 +970,39 @@ export default function MerchantServiceRequestDashboard() {
                             </div>
                           </div>
 
-                          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                            <div className="flex justify-between items-start mb-2">
+                          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
                               <div>
-                                <span className="text-sm text-gray-600">Store Quote:</span>
-                                <p className="text-2xl font-bold text-green-600">KSH {offer.quotedPrice}</p>
+                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Store Quote:</span>
+                                <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">KSH {offer.quotedPrice}</p>
                               </div>
-                              <div className="text-right">
-                                <span className="text-sm text-gray-600">Customer Budget:</span>
-                                <p className="text-sm font-medium text-gray-700">{offer.requestBudget}</p>
+                              <div className="sm:text-right">
+                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Customer Budget:</span>
+                                <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{offer.requestBudget}</p>
                               </div>
                             </div>
                             <div className="mb-2">
-                              <span className="text-sm text-gray-600">Availability:</span>
-                              <p className="text-sm font-medium text-gray-700">{offer.availability}</p>
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Availability:</span>
+                              <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{offer.availability}</p>
                             </div>
                             <div>
-                              <span className="text-sm text-gray-600">Store Message:</span>
-                              <p className="text-gray-700 italic">"{offer.message}"</p>
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Store Message:</span>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{offer.message}"</p>
                             </div>
                           </div>
 
-                          <div className="flex justify-between items-center">
-                            <div className="text-sm text-gray-500">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                               Submitted {offer.submittedAt}
                             </div>
                             <div className="flex space-x-2">
                               {offer.status === 'accepted' && (
-                                <button 
+                                <button
                                   onClick={() => handleContactCustomer(offer)}
-                                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2"
+                                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2 transition-colors text-sm"
                                 >
-                                  <MessageSquare className="w-4 h-4" />
-                                  Contact Customer
+                                  <Phone className="w-4 h-4" />
+                                  Call Customer
                                 </button>
                               )}
                             </div>
@@ -1013,30 +1019,30 @@ export default function MerchantServiceRequestDashboard() {
 
         {/* ✅ ENHANCED: Store-Based Offer Form Modal */}
         {showOfferForm && selectedRequest && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b">
+          <div className="fixed inset-0 bg-black/70 dark:bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Send Store Offer</h2>
-                  <button onClick={() => setShowOfferForm(false)} className="text-gray-500 hover:text-gray-700 text-2xl">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Send Store Offer</h2>
+                  <button onClick={() => setShowOfferForm(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl">
                     ×
                   </button>
                 </div>
-                <div className="mt-2">
-                  <p className="text-gray-600">Store offer for: <span className="font-medium">{selectedRequest.title}</span></p>
-                  <p className="text-sm text-gray-500">Customer Budget: <span className="font-medium text-green-600">{selectedRequest.budget}</span></p>
-                  <p className="text-sm text-blue-600">Category: <span className="font-medium">{selectedRequest.category}</span></p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Store offer for: <span className="font-medium text-gray-900 dark:text-white">{selectedRequest.title}</span></p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Customer Budget: <span className="font-medium text-green-600 dark:text-green-400">{selectedRequest.budget}</span></p>
+                  <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">Category: <span className="font-medium">{selectedRequest.category}</span></p>
                 </div>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* ✅ FIXED: Store Selection - Only show stores that match request category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Store *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Store *</label>
                   <select
                     value={offerForm.storeId}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, storeId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                     required
                   >
                     <option value="">Choose a store...</option>
@@ -1047,16 +1053,16 @@ export default function MerchantServiceRequestDashboard() {
                     ))}
                   </select>
                   {getEligibleStores(selectedRequest.category).length === 0 && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 mt-1">
                       No stores available for "{selectedRequest.category}" category. Create a store in this category first.
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quoted Price * (USD)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quoted Price * (USD)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-2 text-gray-500 dark:text-gray-400">$</span>
                     <input
                       type="number"
                       step="0.01"
@@ -1064,16 +1070,16 @@ export default function MerchantServiceRequestDashboard() {
                       value={offerForm.quotedPrice}
                       onChange={(e) => setOfferForm(prev => ({ ...prev, quotedPrice: e.target.value }))}
                       placeholder="Enter your store's price quote"
-                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                       required
                     />
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Customer budget: {selectedRequest.budget}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Customer budget: {selectedRequest.budget}</span>
                     {offerForm.quotedPrice && (
                       <span className={`font-medium ${isPriceInBudget(offerForm.quotedPrice, selectedRequest)
-                          ? 'text-green-600'
-                          : 'text-orange-600'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-orange-600 dark:text-orange-400'
                         }`}>
                         {isPriceInBudget(offerForm.quotedPrice, selectedRequest)
                           ? '✓ Within budget'
@@ -1085,46 +1091,46 @@ export default function MerchantServiceRequestDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Store Message * (Pitch your store's services)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Store Message * (Pitch your store's services)</label>
                   <textarea
                     rows="4"
                     value={offerForm.message}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, message: e.target.value }))}
                     placeholder="Describe your store's offer, experience, and why your store is the best choice for this job. Mention your store's qualifications, past work, and what makes your store stand out..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                     required
                     minLength="10"
                     maxLength="1000"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {offerForm.message.length}/1000 characters (minimum 10 required)
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Availability *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Availability *</label>
                   <input
                     type="text"
                     value={offerForm.availability}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, availability: e.target.value }))}
                     placeholder="When can your store start? (e.g., Tomorrow at 2 PM, This weekend, Next Monday)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                     required
                     maxLength="200"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Customer timeline: {getTimelineLabel(selectedRequest.timeline)}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Duration</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estimated Duration</label>
                   <input
                     type="text"
                     value={offerForm.estimatedDuration}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, estimatedDuration: e.target.value }))}
                     placeholder="How long will the service take? (e.g., 2-3 hours, Half day, 2 days)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
                   />
                 </div>
 
@@ -1134,34 +1140,34 @@ export default function MerchantServiceRequestDashboard() {
                     id="includesSupplies"
                     checked={offerForm.includesSupplies}
                     onChange={(e) => setOfferForm(prev => ({ ...prev, includesSupplies: e.target.checked }))}
-                    className="mr-2"
+                    className="mr-2 w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-red-500 dark:focus:ring-red-400"
                   />
-                  <label htmlFor="includesSupplies" className="text-sm text-gray-700">
+                  <label htmlFor="includesSupplies" className="text-sm text-gray-700 dark:text-gray-300">
                     Price includes all supplies and materials needed
                   </label>
                 </div>
 
                 {selectedRequest.requirements && selectedRequest.requirements.length > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-blue-900 mb-2">Customer Requirements:</h4>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">Customer Requirements:</h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedRequest.requirements.map((req, index) => (
-                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                        <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
                           {req}
                         </span>
                       ))}
                     </div>
-                    <p className="text-xs text-blue-600 mt-2">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                       Make sure your store meets these requirements before submitting the offer.
                     </p>
                   </div>
                 )}
 
-                <div className="flex justify-end space-x-4 pt-4 border-t">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => setShowOfferForm(false)}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    className="w-full sm:w-auto px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     disabled={submitting}
                   >
                     Cancel
@@ -1169,7 +1175,7 @@ export default function MerchantServiceRequestDashboard() {
                   <button
                     type="button"
                     onClick={handleOfferFormSubmit}
-                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium"
+                    className="w-full sm:w-auto px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-medium transition-colors"
                     disabled={submitting || !offerForm.storeId || !offerForm.quotedPrice || !offerForm.message || !offerForm.availability || getEligibleStores(selectedRequest.category).length === 0}
                   >
                     {submitting ? 'Sending Store Offer...' : 'Send Store Offer'}
