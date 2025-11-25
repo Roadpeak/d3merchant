@@ -95,31 +95,42 @@ const OfferBookings = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
+        console.log('Starting to load offer bookings...');
         const response = await getMerchantOfferBookings({
           limit: 100,
           status: ''
         });
-        
+
         console.log('Offer bookings response:', response);
-        
-        if (response.success) {
-          const offerBookings = response.bookings || [];
+
+        if (response && response.success) {
+          const offerBookings = Array.isArray(response.bookings) ? response.bookings : [];
+          console.log('Loaded offer bookings:', offerBookings.length);
           setBookings(offerBookings);
           setFilteredBookings(offerBookings);
         } else {
-          throw new Error(response.message || 'Failed to load offer bookings');
+          console.warn('Invalid response format or unsuccessful:', response);
+          // Don't throw error, just set empty bookings
+          setBookings([]);
+          setFilteredBookings([]);
         }
       } catch (error) {
         console.error('Error loading offer bookings:', error);
-        setError(error.message);
+        setError(error?.message || 'Unknown error occurred');
+        setBookings([]);
+        setFilteredBookings([]);
         toast.error("Failed to fetch offer bookings");
       } finally {
         setLoading(false);
       }
     };
 
-    loadBookings();
+    loadBookings().catch(err => {
+      console.error('Unhandled error in loadBookings:', err);
+      setLoading(false);
+      setError(err?.message || 'Failed to load');
+    });
   }, []);
 
   const handleRefresh = async () => {
