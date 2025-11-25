@@ -292,68 +292,68 @@ const OfferBookings = () => {
     const PaymentIcon = paymentStatus.icon;
 
     return (
-      <div className="bg-white rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 hover:shadow-lg transition-all duration-200 overflow-hidden">
         {/* Card Header */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 px-4 py-3 border-b border-gray-100">
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-10 h-10 rounded-full bg-green-600 dark:bg-green-700 flex items-center justify-center text-white font-semibold text-sm">
                 {getInitials(booking.User?.firstName, booking.User?.lastName)}
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 text-sm">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
                   {booking.User?.firstName || "Unknown"} {booking.User?.lastName || "User"}
                 </h3>
-                <p className="text-xs text-gray-500">ID: {String(booking.id).padStart(6, '0')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">ID: {String(booking.id).padStart(6, '0')}</p>
               </div>
             </div>
             <div className="relative">
               <button
                 onClick={() => setDropdownOpen(dropdownOpen === booking.id ? null : booking.id)}
-                className="p-2 hover:bg-white rounded-lg transition-colors"
+                className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <MoreVertical className="w-4 h-4 text-gray-600" />
+                <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
-              
+
               {dropdownOpen === booking.id && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setDropdownOpen(null)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg z-20 border border-gray-100 py-2">
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg z-20 border border-gray-100 dark:border-gray-700 py-2">
                     <button
                       onClick={() => {
                         navigate(`/dashboard/bookings/${booking.id}/view`);
                         setDropdownOpen(null);
                       }}
-                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 w-full text-left transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full text-left transition-colors"
                     >
                       <Eye className="w-4 h-4 mr-3" />
                       View Details
                     </button>
-                    
+
                     {booking.status === 'Confirmed' && (
                       <button
                         onClick={() => {
                           console.log('Check-in for booking:', booking.id);
                           setDropdownOpen(null);
                         }}
-                        className="flex items-center px-4 py-2.5 text-sm text-green-700 hover:bg-green-50 w-full text-left transition-colors"
+                        className="flex items-center px-4 py-2.5 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 w-full text-left transition-colors"
                       >
                         <CheckCircle className="w-4 h-4 mr-3" />
                         Check-in Client
                       </button>
                     )}
-                    
-                    <div className="border-t border-gray-100 my-1" />
-                    
+
+                    <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+
                     <button
                       onClick={() => {
                         console.log('Edit booking:', booking.id);
                         setDropdownOpen(null);
                       }}
-                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 w-full text-left transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full text-left transition-colors"
                     >
                       <Edit className="w-4 h-4 mr-3" />
                       Edit Booking
@@ -368,16 +368,16 @@ const OfferBookings = () => {
         {/* Card Body */}
         <div className="p-4 space-y-3">
           {/* Offer Info */}
-          <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-100 dark:border-green-800">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center mb-1">
-                  <Tag className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
-                  <span className="text-sm font-semibold text-gray-900">
+                  <Tag className="w-4 h-4 text-green-600 dark:text-green-400 mr-2 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
                     {booking.Offer?.title || booking.Offer?.Service?.name || booking.offer || "Special Offer"}
                   </span>
                 </div>
-                <p className="text-xs text-green-700 font-medium">
+                <p className="text-xs text-green-700 dark:text-green-400 font-medium">
                   {booking.Offer?.description || "Special Promotion"}
                 </p>
               </div>
@@ -385,16 +385,16 @@ const OfferBookings = () => {
           </div>
 
           {/* Date & Time */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
             <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-900">
+              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
                 {moment(booking.startTime).format("MMM DD, YYYY")}
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">
+              <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 {moment(booking.startTime).format("hh:mm A")}
               </span>
             </div>
@@ -404,39 +404,39 @@ const OfferBookings = () => {
           <div className="space-y-2">
             {booking.User?.email && (
               <div className="flex items-center text-sm">
-                <Mail className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
-                <span className="text-gray-600 truncate">{booking.User.email}</span>
+                <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2 flex-shrink-0" />
+                <span className="text-gray-600 dark:text-gray-400 truncate">{booking.User.email}</span>
               </div>
             )}
             {booking.User?.phone && (
               <div className="flex items-center text-sm">
-                <Phone className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
-                <span className="text-gray-600">{booking.User.phone}</span>
+                <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2 flex-shrink-0" />
+                <span className="text-gray-600 dark:text-gray-400">{booking.User.phone}</span>
               </div>
             )}
           </div>
 
           {/* Location & Staff */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-100">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 border border-blue-100 dark:border-blue-800">
               <div className="flex items-start">
-                <MapPin className="w-4 h-4 text-blue-600 mr-1.5 flex-shrink-0 mt-0.5" />
+                <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">
+                  <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
                     {booking.store?.name || "N/A"}
                   </p>
-                  <p className="text-xs text-gray-500">Location</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Location</p>
                 </div>
               </div>
             </div>
-            <div className="bg-purple-50 rounded-lg p-2.5 border border-purple-100">
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2.5 border border-purple-100 dark:border-purple-800">
               <div className="flex items-start">
-                <User className="w-4 h-4 text-purple-600 mr-1.5 flex-shrink-0 mt-0.5" />
+                <User className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-1.5 flex-shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">
+                  <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
                     {booking.staff?.name || "N/A"}
                   </p>
-                  <p className="text-xs text-gray-500">Staff</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Staff</p>
                 </div>
               </div>
             </div>
@@ -444,7 +444,7 @@ const OfferBookings = () => {
         </div>
 
         {/* Card Footer */}
-        <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${getStatusColor(booking.status)}`}>
               {booking.status || "Pending"}
@@ -460,17 +460,17 @@ const OfferBookings = () => {
   };
 
   const CreateOfferBookingModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <DollarSign className="w-6 h-6 mr-2 text-green-600" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+              <DollarSign className="w-6 h-6 mr-2 text-green-600 dark:text-green-500" />
               Create New Offer Booking
             </h2>
             <button
               onClick={() => setShowCreateModal(false)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <X className="w-6 h-6" />
             </button>
@@ -479,61 +479,61 @@ const OfferBookings = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Offer/Promotion */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Offer/Promotion
               </label>
               <input
                 type="text"
                 value={newBooking.offer}
                 onChange={(e) => setNewBooking({...newBooking, offer: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Select or search offer"
               />
             </div>
 
             {/* Client Information */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Client Name *
               </label>
               <input
                 type="text"
                 value={newBooking.clientName}
                 onChange={(e) => setNewBooking({...newBooking, clientName: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Enter client full name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Client Email *
               </label>
               <input
                 type="email"
                 value={newBooking.clientEmail}
                 onChange={(e) => setNewBooking({...newBooking, clientEmail: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="client@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Client Phone
               </label>
               <input
                 type="tel"
                 value={newBooking.clientPhone}
                 onChange={(e) => setNewBooking({...newBooking, clientPhone: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="0712345678"
               />
             </div>
 
             {/* Date and Time */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Date *
               </label>
               <input
@@ -541,18 +541,18 @@ const OfferBookings = () => {
                 value={newBooking.date}
                 onChange={(e) => setNewBooking({...newBooking, date: e.target.value})}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Time *
               </label>
               <select
                 value={newBooking.time}
                 onChange={(e) => setNewBooking({...newBooking, time: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Select time</option>
                 {timeSlots.map(time => (
@@ -563,7 +563,7 @@ const OfferBookings = () => {
 
             {/* Store Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Store Location *
               </label>
               <select
@@ -572,7 +572,7 @@ const OfferBookings = () => {
                   const selectedStore = stores.find(s => s.id === parseInt(e.target.value));
                   setNewBooking({...newBooking, store: selectedStore});
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Select store</option>
                 {stores.map(store => (
@@ -583,7 +583,7 @@ const OfferBookings = () => {
 
             {/* Staff Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Staff Member *
               </label>
               <select
@@ -592,7 +592,7 @@ const OfferBookings = () => {
                   const selectedStaff = staff.find(s => s.id === parseInt(e.target.value));
                   setNewBooking({...newBooking, staff: selectedStaff});
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Select staff member</option>
                 {staff.map(member => (
@@ -603,13 +603,13 @@ const OfferBookings = () => {
 
             {/* Payment Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Payment Status *
               </label>
               <select
                 value={newBooking.paymentStatus}
                 onChange={(e) => setNewBooking({...newBooking, paymentStatus: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 {paymentStatusOptions.map(option => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -620,14 +620,14 @@ const OfferBookings = () => {
             {/* Deposit Amount (conditional) */}
             {newBooking.paymentStatus === 'deposit' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Deposit Amount *
                 </label>
                 <input
                   type="number"
                   value={newBooking.depositAmount}
                   onChange={(e) => setNewBooking({...newBooking, depositAmount: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="0.00"
                   min="0"
                   step="0.01"
@@ -637,14 +637,14 @@ const OfferBookings = () => {
 
             {/* Notes */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Notes
               </label>
               <textarea
                 value={newBooking.notes}
                 onChange={(e) => setNewBooking({...newBooking, notes: e.target.value})}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Additional notes about the offer booking..."
               />
             </div>
@@ -653,7 +653,7 @@ const OfferBookings = () => {
           <div className="flex justify-end space-x-4 mt-8">
             <button
               onClick={() => setShowCreateModal(false)}
-              className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition duration-200"
+              className="px-6 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-200"
             >
               Cancel
             </button>
@@ -675,8 +675,8 @@ const OfferBookings = () => {
       <Layout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Loading offer bookings...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Loading offer bookings...</p>
           </div>
         </div>
       </Layout>
@@ -688,12 +688,12 @@ const OfferBookings = () => {
       <Layout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center max-w-md">
-            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="w-8 h-8 text-red-500" />
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors">
+              <AlertCircle className="w-8 h-8 text-red-500 dark:text-red-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">Error Loading Bookings</h3>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <button 
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Error Loading Bookings</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+            <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -713,61 +713,61 @@ const OfferBookings = () => {
     >
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 transition-colors">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-          <p className="text-xs text-gray-600">Total Bookings</p>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-blue-600">{stats.confirmed}</p>
-          <p className="text-xs text-gray-600">Confirmed</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Total Bookings</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 transition-colors">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-          <p className="text-xs text-gray-600">Pending</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.confirmed}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Confirmed</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 transition-colors">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-          <p className="text-xs text-gray-600">Completed</p>
+          <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Pending</p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 transition-colors">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
         </div>
       </div>
 
       {/* Search and Filter Section */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 mb-6 transition-colors">
         <div className="flex flex-col space-y-4">
           {/* Top Row: Search and Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
               />
             </div>
 
@@ -776,15 +776,15 @@ const OfferBookings = () => {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
               </button>
-              
+
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">New Booking</span>
@@ -797,7 +797,7 @@ const OfferBookings = () => {
             <select
               value={filters.store}
               onChange={(e) => setFilters(prev => ({ ...prev, store: e.target.value }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-colors"
             >
               <option value="">All Stores</option>
               {stores.map(store => (
@@ -808,7 +808,7 @@ const OfferBookings = () => {
             <select
               value={filters.staff}
               onChange={(e) => setFilters(prev => ({ ...prev, staff: e.target.value }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-colors"
             >
               <option value="">All Staff</option>
               {staff.map(member => (
@@ -819,7 +819,7 @@ const OfferBookings = () => {
             <select
               value={filters.status}
               onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-colors"
             >
               <option value="">All Status</option>
               <option value="Confirmed">Confirmed</option>
@@ -829,7 +829,7 @@ const OfferBookings = () => {
             </select>
 
             {/* Results Count */}
-            <div className="flex items-center px-3 py-2 text-sm text-gray-600 ml-auto">
+            <div className="flex items-center px-3 py-2 text-sm text-gray-600 dark:text-gray-400 ml-auto transition-colors">
               <span className="font-medium">{filteredBookings.length}</span>
               <span className="mx-1">of</span>
               <span className="font-medium">{bookings.length}</span>
@@ -847,14 +847,14 @@ const OfferBookings = () => {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 p-12">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-12 transition-colors">
           <div className="text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <DollarSign className="w-8 h-8 text-gray-400" />
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors">
+              <DollarSign className="w-8 h-8 text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">No Offer Bookings Found</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {searchTerm || Object.values(filters).some(f => f) 
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">No Offer Bookings Found</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              {searchTerm || Object.values(filters).some(f => f)
                 ? 'No offer bookings match your current search or filters. Try adjusting your criteria.'
                 : 'Get started by creating your first offer booking to manage promotional appointments.'
               }
