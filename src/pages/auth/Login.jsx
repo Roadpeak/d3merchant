@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -94,12 +95,12 @@ const MerchantLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-600 via-blue-700 to-blue-800 flex items-center justify-center p-4">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-4 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -top-4 -right-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-4 -left-4 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute -top-4 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-blue-900 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-6xl flex items-center justify-between">
@@ -107,39 +108,51 @@ const MerchantLoginPage = () => {
         <div className="hidden lg:flex flex-col w-1/2 pr-12">
           <div className="mb-8">
             <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
-                <Store className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mr-4 shadow-lg">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-white font-bold text-lg leading-none tracking-tight">D3</span>
+                  <svg
+                    className="w-6 h-2 text-yellow-400 mt-0.5"
+                    viewBox="0 0 24 8"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M2 2 Q 12 8, 22 2" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white">Discoun3</h1>
-                <p className="text-blue-200">Merchant Portal</p>
+                <p className="text-white/80">Merchant Portal</p>
               </div>
             </div>
-            
+
             <h2 className="text-4xl font-bold text-white mb-4">
               Grow Your Business with
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">
                 Discounted Services
               </span>
             </h2>
-            
-            <p className="text-xl text-blue-100 mb-8">
+
+            <p className="text-xl text-white/90 mb-8">
               Join thousands of merchants who are connecting with customers through our platform
             </p>
           </div>
 
           {/* Features */}
           <div className="space-y-4">
-            <div className="flex items-center text-blue-100">
-              <Shield className="w-5 h-5 text-blue-400 mr-3" />
+            <div className="flex items-center text-white/90">
+              <Shield className="w-5 h-5 text-yellow-400 mr-3" />
               <span>Secure Business Management</span>
             </div>
-            <div className="flex items-center text-blue-100">
-              <Zap className="w-5 h-5 text-purple-400 mr-3" />
+            <div className="flex items-center text-white/90">
+              <Zap className="w-5 h-5 text-yellow-400 mr-3" />
               <span>Real-time analytics & insights</span>
             </div>
-            <div className="flex items-center text-blue-100">
-              <Store className="w-5 h-5 text-pink-400 mr-3" />
+            <div className="flex items-center text-white/90">
+              <Store className="w-5 h-5 text-yellow-400 mr-3" />
               <span>Multi-location management</span>
             </div>
           </div>
@@ -150,23 +163,35 @@ const MerchantLoginPage = () => {
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
             <div className="text-center mb-8">
               <div className="lg:hidden flex items-center justify-center mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
-                  <Store className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mr-3 shadow-lg">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="text-white font-bold text-sm leading-none tracking-tight">D3</span>
+                    <svg
+                      className="w-5 h-1.5 text-yellow-400 mt-0.5"
+                      viewBox="0 0 24 8"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M2 2 Q 12 8, 22 2" />
+                    </svg>
+                  </div>
                 </div>
                 <h1 className="text-2xl font-bold text-white">Discoun3</h1>
               </div>
               <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
-              <p className="text-blue-200">Sign in to your merchant account</p>
+              <p className="text-white/80">Sign in to your merchant account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}
               <div>
-                <label className="block text-sm font-medium text-blue-100 mb-2">
+                <label className="block text-sm font-medium text-white/90 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/70 w-5 h-5" />
                   <input
                     type="email"
                     name="email"
@@ -174,7 +199,7 @@ const MerchantLoginPage = () => {
                     onChange={handleInputChange}
                     className={`w-full pl-12 pr-4 py-3 bg-white/10 border ${
                       errors.email ? 'border-red-400' : 'border-white/20'
-                    } rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-200`}
+                    } rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent backdrop-blur-sm transition-all duration-200`}
                     placeholder="Enter your email"
                     disabled={loading}
                   />
@@ -186,11 +211,11 @@ const MerchantLoginPage = () => {
 
               {/* Password Field */}
               <div>
-                <label className="block text-sm font-medium text-blue-100 mb-2">
+                <label className="block text-sm font-medium text-white/90 mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-5 h-5" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/70 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
@@ -198,14 +223,14 @@ const MerchantLoginPage = () => {
                     onChange={handleInputChange}
                     className={`w-full pl-12 pr-12 py-3 bg-white/10 border ${
                       errors.password ? 'border-red-400' : 'border-white/20'
-                    } rounded-xl text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-200`}
+                    } rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent backdrop-blur-sm transition-all duration-200`}
                     placeholder="Enter your password"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-300 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white transition-colors"
                     disabled={loading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -224,14 +249,14 @@ const MerchantLoginPage = () => {
                     name="rememberMe"
                     checked={formData.rememberMe}
                     onChange={handleInputChange}
-                    className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-cyan-500 bg-white/10 border-white/20 rounded focus:ring-yellow-400 focus:ring-2"
                     disabled={loading}
                   />
-                  <span className="ml-2 text-sm text-blue-200">Remember me</span>
+                  <span className="ml-2 text-sm text-white/80">Remember me</span>
                 </label>
                 <Link
                   to="/merchant/forgot-password"
-                  className="text-sm text-blue-300 hover:text-white transition-colors"
+                  className="text-sm text-yellow-300 hover:text-yellow-400 transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -241,7 +266,7 @@ const MerchantLoginPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                className="w-full flex items-center justify-center py-3 px-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-medium rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 shadow-lg"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -256,11 +281,11 @@ const MerchantLoginPage = () => {
 
             {/* Sign Up Link */}
             <div className="mt-8 text-center">
-              <p className="text-blue-200">
+              <p className="text-white/80">
                 Don't have an account?{' '}
                 <Link
                   to="/accounts/sign-up"
-                  className="text-blue-300 hover:text-white font-medium transition-colors"
+                  className="text-yellow-300 hover:text-yellow-400 font-medium transition-colors"
                 >
                   Sign up for free
                 </Link>

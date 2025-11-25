@@ -18,7 +18,7 @@ const useWebPush = (isAuthenticated) => {
   const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   const VAPID_PUBLIC_KEY = 'BKejhBqZqa4GnoAc7nFnQXtCTTbQBpMXjABBS_cMyk4RRpRkgOB6_52y2VQxObMi9XBvRyim7seUpvUm1HaoFms';
-  const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://api.discoun3ree.com/api/v1';
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.discoun3ree.com/api/v1';
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -106,7 +106,7 @@ const useWebPush = (isAuthenticated) => {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-api-key': process.env.REACT_APP_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
+          'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
         },
         credentials: 'include',
         body: JSON.stringify(subscription)

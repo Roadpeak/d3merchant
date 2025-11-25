@@ -164,6 +164,7 @@ const Layout = ({
         }
 
         const merchant = merchantAuthService.getCurrentMerchant();
+
         if (merchant) {
           setCurrentMerchant(merchant);
         } else {
@@ -454,20 +455,121 @@ const Layout = ({
   );
 
   // Grid Navigation Component
-  const GridNavigation = () => (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Clean background - white in light mode, dark gradient in dark mode */}
-      <div className="absolute inset-0 bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-      </div>
+  const GridNavigation = () => {
+    const [stats, setStats] = useState({
+      serviceBookings: 0,
+      offerBookings: 0,
+      serviceRequests: 0,
+      monthlyRevenue: 0
+    });
+    const [loadingStats, setLoadingStats] = useState(true);
 
-      {/* Content */}
-      <div className="relative z-10 p-6 max-w-7xl mx-auto">
-        {/* Greeting Section */}
-        <div className="mb-8 bg-white dark:bg-gray-800/60 dark:backdrop-blur-lg rounded-3xl p-6 border border-gray-200 dark:border-gray-700/20 shadow-sm">
-          <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-            Welcome back, {currentMerchant?.first_name || 'Merchant'}! 👋
-          </h2>
+    useEffect(() => {
+      // Fetch real-time stats for welcome banner
+      const fetchStats = async () => {
+        try {
+          const [
+            { default: enhancedBookingService },
+            { default: merchantServiceRequestService }
+          ] = await Promise.all([
+            import('../services/enhancedBookingService'),
+            import('../services/merchantServiceRequestService')
+          ]);
+
+          const [merchantBookings, serviceBookings, offerBookings, serviceRequests] = await Promise.allSettled([
+            enhancedBookingService.getMerchantBookings({ limit: 1000 }),
+            enhancedBookingService.getMerchantServiceBookings({ limit: 1000 }),
+            enhancedBookingService.getMerchantOfferBookings({ limit: 1000 }),
+            merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
+          ]);
+
+          // Calculate monthly revenue
+          let monthlyRevenue = 0;
+          if (merchantBookings.status === 'fulfilled' && merchantBookings.value?.success) {
+            const bookings = merchantBookings.value.bookings || [];
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            bookings.forEach(booking => {
+              const bookingDate = new Date(booking.createdAt || booking.created_at);
+              if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
+                const amount = parseFloat(booking.totalAmount || booking.amount || booking.accessFee || 0);
+                monthlyRevenue += amount;
+              }
+            });
+          }
+
+          setStats({
+            serviceBookings: serviceBookings.status === 'fulfilled' ? (serviceBookings.value?.bookings?.length || 0) : 0,
+            offerBookings: offerBookings.status === 'fulfilled' ? (offerBookings.value?.bookings?.length || 0) : 0,
+            serviceRequests: serviceRequests.status === 'fulfilled' ? (serviceRequests.value?.data?.requests?.length || 0) : 0,
+            monthlyRevenue
+          });
+        } catch (error) {
+          console.error('Error fetching grid stats:', error);
+        } finally {
+          setLoadingStats(false);
+        }
+      };
+
+      fetchStats();
+    }, []);
+
+    return (
+      <div className="relative min-h-screen overflow-hidden">
+        {/* Enhanced gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20 dark:bg-gradient-to-br dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
+          {/* Decorative blobs */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-400/10 dark:bg-cyan-400/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl"></div>
         </div>
+
+        {/* Content */}
+        <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
+          {/* Enhanced Welcome Banner with Quick Stats */}
+          <div className="mb-8 bg-gradient-to-r from-cyan-600 via-blue-700 to-blue-800 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-400/10 rounded-full blur-3xl -ml-24 -mb-24"></div>
+
+            <div className="relative">
+              {/* Greeting */}
+              <div className="mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                  Welcome back, {currentMerchant?.first_name || 'Merchant'}! 👋
+                </h2>
+                <p className="text-blue-100">Here's what's happening with your business today</p>
+              </div>
+
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
+                  <div className="text-blue-100 text-xs md:text-sm mb-1">Monthly Revenue</div>
+                  <div className="text-white text-xl md:text-2xl font-bold">
+                    {loadingStats ? '...' : `$${stats.monthlyRevenue.toLocaleString()}`}
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
+                  <div className="text-blue-100 text-xs md:text-sm mb-1">Service Bookings</div>
+                  <div className="text-white text-xl md:text-2xl font-bold">
+                    {loadingStats ? '...' : stats.serviceBookings}
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
+                  <div className="text-blue-100 text-xs md:text-sm mb-1">Offer Bookings</div>
+                  <div className="text-white text-xl md:text-2xl font-bold">
+                    {loadingStats ? '...' : stats.offerBookings}
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
+                  <div className="text-blue-100 text-xs md:text-sm mb-1">Open Requests</div>
+                  <div className="text-white text-xl md:text-2xl font-bold">
+                    {loadingStats ? '...' : stats.serviceRequests}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
         {/* Tiled Grid Menu */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 lg:gap-6">
@@ -539,9 +641,139 @@ const Layout = ({
             <p className="text-xs text-gray-500 dark:text-gray-400">Sign out of your account</p>
           </div>
         </button>
+
+        {/* Professional Footer */}
+        <footer className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Brand Section */}
+            <div className="col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-cyan-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
+                  <div className="text-center">
+                    <span className="text-white font-bold text-sm block leading-none">D3</span>
+                    <svg className="w-5 h-1.5 mx-auto" viewBox="0 0 24 8">
+                      <path d="M2 2 Q 12 6, 22 2" stroke="#FBBF24" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                </div>
+                <span className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent">
+                  Discoun3ree
+                </span>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Your all-in-one merchant dashboard for managing services, bookings, and growing your business.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Quick Links</h4>
+              <ul className="space-y-2">
+                <li>
+                  <button onClick={() => navigate('/dashboard')} className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Dashboard
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/dashboard/services')} className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Services
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/dashboard/analytics')} className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Analytics
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/dashboard/account')} className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Account
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Support</h4>
+              <ul className="space-y-2">
+                <li>
+                  <a href="https://discoun3ree.com/help" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <a href="https://discoun3ree.com/contact" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Contact Us
+                  </a>
+                </li>
+                <li>
+                  <a href="https://discoun3ree.com/docs" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Documentation
+                  </a>
+                </li>
+                <li>
+                  <a href="https://discoun3ree.com/faq" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    FAQ
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Legal</h4>
+              <ul className="space-y-2">
+                <li>
+                  <a href="https://discoun3ree.com/privacy" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="https://discoun3ree.com/terms" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="https://discoun3ree.com/cookies" target="_blank" rel="noopener noreferrer" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">
+                    Cookie Policy
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Footer */}
+          <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                © {new Date().getFullYear()} Discoun3ree. All rights reserved.
+              </p>
+              <div className="flex gap-6">
+                <a href="https://twitter.com/discoun3ree" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-500 transition-colors">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+                  </svg>
+                </a>
+                <a href="https://facebook.com/discoun3ree" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-600 transition-colors">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+                  </svg>
+                </a>
+                <a href="https://instagram.com/discoun3ree" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-pink-500 transition-colors">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                    <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" fill="none" stroke="white" strokeWidth="2"/>
+                    <circle cx="17.5" cy="6.5" r="1.5" fill="white"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
