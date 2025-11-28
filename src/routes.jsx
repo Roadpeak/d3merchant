@@ -39,6 +39,7 @@ const AppRoutes = () => {
       <Route path="/accounts/sign-in" element={<LoginPage />} />
       <Route path="/merchant/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/merchant/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path='/dashboard' element={<Dashboard />} />
       <Route path='/dashboard/chat' element={<MerchantChatInterface />} />
       <Route path="/dashboard/services" element={<ServicesPage />} />
