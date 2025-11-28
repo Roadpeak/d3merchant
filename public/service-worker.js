@@ -44,17 +44,38 @@ self.addEventListener('push', (event) => {
             const data = event.data.json();
             console.log('📦 Push data:', data);
 
+            // Determine the correct URL based on notification type
+            let targetUrl = data.url || data.actionUrl || '/dashboard';
+
+            // Handle chat/message notifications specially
+            if (data.type === 'new_message' || data.type === 'new_customer_message') {
+                // Use conversationId if available
+                if (data.conversationId || data.data?.conversationId) {
+                    const convId = data.conversationId || data.data?.conversationId;
+                    targetUrl = `/dashboard/chat?conversation=${convId}`;
+                } else {
+                    // Default to chat page without specific conversation
+                    targetUrl = '/dashboard/chat';
+                }
+            }
+            // Fix any URLs that point to /chat instead of /dashboard/chat
+            else if (targetUrl.startsWith('/chat') && !targetUrl.startsWith('/dashboard/chat')) {
+                targetUrl = `/dashboard${targetUrl}`;
+            }
+
             notificationData = {
                 title: data.title || 'New Notification',
                 body: data.body || data.message || 'You have a new notification',
                 icon: data.icon || '/logo192.png',
                 badge: data.badge || '/logo192.png',
                 tag: data.tag || 'merchant-notification',
-                url: data.url || data.actionUrl || '/dashboard',
+                url: targetUrl,
                 data: data,
                 image: data.image,
                 requireInteraction: data.requireInteraction || false
             };
+
+            console.log('🔗 Notification will open URL:', targetUrl);
         } catch (error) {
             console.error('❌ Error parsing push data:', error);
         }
