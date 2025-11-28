@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import merchantAuthService from '../../services/merchantAuthService';
-import { Mail, ArrowRight, Store, Shield, CheckCircle, Loader } from 'lucide-react';
+import { Mail, ArrowRight, Store, Shield, CheckCircle, Loader, Lock } from 'lucide-react';
 
 const ForgotPasswordPage = () => {
   const [emailSent, setEmailSent] = useState(false);
