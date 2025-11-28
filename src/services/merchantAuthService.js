@@ -236,11 +236,39 @@ class MerchantAuthService {
         body: JSON.stringify(credentials),
       });
 
-      const data = await response.json();
-      console.log('📨 Login response received');
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('💥 Failed to parse response:', parseError);
+        throw new Error('Invalid response from server. Please try again later.');
+      }
+
+      console.log('📨 Login response received:', {
+        status: response.status,
+        ok: response.ok,
+        hasData: !!data
+      });
 
       if (!response.ok) {
-        throw new Error(data.message || `Login failed with status ${response.status}`);
+        // Handle specific HTTP status codes
+        if (response.status === 401) {
+          throw new Error(data.message || 'Invalid email or password. Please try again.');
+        } else if (response.status === 404) {
+          throw new Error('Account not found. Please check your email or sign up.');
+        } else if (response.status === 429) {
+          throw new Error('Too many login attempts. Please try again later.');
+        } else if (response.status >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else {
+          throw new Error(data.message || `Login failed with status ${response.status}`);
+        }
+      }
+
+      // Validate response data
+      if (!data.access_token) {
+        console.error('💥 No access token in response:', data);
+        throw new Error('Invalid server response. Please try again.');
       }
 
       // Store authentication data
@@ -265,6 +293,12 @@ class MerchantAuthService {
       return data;
     } catch (error) {
       console.error('💥 Login error:', error);
+
+      // Re-throw with better error message
+      if (error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your internet connection.');
+      }
+
       throw error;
     } finally {
       this.authCheckInProgress = false;

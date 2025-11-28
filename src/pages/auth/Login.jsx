@@ -57,18 +57,24 @@ const MerchantLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
+    setErrors({}); // Clear any previous errors
 
     try {
       const response = await merchantAuthService.login({
         email: formData.email,
         password: formData.password,
       });
+
+      // Check if response is valid
+      if (!response || !response.access_token) {
+        throw new Error('Invalid response from server. Please try again.');
+      }
 
       // Store auth data
       merchantAuthService.storeAuthData({
@@ -88,7 +94,33 @@ const MerchantLoginPage = () => {
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.message || 'Login failed. Please check your credentials.');
+
+      // Extract meaningful error message
+      let errorMessage = 'Login failed. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.statusText) {
+        errorMessage = error.response.statusText;
+      }
+
+      // Show specific error messages for common cases
+      if (errorMessage.toLowerCase().includes('password')) {
+        errorMessage = 'Incorrect password. Please try again.';
+        setErrors({ password: 'Incorrect password' });
+      } else if (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('not found')) {
+        errorMessage = 'Account not found. Please check your email or sign up.';
+        setErrors({ email: 'Account not found' });
+      } else if (errorMessage.toLowerCase().includes('network')) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+
+      toast.error(errorMessage, {
+        duration: 5000,
+        position: 'top-center',
+      });
     } finally {
       setLoading(false);
     }
@@ -295,7 +327,8 @@ const MerchantLoginPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>
+        {`
         @keyframes blob {
           0% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
@@ -311,7 +344,8 @@ const MerchantLoginPage = () => {
         .animation-delay-4000 {
           animation-delay: 4s;
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
