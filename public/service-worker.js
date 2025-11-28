@@ -47,20 +47,104 @@ self.addEventListener('push', (event) => {
             // Determine the correct URL based on notification type
             let targetUrl = data.url || data.actionUrl || '/dashboard';
 
-            // Handle chat/message notifications specially
-            if (data.type === 'new_message' || data.type === 'new_customer_message') {
-                // Use conversationId if available
-                if (data.conversationId || data.data?.conversationId) {
-                    const convId = data.conversationId || data.data?.conversationId;
-                    targetUrl = `/dashboard/chat?conversation=${convId}`;
-                } else {
-                    // Default to chat page without specific conversation
-                    targetUrl = '/dashboard/chat';
-                }
-            }
-            // Fix any URLs that point to /chat instead of /dashboard/chat
-            else if (targetUrl.startsWith('/chat') && !targetUrl.startsWith('/dashboard/chat')) {
-                targetUrl = `/dashboard${targetUrl}`;
+            // Handle different notification types with proper routing
+            switch(data.type) {
+                // Message notifications
+                case 'new_message':
+                case 'new_customer_message':
+                case 'message':
+                    // Use conversationId if available
+                    if (data.conversationId || data.data?.conversationId) {
+                        const convId = data.conversationId || data.data?.conversationId;
+                        targetUrl = `/dashboard/chat?conversation=${convId}`;
+                    } else {
+                        targetUrl = '/dashboard/chat';
+                    }
+                    break;
+
+                // New follower notification
+                case 'new_follower':
+                    targetUrl = '/dashboard/socials';
+                    break;
+
+                // Review notifications
+                case 'new_review':
+                    targetUrl = '/dashboard/reviews';
+                    break;
+
+                // Booking notifications (merchant side)
+                case 'new_booking':
+                    // Check if it's a service or offer booking
+                    if (data.data?.bookingType === 'offer' || data.offerBookingId) {
+                        targetUrl = '/dashboard/offer-bookings';
+                    } else {
+                        targetUrl = '/dashboard/service-bookings';
+                    }
+                    // If specific booking ID is provided, go to detail view
+                    if (data.data?.bookingId || data.bookingId) {
+                        const bookingId = data.data?.bookingId || data.bookingId;
+                        targetUrl = `/dashboard/bookings/${bookingId}/view`;
+                    }
+                    break;
+
+                case 'booking_rescheduled_merchant':
+                case 'booking_rescheduled':
+                    // Go to specific booking if ID provided
+                    if (data.data?.bookingId || data.bookingId) {
+                        const bookingId = data.data?.bookingId || data.bookingId;
+                        targetUrl = `/dashboard/bookings/${bookingId}/view`;
+                    } else if (data.data?.bookingType === 'offer' || data.offerBookingId) {
+                        targetUrl = '/dashboard/offer-bookings';
+                    } else {
+                        targetUrl = '/dashboard/service-bookings';
+                    }
+                    break;
+
+                case 'booking_cancelled_merchant':
+                case 'booking_cancelled':
+                    // Go to specific booking if ID provided
+                    if (data.data?.bookingId || data.bookingId) {
+                        const bookingId = data.data?.bookingId || data.bookingId;
+                        targetUrl = `/dashboard/bookings/${bookingId}/view`;
+                    } else if (data.data?.bookingType === 'offer' || data.offerBookingId) {
+                        targetUrl = '/dashboard/offer-bookings';
+                    } else {
+                        targetUrl = '/dashboard/service-bookings';
+                    }
+                    break;
+
+                // Booking confirmations
+                case 'booking_confirmed':
+                case 'booking_confirmation':
+                    if (data.data?.bookingId || data.bookingId) {
+                        const bookingId = data.data?.bookingId || data.bookingId;
+                        targetUrl = `/dashboard/bookings/${bookingId}/view`;
+                    } else {
+                        targetUrl = '/dashboard/service-bookings';
+                    }
+                    break;
+
+                // Service request notifications
+                case 'service_request_offer':
+                case 'new_service_request':
+                    targetUrl = '/dashboard/serviceRequests';
+                    break;
+
+                // Default: use provided URL or fallback
+                default:
+                    // Fix any URLs that point to /chat instead of /dashboard/chat
+                    if (targetUrl.startsWith('/chat') && !targetUrl.startsWith('/dashboard/chat')) {
+                        targetUrl = `/dashboard${targetUrl}`;
+                    }
+                    // Fix any URLs that point to /bookings instead of /dashboard/bookings
+                    else if (targetUrl.startsWith('/bookings') && !targetUrl.startsWith('/dashboard/bookings')) {
+                        targetUrl = `/dashboard${targetUrl}`;
+                    }
+                    // Fix any URLs that point to /reviews instead of /dashboard/reviews
+                    else if (targetUrl.startsWith('/reviews') && !targetUrl.startsWith('/dashboard/reviews')) {
+                        targetUrl = `/dashboard${targetUrl}`;
+                    }
+                    break;
             }
 
             notificationData = {
@@ -75,6 +159,7 @@ self.addEventListener('push', (event) => {
                 requireInteraction: data.requireInteraction || false
             };
 
+            console.log('🔗 Notification type:', data.type);
             console.log('🔗 Notification will open URL:', targetUrl);
         } catch (error) {
             console.error('❌ Error parsing push data:', error);
@@ -111,22 +196,47 @@ self.addEventListener('push', (event) => {
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
-    console.log('👆 Merchant notification clicked, action:', event.action);
+    console.log('👆 Merchant notification clicked');
+    console.log('📋 Action:', event.action);
+    console.log('📋 Notification data:', event.notification.data);
 
     event.notification.close();
 
     // If user clicked dismiss, just close
     if (event.action === 'dismiss') {
+        console.log('🔕 User dismissed notification');
         return;
     }
 
-    // Get the URL to open
-    const urlToOpen = new URL(
-        event.notification.data?.url || '/dashboard',
-        self.location.origin
-    ).href;
+    const notificationData = event.notification.data || {};
+    let urlToOpen = '/dashboard';
 
-    console.log('🔗 Opening URL:', urlToOpen);
+    // Handle specific actions
+    if (event.action === 'view') {
+        // Use the URL from notification data
+        urlToOpen = notificationData.url || '/dashboard';
+    } else if (event.action === 'reply') {
+        // For review replies
+        urlToOpen = '/dashboard/reviews';
+    } else if (event.action === 'confirm') {
+        // For booking confirmations
+        if (notificationData.bookingId) {
+            urlToOpen = `/dashboard/bookings/${notificationData.bookingId}/view`;
+        } else {
+            urlToOpen = '/dashboard/service-bookings';
+        }
+    } else if (event.action === 'view_followers') {
+        urlToOpen = '/dashboard/socials';
+    } else {
+        // No specific action clicked, use notification data to determine URL
+        urlToOpen = notificationData.url || '/dashboard';
+    }
+
+    // Convert to absolute URL
+    const absoluteUrl = new URL(urlToOpen, self.location.origin).href;
+
+    console.log('🔗 Opening URL:', absoluteUrl);
+    console.log('🔗 Notification type:', notificationData.type);
 
     // Open or focus the app
     event.waitUntil(
@@ -141,7 +251,8 @@ self.addEventListener('notificationclick', (event) => {
                     return client.focus().then(client => {
                         // Try to navigate to the notification URL
                         if ('navigate' in client) {
-                            return client.navigate(urlToOpen);
+                            console.log('🔄 Navigating to:', absoluteUrl);
+                            return client.navigate(absoluteUrl);
                         }
                         return client;
                     });
@@ -149,8 +260,8 @@ self.addEventListener('notificationclick', (event) => {
             }
             // Open new window if not already open
             if (self.clients.openWindow) {
-                console.log('✅ Opening new merchant dashboard window');
-                return self.clients.openWindow(urlToOpen);
+                console.log('✅ Opening new merchant dashboard window at:', absoluteUrl);
+                return self.clients.openWindow(absoluteUrl);
             }
         })
     );
