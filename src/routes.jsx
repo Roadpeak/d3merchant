@@ -2,6 +2,8 @@ import React from 'react'
 import { Route, Routes, Navigate } from 'react-router-dom';
 import SignupPage from './pages/auth/SignUp'
 import LoginPage from './pages/auth/Login'
+import ForgotPasswordPage from './pages/auth/forgotpasswordpage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import ServicesPage from './pages/services/Service'
 import OfferPage from './pages/offers/Offers'
 import CreateStore from './pages/stores/CreateStore'
@@ -35,6 +37,8 @@ const AppRoutes = () => {
       <Route path="/" element={<Navigate to="/dashboard" />} />
       <Route path="/accounts/sign-up" element={<SignupPage />} />
       <Route path="/accounts/sign-in" element={<LoginPage />} />
+      <Route path="/merchant/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/merchant/reset-password" element={<ResetPasswordPage />} />
       <Route path='/dashboard' element={<Dashboard />} />
       <Route path='/dashboard/chat' element={<MerchantChatInterface />} />
       <Route path="/dashboard/services" element={<ServicesPage />} />

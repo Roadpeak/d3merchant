@@ -499,6 +499,61 @@ class MerchantAuthService {
     };
   }
 
+  // Request password reset - send email with reset token
+  async requestPasswordReset(email) {
+    try {
+      console.log('🔑 Requesting password reset for:', email);
+
+      const response = await fetch(`${this.baseURL}/request-password-reset`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      console.log('📨 Password reset request response received');
+
+      if (!response.ok) {
+        throw new Error(data.message || `Password reset request failed with status ${response.status}`);
+      }
+
+      console.log('✅ Password reset email sent successfully');
+      return data;
+    } catch (error) {
+      console.error('💥 Password reset request error:', error);
+      throw error;
+    }
+  }
+
+  // Reset password with token
+  async resetPassword(token, newPassword) {
+    try {
+      console.log('🔑 Resetting password with token...');
+
+      const response = await fetch(`${this.baseURL}/reset-password`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify({
+          token,
+          newPassword
+        }),
+      });
+
+      const data = await response.json();
+      console.log('📨 Password reset response received');
+
+      if (!response.ok) {
+        throw new Error(data.message || `Password reset failed with status ${response.status}`);
+      }
+
+      console.log('✅ Password reset successful');
+      return data;
+    } catch (error) {
+      console.error('💥 Password reset error:', error);
+      throw error;
+    }
+  }
+
   // Debug method for development
   debug() {
     if (import.meta.env.DEV) {
