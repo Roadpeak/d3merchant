@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import Layout from '../../elements/Layout';
 import Modal from '../../elements/Modal';
-import { fetchServices } from '../../services/api_service';
+import { fetchServices, fetchStaff } from '../../services/api_service';
 import ServiceForm from './ServiceForm';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -100,6 +100,26 @@ const ServicesPage = () => {
             } catch (error) {
                 toast.error('Failed to delete service');
             }
+        }
+    };
+
+    const handleAddService = async () => {
+        try {
+            const staffResponse = await fetchStaff();
+            const staff = staffResponse?.staff || staffResponse?.data || staffResponse || [];
+
+            if (!Array.isArray(staff) || staff.length === 0) {
+                toast.error('Please add at least one staff member before creating a service', {
+                    duration: 4000,
+                    icon: '⚠️',
+                });
+                return;
+            }
+
+            setModalOpen(true);
+        } catch (error) {
+            console.error('Error checking staff:', error);
+            toast.error('Failed to verify staff availability. Please try again.');
         }
     };
 
@@ -459,7 +479,7 @@ const ServicesPage = () => {
                 Start by adding your first service to showcase what you offer to your customers.
             </p>
             <button
-                onClick={() => setModalOpen(true)}
+                onClick={handleAddService}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
                 <Plus className="w-5 h-5" />
@@ -736,7 +756,7 @@ const ServicesPage = () => {
             {/* Quick Action Button - MOVED FROM NAVBAR */}
             <div className="mx-6 mb-6">
                 <button
-                    onClick={() => setModalOpen(true)}
+                    onClick={handleAddService}
                     className="bg-gradient-to-br from-green-500 to-green-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2 shadow-md"
                 >
                     <Plus className="w-5 h-5" />
@@ -817,7 +837,7 @@ const ServicesPage = () => {
                         </p>
                         {services.length === 0 && (
                             <button
-                                onClick={() => setModalOpen(true)}
+                                onClick={handleAddService}
                                 className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
                             >
                                 <Plus className="w-5 h-5" />

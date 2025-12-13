@@ -4,6 +4,8 @@ import { Search, Settings, User, ChevronDown, X, LayoutDashboard, MessageSquare,
 import NotificationButton from '../components/NotificationButton';
 import merchantAuthService from '../services/merchantAuthService';
 import { toast } from 'react-hot-toast';
+import StaffOnboardingModal from '../components/StaffOnboardingModal';
+import { fetchStaff } from '../services/api_service';
 
 const Layout = ({
   children,
@@ -29,6 +31,8 @@ const Layout = ({
   const [darkMode, setDarkMode] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showStaffOnboarding, setShowStaffOnboarding] = useState(false);
+  const [staffCount, setStaffCount] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -182,6 +186,51 @@ const Layout = ({
 
     initializeMerchant();
   }, [navigate]);
+
+  // Check for staff - show onboarding if no staff exists
+  useEffect(() => {
+    const checkStaffStatus = async () => {
+      if (!merchantAuthService.isAuthenticated()) {
+        return;
+      }
+
+      try {
+        const response = await fetchStaff();
+        const staffList = response.staff || [];
+
+        setStaffCount(staffList.length);
+
+        // Show onboarding modal if no staff
+        if (staffList.length === 0) {
+          setShowStaffOnboarding(true);
+        }
+      } catch (error) {
+        console.error('Error checking staff status:', error);
+        // If error, assume no staff and show onboarding
+        setShowStaffOnboarding(true);
+      }
+    };
+
+    checkStaffStatus();
+  }, []);
+
+  // Handle staff added callback
+  const handleStaffAdded = async () => {
+    try {
+      // Refresh staff list
+      const response = await fetchStaff();
+      const staffList = response.staff || [];
+      setStaffCount(staffList.length);
+
+      // Close onboarding modal
+      setShowStaffOnboarding(false);
+
+      toast.success('Great! You can now create services and manage bookings.');
+    } catch (error) {
+      console.error('Error refreshing staff:', error);
+      setShowStaffOnboarding(false);
+    }
+  };
 
   // Load chat unread count
   useEffect(() => {
@@ -856,6 +905,12 @@ const Layout = ({
       </div>
 
       <MobileSearchOverlay />
+
+      {/* Staff Onboarding Modal */}
+      <StaffOnboardingModal
+        isOpen={showStaffOnboarding}
+        onStaffAdded={handleStaffAdded}
+      />
     </div>
   );
 };
