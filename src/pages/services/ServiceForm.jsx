@@ -29,7 +29,7 @@ const EnhancedServiceForm = ({ onClose, onServiceAdded, editingService = null })
         // Booking capacity fields
         max_concurrent_bookings: 1,
         allow_overbooking: false,
-        slot_interval: '',
+        slot_interval: 0, // Will auto-set to match duration
         buffer_time: 0,
         min_advance_booking: 30,
         max_advance_booking: 10080,
