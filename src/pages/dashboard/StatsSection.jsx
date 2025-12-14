@@ -37,12 +37,21 @@ const UpdatedStatsSection = () => {
         merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
       ]);
 
+      console.log('📊 DASHBOARD STATS DEBUG:');
+      console.log('Service Bookings Response:', serviceBookingsResponse);
+      console.log('Offer Bookings Response:', offerBookingsResponse);
+      console.log('Service Requests Response:', serviceRequestsResponse);
+
       // Process service bookings
       let serviceBookings = [];
       if (serviceBookingsResponse.status === 'fulfilled' && serviceBookingsResponse.value?.success) {
         serviceBookings = serviceBookingsResponse.value.bookings || [];
       } else if (serviceBookingsResponse.status === 'fulfilled' && Array.isArray(serviceBookingsResponse.value)) {
         serviceBookings = serviceBookingsResponse.value;
+      }
+      console.log('✅ Service Bookings Extracted:', serviceBookings.length, 'bookings');
+      if (serviceBookings.length > 0) {
+        console.log('Sample Service Booking:', serviceBookings[0]);
       }
 
       // Process offer bookings
@@ -52,12 +61,17 @@ const UpdatedStatsSection = () => {
           ? offerBookingsResponse.value
           : (offerBookingsResponse.value?.bookings || []);
       }
+      console.log('✅ Offer Bookings Extracted:', offerBookings.length, 'bookings');
+      if (offerBookings.length > 0) {
+        console.log('Sample Offer Booking:', offerBookings[0]);
+      }
 
       // Process service requests
       let serviceRequests = [];
       if (serviceRequestsResponse.status === 'fulfilled' && serviceRequestsResponse.value?.success) {
         serviceRequests = serviceRequestsResponse.value.data?.requests || [];
       }
+      console.log('✅ Service Requests Extracted:', serviceRequests.length, 'requests');
 
       // Calculate monthly revenue from:
       // 1. Completed service bookings this month
@@ -116,6 +130,12 @@ const UpdatedStatsSection = () => {
 
       // Count new/open service requests
       const newServiceRequestsCount = serviceRequests.length;
+
+      console.log('💰 CALCULATED VALUES:');
+      console.log('Monthly Revenue:', monthlyRevenue);
+      console.log('Upcoming Service Bookings:', upcomingServiceBookings);
+      console.log('Upcoming Offer Bookings:', upcomingOfferBookings);
+      console.log('New Service Requests:', newServiceRequestsCount);
 
       // Calculate percentage change (placeholder - you can implement historical comparison later)
       const calculateChange = (currentValue) => {
