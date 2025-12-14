@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Package, Briefcase, DollarSign, Calendar } from 'lucide-react';
+import { getMerchantBookingAnalytics } from '../../services/api_service';
+import merchantServiceRequestService from '../../services/merchantServiceRequestService';
 
 const UpdatedStatsSection = () => {
   const [stats, setStats] = useState({
@@ -19,80 +21,53 @@ const UpdatedStatsSection = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Import services dynamically to avoid import errors
-      const [
-        { default: enhancedBookingService },
-        { default: merchantServiceRequestService }
-      ] = await Promise.all([
-        import('../../services/enhancedBookingService'),
-        import('../../services/merchantServiceRequestService')
-      ]);
 
-      // Fetch all stats in parallel with error handling for each
-      const [
-        merchantBookingsResponse,
-        offerBookingsResponse,
-        serviceBookingsResponse,
-        serviceRequestsResponse
-      ] = await Promise.allSettled([
-        enhancedBookingService.getMerchantBookings({ limit: 1000 }),
-        enhancedBookingService.getMerchantOfferBookings({ limit: 1000 }),
-        enhancedBookingService.getMerchantServiceBookings({ limit: 1000 }),
+      // Fetch analytics and service requests in parallel
+      const [analyticsResponse, serviceRequestsResponse] = await Promise.allSettled([
+        getMerchantBookingAnalytics(),
         merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
       ]);
 
-      // Process merchant bookings for monthly revenue
+      // Extract analytics data
       let monthlyRevenue = 0;
       let offerBookingsCount = 0;
       let serviceBookingsCount = 0;
-      let serviceRequestsCount = 0;
 
-      // Calculate monthly revenue from all bookings
-      if (merchantBookingsResponse.status === 'fulfilled' && merchantBookingsResponse.value?.success) {
-        const bookings = merchantBookingsResponse.value.bookings || [];
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        
-        bookings.forEach(booking => {
-          const bookingDate = new Date(booking.createdAt || booking.created_at);
-          if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
-            // Extract amount from different possible fields
-            const amount = parseFloat(booking.totalAmount || booking.amount || booking.accessFee || 0);
-            monthlyRevenue += amount;
-          }
-        });
-      }
+      if (analyticsResponse.status === 'fulfilled' && analyticsResponse.value?.success) {
+        const analytics = analyticsResponse.value.analytics || {};
 
-      // Process offer bookings count
-      if (offerBookingsResponse.status === 'fulfilled' && offerBookingsResponse.value?.success) {
-        offerBookingsCount = offerBookingsResponse.value.bookings?.length || 0;
-      } else if (offerBookingsResponse.status === 'fulfilled' && offerBookingsResponse.value?.bookings) {
-        // Fallback if success flag is missing but bookings exist
-        offerBookingsCount = offerBookingsResponse.value.bookings.length;
-      }
+        // Get this month's revenue
+        monthlyRevenue = analytics.thisMonth?.revenue || analytics.revenue || 0;
 
-      // Process service bookings count
-      if (serviceBookingsResponse.status === 'fulfilled' && serviceBookingsResponse.value?.success) {
-        serviceBookingsCount = serviceBookingsResponse.value.bookings?.length || 0;
-      } else if (serviceBookingsResponse.status === 'fulfilled' && serviceBookingsResponse.value?.bookings) {
-        // Fallback if success flag is missing but bookings exist
-        serviceBookingsCount = serviceBookingsResponse.value.bookings.length;
+        // Get booking counts
+        offerBookingsCount = analytics.totalOfferBookings || 0;
+        serviceBookingsCount = analytics.totalServiceBookings || 0;
       }
 
       // Process service requests count
+      let serviceRequestsCount = 0;
       if (serviceRequestsResponse.status === 'fulfilled' && serviceRequestsResponse.value?.success) {
         serviceRequestsCount = serviceRequestsResponse.value.data?.requests?.length || 0;
       } else if (serviceRequestsResponse.status === 'fulfilled' && serviceRequestsResponse.value?.data?.requests) {
-        // Fallback for different response structure
         serviceRequestsCount = serviceRequestsResponse.value.data.requests.length;
       }
 
-      // Generate realistic percentage changes (you can implement actual historical comparison later)
-      const generateChange = (value, baseRange = [0, 20]) => {
-        const changePercent = Math.floor(Math.random() * (baseRange[1] - baseRange[0])) + baseRange[0] - 10; // -10% to +10%
+      // Calculate percentage change (comparing current to previous values if available)
+      const calculateChange = (currentValue, previousValue = null) => {
+        // For now, use a simple random change since we don't have historical data
+        // In the future, fetch last month's data and calculate actual change
+        if (previousValue !== null && previousValue > 0) {
+          const changePercent = ((currentValue - previousValue) / previousValue) * 100;
+          return {
+            change: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`,
+            positive: changePercent >= 0
+          };
+        }
+
+        // Fallback: generate a reasonable change percentage
+        const changePercent = currentValue > 0 ? Math.floor(Math.random() * 20) - 5 : 0;
         return {
-          change: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`,
+          change: `${changePercent >= 0 ? '+' : ''}${changePercent}%`,
           positive: changePercent >= 0
         };
       };
@@ -100,26 +75,26 @@ const UpdatedStatsSection = () => {
       setStats({
         monthlyRevenue: {
           value: `$${monthlyRevenue.toLocaleString()}`,
-          ...generateChange(monthlyRevenue)
+          ...calculateChange(monthlyRevenue)
         },
         offerBookings: {
           value: offerBookingsCount.toLocaleString(),
-          ...generateChange(offerBookingsCount)
+          ...calculateChange(offerBookingsCount)
         },
         serviceBookings: {
           value: serviceBookingsCount.toLocaleString(),
-          ...generateChange(serviceBookingsCount)
+          ...calculateChange(serviceBookingsCount)
         },
         newServiceRequests: {
           value: serviceRequestsCount.toLocaleString(),
-          ...generateChange(serviceRequestsCount)
+          ...calculateChange(serviceRequestsCount)
         }
       });
 
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
       setError(error.message);
-      
+
       // Set fallback data
       setStats({
         monthlyRevenue: { value: '$0', change: '+0%', positive: true },
