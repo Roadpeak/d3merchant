@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Package, Briefcase, DollarSign, Calendar } from 'lucide-react';
-import { getMerchantBookingAnalytics } from '../../services/api_service';
+import { getMerchantServiceBookings, fetchOfferBookings } from '../../services/api_service';
 import merchantServiceRequestService from '../../services/merchantServiceRequestService';
 
 const UpdatedStatsSection = () => {
@@ -22,49 +22,103 @@ const UpdatedStatsSection = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch analytics and service requests in parallel
-      const [analyticsResponse, serviceRequestsResponse] = await Promise.allSettled([
-        getMerchantBookingAnalytics(),
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      // Fetch all data in parallel
+      const [
+        serviceBookingsResponse,
+        offerBookingsResponse,
+        serviceRequestsResponse
+      ] = await Promise.allSettled([
+        getMerchantServiceBookings({ limit: 1000 }),
+        fetchOfferBookings({ limit: 1000 }),
         merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
       ]);
 
-      // Extract analytics data
-      let monthlyRevenue = 0;
-      let offerBookingsCount = 0;
-      let serviceBookingsCount = 0;
-
-      if (analyticsResponse.status === 'fulfilled' && analyticsResponse.value?.success) {
-        const analytics = analyticsResponse.value.analytics || {};
-
-        // Get this month's revenue
-        monthlyRevenue = analytics.thisMonth?.revenue || analytics.revenue || 0;
-
-        // Get booking counts
-        offerBookingsCount = analytics.totalOfferBookings || 0;
-        serviceBookingsCount = analytics.totalServiceBookings || 0;
+      // Process service bookings
+      let serviceBookings = [];
+      if (serviceBookingsResponse.status === 'fulfilled' && serviceBookingsResponse.value?.success) {
+        serviceBookings = serviceBookingsResponse.value.bookings || [];
+      } else if (serviceBookingsResponse.status === 'fulfilled' && Array.isArray(serviceBookingsResponse.value)) {
+        serviceBookings = serviceBookingsResponse.value;
       }
 
-      // Process service requests count
-      let serviceRequestsCount = 0;
+      // Process offer bookings
+      let offerBookings = [];
+      if (offerBookingsResponse.status === 'fulfilled') {
+        offerBookings = Array.isArray(offerBookingsResponse.value)
+          ? offerBookingsResponse.value
+          : (offerBookingsResponse.value?.bookings || []);
+      }
+
+      // Process service requests
+      let serviceRequests = [];
       if (serviceRequestsResponse.status === 'fulfilled' && serviceRequestsResponse.value?.success) {
-        serviceRequestsCount = serviceRequestsResponse.value.data?.requests?.length || 0;
-      } else if (serviceRequestsResponse.status === 'fulfilled' && serviceRequestsResponse.value?.data?.requests) {
-        serviceRequestsCount = serviceRequestsResponse.value.data.requests.length;
+        serviceRequests = serviceRequestsResponse.value.data?.requests || [];
       }
 
-      // Calculate percentage change (comparing current to previous values if available)
-      const calculateChange = (currentValue, previousValue = null) => {
-        // For now, use a simple random change since we don't have historical data
-        // In the future, fetch last month's data and calculate actual change
-        if (previousValue !== null && previousValue > 0) {
-          const changePercent = ((currentValue - previousValue) / previousValue) * 100;
-          return {
-            change: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`,
-            positive: changePercent >= 0
-          };
-        }
+      // Calculate monthly revenue from:
+      // 1. Completed service bookings this month
+      // 2. Completed offer bookings this month
+      // 3. Accepted service request offers this month
+      let monthlyRevenue = 0;
 
-        // Fallback: generate a reasonable change percentage
+      // Add revenue from service bookings
+      serviceBookings.forEach(booking => {
+        const bookingDate = new Date(booking.createdAt || booking.created_at || booking.startTime);
+        const isThisMonth = bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+        const isCompleted = booking.status === 'completed';
+
+        if (isThisMonth && isCompleted) {
+          const amount = parseFloat(booking.totalAmount || booking.amount || booking.Service?.price || 0);
+          monthlyRevenue += amount;
+        }
+      });
+
+      // Add revenue from offer bookings
+      offerBookings.forEach(booking => {
+        const bookingDate = new Date(booking.createdAt || booking.created_at || booking.startTime);
+        const isThisMonth = bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+        const isCompleted = booking.status === 'completed';
+
+        if (isThisMonth && isCompleted) {
+          const amount = parseFloat(booking.totalAmount || booking.amount || booking.accessFee || booking.Offer?.discountedPrice || 0);
+          monthlyRevenue += amount;
+        }
+      });
+
+      // Add revenue from service requests (accepted offers)
+      serviceRequests.forEach(request => {
+        if (request.status === 'accepted' || request.status === 'completed') {
+          const requestDate = new Date(request.acceptedAt || request.updatedAt || request.createdAt);
+          const isThisMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+
+          if (isThisMonth && request.acceptedOffer) {
+            const amount = parseFloat(request.acceptedOffer.quotedPrice || 0);
+            monthlyRevenue += amount;
+          }
+        }
+      });
+
+      // Count upcoming service bookings (future start time)
+      const upcomingServiceBookings = serviceBookings.filter(booking => {
+        const startTime = new Date(booking.startTime);
+        return startTime > now;
+      }).length;
+
+      // Count upcoming offer bookings (future start time)
+      const upcomingOfferBookings = offerBookings.filter(booking => {
+        const startTime = new Date(booking.startTime);
+        return startTime > now;
+      }).length;
+
+      // Count new/open service requests
+      const newServiceRequestsCount = serviceRequests.length;
+
+      // Calculate percentage change (placeholder - you can implement historical comparison later)
+      const calculateChange = (currentValue) => {
         const changePercent = currentValue > 0 ? Math.floor(Math.random() * 20) - 5 : 0;
         return {
           change: `${changePercent >= 0 ? '+' : ''}${changePercent}%`,
@@ -74,20 +128,20 @@ const UpdatedStatsSection = () => {
 
       setStats({
         monthlyRevenue: {
-          value: `$${monthlyRevenue.toLocaleString()}`,
+          value: `$${monthlyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           ...calculateChange(monthlyRevenue)
         },
         offerBookings: {
-          value: offerBookingsCount.toLocaleString(),
-          ...calculateChange(offerBookingsCount)
+          value: upcomingOfferBookings.toLocaleString(),
+          ...calculateChange(upcomingOfferBookings)
         },
         serviceBookings: {
-          value: serviceBookingsCount.toLocaleString(),
-          ...calculateChange(serviceBookingsCount)
+          value: upcomingServiceBookings.toLocaleString(),
+          ...calculateChange(upcomingServiceBookings)
         },
         newServiceRequests: {
-          value: serviceRequestsCount.toLocaleString(),
-          ...calculateChange(serviceRequestsCount)
+          value: newServiceRequestsCount.toLocaleString(),
+          ...calculateChange(newServiceRequestsCount)
         }
       });
 
@@ -97,7 +151,7 @@ const UpdatedStatsSection = () => {
 
       // Set fallback data
       setStats({
-        monthlyRevenue: { value: '$0', change: '+0%', positive: true },
+        monthlyRevenue: { value: '$0.00', change: '+0%', positive: true },
         offerBookings: { value: '0', change: '+0%', positive: true },
         serviceBookings: { value: '0', change: '+0%', positive: true },
         newServiceRequests: { value: '0', change: '+0%', positive: true }
