@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Users, UserPlus, Mail, Phone, Briefcase, AlertCircle } from 'lucide-react';
+import { X, Users, UserPlus, Mail, Phone, AlertCircle } from 'lucide-react';
 import { createStaff } from '../services/api_service';
 import { toast } from 'react-hot-toast';
 
@@ -7,9 +7,8 @@ const StaffOnboardingModal = ({ isOpen, onStaffAdded }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
-    role: 'STAFF',
-    specialization: ''
+    phoneNumber: '',
+    role: 'staff'
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -30,8 +29,8 @@ const StaffOnboardingModal = ({ isOpen, onStaffAdded }) => {
       newErrors.email = 'Please enter a valid email';
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Phone number is required';
     }
 
     setErrors(newErrors);
@@ -69,9 +68,8 @@ const StaffOnboardingModal = ({ isOpen, onStaffAdded }) => {
       setFormData({
         name: '',
         email: '',
-        phone: '',
-        role: 'STAFF',
-        specialization: ''
+        phoneNumber: '',
+        role: 'staff'
       });
 
       // Call the callback to refresh staff list and close modal
@@ -188,42 +186,20 @@ const StaffOnboardingModal = ({ isOpen, onStaffAdded }) => {
               </label>
               <input
                 type="tel"
-                name="phone"
-                value={formData.phone}
+                name="phoneNumber"
+                value={formData.phoneNumber}
                 onChange={handleInputChange}
                 placeholder="+254 XXX XXX XXX"
                 disabled={loading}
                 className={`w-full px-4 py-3 rounded-xl border ${
-                  errors.phone
+                  errors.phoneNumber
                     ? 'border-red-300 focus:ring-red-500'
                     : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                 } bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
               />
-              {errors.phone && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.phone}</p>
+              {errors.phoneNumber && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.phoneNumber}</p>
               )}
-            </div>
-
-            {/* Specialization (Optional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <div className="flex items-center space-x-2">
-                  <Briefcase className="w-4 h-4" />
-                  <span>Specialization (Optional)</span>
-                </div>
-              </label>
-              <input
-                type="text"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleInputChange}
-                placeholder="e.g. Hair Stylist, Massage Therapist"
-                disabled={loading}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                This helps customers find the right service provider
-              </p>
             </div>
 
             {/* Submit Button */}
