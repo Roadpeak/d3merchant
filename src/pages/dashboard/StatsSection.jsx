@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Package, Briefcase, DollarSign, Calendar } from 'lucide-react';
-import { getMerchantServiceBookings, fetchOfferBookings } from '../../services/api_service';
+import bookingApiService from '../../services/bookingApiService';
 import merchantServiceRequestService from '../../services/merchantServiceRequestService';
 
 const UpdatedStatsSection = () => {
@@ -32,8 +32,8 @@ const UpdatedStatsSection = () => {
         offerBookingsResponse,
         serviceRequestsResponse
       ] = await Promise.allSettled([
-        getMerchantServiceBookings({ limit: 1000 }),
-        fetchOfferBookings({ limit: 1000 }),
+        bookingApiService.getMerchantServiceBookings({ limit: 1000 }),
+        bookingApiService.getMerchantOfferBookings({ limit: 1000 }),
         merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
       ]);
 
