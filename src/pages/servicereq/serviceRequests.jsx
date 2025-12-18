@@ -321,6 +321,32 @@ export default function MerchantServiceRequestDashboard() {
     }
   }, [filters, initialized, isAuthenticated]);
 
+  // ✅ NEW: Play notification sound
+  const playNotificationSound = () => {
+    try {
+      // Create a simple beep sound using Web Audio API
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800; // Frequency in Hz (higher = higher pitch)
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+
+      console.log('🔊 Notification sound played');
+    } catch (error) {
+      console.error('❌ Failed to play notification sound:', error);
+    }
+  };
+
   // Socket.IO connection for real-time notifications
   useEffect(() => {
     if (isAuthenticated && currentMerchant && merchantStores.length > 0) {
@@ -348,21 +374,34 @@ export default function MerchantServiceRequestDashboard() {
         });
       });
 
-      // Listen for new service requests matching merchant's categories
+      // ✅ ENHANCED: Listen for new service requests with sound notification
       socketRef.current.on('service-request:new', (data) => {
         console.log('🔔 New service request notification:', data);
+
+        // Play sound notification (especially for IMMEDIATE requests)
+        if (data.urgency === 'IMMEDIATE') {
+          playNotificationSound();
+          // Play twice for urgent requests
+          setTimeout(() => playNotificationSound(), 600);
+        } else {
+          playNotificationSound();
+        }
+
         setNewRequestNotification(data);
 
         // Auto-reload service requests to show the new one
         loadServiceRequests();
 
-        // Clear notification after 5 seconds
-        setTimeout(() => setNewRequestNotification(null), 5000);
+        // Clear notification after 10 seconds (increased for urgent requests)
+        setTimeout(() => setNewRequestNotification(null), data.urgency === 'IMMEDIATE' ? 15000 : 8000);
       });
 
       // Listen for offer acceptance
       socketRef.current.on('offer:accepted', (data) => {
         console.log('✅ Offer accepted notification:', data);
+
+        // Play success sound
+        playNotificationSound();
 
         // Reload offers and stats
         Promise.all([
@@ -668,8 +707,48 @@ export default function MerchantServiceRequestDashboard() {
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* ✅ NEW: Real-time Notification Banner */}
+        {newRequestNotification && (
+          <div className={`fixed top-0 left-0 right-0 z-50 ${
+            newRequestNotification.urgency === 'IMMEDIATE'
+              ? 'bg-gradient-to-r from-red-600 to-orange-600 animate-pulse'
+              : 'bg-gradient-to-r from-blue-600 to-purple-600'
+          } text-white shadow-lg`}>
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="text-3xl">
+                    {newRequestNotification.urgency === 'IMMEDIATE' ? '🔥' : '📬'}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">
+                      {newRequestNotification.urgency === 'IMMEDIATE' ? 'URGENT REQUEST!' : 'New Service Request'}
+                    </h3>
+                    <p className="text-sm opacity-90">
+                      {newRequestNotification.title} - {newRequestNotification.category}
+                    </p>
+                    <p className="text-xs opacity-75">
+                      Budget: KSH {newRequestNotification.budgetMin} - {newRequestNotification.budgetMax} | Location: {newRequestNotification.location}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setNewRequestNotification(null);
+                    setActiveTab('requests');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="bg-white text-blue-600 dark:text-blue-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+                >
+                  View Now →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className={`bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 ${newRequestNotification ? 'mt-24' : ''}`}>
           <div className="container mx-auto px-4 py-4 sm:py-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
