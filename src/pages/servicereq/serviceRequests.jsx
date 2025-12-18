@@ -557,6 +557,20 @@ export default function MerchantServiceRequestDashboard() {
     return timelineMap[timeline] || timeline;
   };
 
+  const getUrgencyBadge = (urgency) => {
+    const configs = {
+      'IMMEDIATE': { color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-300 dark:border-red-700', label: '🔥 IMMEDIATE', icon: '⚡' },
+      'SCHEDULED': { color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700', label: '📅 SCHEDULED', icon: '📅' },
+      'CHECK_LATER': { color: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-600', label: '🕐 CHECK LATER', icon: '🕐' }
+    };
+    const config = configs[urgency] || configs['CHECK_LATER'];
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   const getStatusBadge = (status) => {
     const configs = {
       'pending': { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
@@ -841,13 +855,19 @@ export default function MerchantServiceRequestDashboard() {
                 <>
                   {serviceRequests.map((request) => {
                     const eligibleStores = getEligibleStores(request.category);
+                    const isImmediate = request.urgency === 'IMMEDIATE';
                     return (
-                      <div key={request.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                      <div key={request.id} className={`rounded-lg shadow-sm border hover:shadow-md transition-shadow ${
+                        isImmediate
+                          ? 'bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-300 dark:border-red-700 ring-2 ring-red-200 dark:ring-red-800'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                      }`}>
                         <div className="p-4 sm:p-6">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex-1">
                               <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">{request.title}</h3>
+                                {request.urgency && getUrgencyBadge(request.urgency)}
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.priority === 'urgent' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
                                     request.priority === 'high' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300' :
                                       'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
@@ -883,6 +903,12 @@ export default function MerchantServiceRequestDashboard() {
                                   <Clock className="w-4 h-4" />
                                   <span>{getTimelineLabel(request.timeline)}</span>
                                 </div>
+                                {request.urgency === 'SCHEDULED' && request.scheduledDateTime && (
+                                  <div className="flex items-center space-x-1 font-medium text-blue-600 dark:text-blue-400">
+                                    <Clock className="w-4 h-4" />
+                                    <span>📅 {new Date(request.scheduledDateTime).toLocaleString()}</span>
+                                  </div>
+                                )}
                                 <div className="flex items-center space-x-1">
                                   <User className="w-4 h-4" />
                                   <span>by {request.postedBy}</span>
