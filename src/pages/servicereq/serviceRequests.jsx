@@ -347,6 +347,41 @@ export default function MerchantServiceRequestDashboard() {
     }
   };
 
+  // ✅ NEW: Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('🔔 Notification permission:', permission);
+      });
+    }
+  }, []);
+
+  // ✅ NEW: Show browser push notification for new requests
+  const showRequestNotification = (request) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const urgencyEmoji = request.urgency === 'IMMEDIATE' ? '🔥 URGENT: ' : '';
+        const notification = new Notification(`${urgencyEmoji}New Service Request!`, {
+          body: `${request.category}: ${request.title}\nBudget: KSH ${request.budgetMin} - KSH ${request.budgetMax}\n📍 ${request.location}`,
+          icon: '/logo192.png',
+          badge: '/logo192.png',
+          tag: `request-${request.id}`,
+          requireInteraction: request.urgency === 'IMMEDIATE',
+          vibrate: request.urgency === 'IMMEDIATE' ? [200, 100, 200, 100, 200] : [200, 100, 200]
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        console.log('🔔 Push notification shown for request:', request.id);
+      } catch (error) {
+        console.error('❌ Failed to show notification:', error);
+      }
+    }
+  };
+
   // Socket.IO connection for real-time notifications
   useEffect(() => {
     if (isAuthenticated && currentMerchant && merchantStores.length > 0) {
@@ -386,6 +421,9 @@ export default function MerchantServiceRequestDashboard() {
         } else {
           playNotificationSound();
         }
+
+        // ✅ SHOW PUSH NOTIFICATION
+        showRequestNotification(data);
 
         setNewRequestNotification(data);
 
