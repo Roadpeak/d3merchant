@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../elements/Layout';
 import merchantAuthService from '../../services/merchantAuthService';
 // ✅ FIXED: Changed from dynamic import to static import
 import merchantServiceRequestService from '../../services/merchantServiceRequestService';
+import io from 'socket.io-client';
 
 // Simple SVG Icons (keeping the same as before)
 const Search = ({ className = "w-4 h-4" }) => (
@@ -106,6 +107,9 @@ const InfoBox = ({ type, message, onClose }) => (
 );
 
 export default function MerchantServiceRequestDashboard() {
+  // Refs
+  const socketRef = useRef(null);
+
   // Core state
   const [activeTab, setActiveTab] = useState('requests');
   const [loading, setLoading] = useState(true);
@@ -116,6 +120,9 @@ export default function MerchantServiceRequestDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentMerchant, setCurrentMerchant] = useState(null);
   const [merchantStores, setMerchantStores] = useState([]);
+
+  // Socket state
+  const [newRequestNotification, setNewRequestNotification] = useState(null);
 
   // Data state
   const [dashboardStats, setDashboardStats] = useState({
@@ -313,6 +320,67 @@ export default function MerchantServiceRequestDashboard() {
       loadServiceRequests();
     }
   }, [filters, initialized, isAuthenticated]);
+
+  // Socket.IO connection for real-time notifications
+  useEffect(() => {
+    if (isAuthenticated && currentMerchant && merchantStores.length > 0) {
+      const wsUrl = process.env.REACT_APP_WS_URL || 'https://api.discoun3ree.com';
+      const token = merchantAuthService.getToken();
+
+      if (!token) {
+        console.error('❌ No token found for Socket.IO connection');
+        return;
+      }
+
+      socketRef.current = io(wsUrl, {
+        auth: { token, userId: currentMerchant.id, userType: 'merchant' },
+        transports: ['websocket', 'polling']
+      });
+
+      socketRef.current.on('connect', () => {
+        console.log('✅ Socket.IO connected for merchant');
+
+        // Join category rooms for each merchant store
+        merchantStores.forEach(store => {
+          const categoryRoom = `category:${store.category}`;
+          socketRef.current.emit('join', categoryRoom);
+          console.log(`📡 Joined category room: ${categoryRoom}`);
+        });
+      });
+
+      // Listen for new service requests matching merchant's categories
+      socketRef.current.on('service-request:new', (data) => {
+        console.log('🔔 New service request notification:', data);
+        setNewRequestNotification(data);
+
+        // Auto-reload service requests to show the new one
+        loadServiceRequests();
+
+        // Clear notification after 5 seconds
+        setTimeout(() => setNewRequestNotification(null), 5000);
+      });
+
+      // Listen for offer acceptance
+      socketRef.current.on('offer:accepted', (data) => {
+        console.log('✅ Offer accepted notification:', data);
+
+        // Reload offers and stats
+        Promise.all([
+          loadMerchantOffers(),
+          loadDashboardStats()
+        ]);
+
+        alert(`Great news! Your offer for request #${data.requestId} has been accepted!`);
+      });
+
+      return () => {
+        if (socketRef.current) {
+          console.log('Disconnecting Socket.IO...');
+          socketRef.current.disconnect();
+        }
+      };
+    }
+  }, [isAuthenticated, currentMerchant, merchantStores]);
 
   const loadDashboardData = async () => {
     try {

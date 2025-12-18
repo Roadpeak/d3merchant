@@ -66,11 +66,11 @@ class MerchantNotificationSocket {
     if (!this.socket) return;
 
     // Connection events
-    this.socket.on('connect', () => {
+    this.socket.on('connect', async () => {
       console.log('✅ Merchant notification socket connected');
       this.connected = true;
       this.reconnectAttempts = 0;
-      
+
       const merchant = merchantAuthService.getCurrentMerchant();
       if (merchant) {
         // Join merchant-specific rooms
@@ -78,6 +78,24 @@ class MerchantNotificationSocket {
           merchantId: merchant.id,
           storeIds: merchant.storeIds || []
         });
+
+        // ✅ NEW: Auto-join category rooms based on merchant's stores
+        try {
+          // Dynamically import to avoid circular dependency
+          const { default: merchantServiceRequestService } = await import('./merchantServiceRequestService.js');
+
+          const storesResponse = await merchantServiceRequestService.getMerchantStores();
+          if (storesResponse && storesResponse.success && storesResponse.data?.stores) {
+            const categories = [...new Set(storesResponse.data.stores.map(store => store.category))];
+            console.log('🏪 Auto-joining category rooms:', categories);
+            this.joinCategoryRooms(categories);
+
+            // Request notification permission
+            await this.requestNotificationPermission();
+          }
+        } catch (error) {
+          console.error('Failed to auto-join category rooms:', error);
+        }
       }
     });
 
@@ -128,6 +146,30 @@ class MerchantNotificationSocket {
     this.socket.on('store_notification', (notification) => {
       console.log('🏪 Store-specific notification:', notification);
       this.handleStoreNotification(notification);
+    });
+
+    // ✅ NEW: Uber-style Service Request Events
+    this.socket.on('service-request:new', (requestData) => {
+      console.log('🚨 NEW IMMEDIATE SERVICE REQUEST:', requestData);
+      this.handleNewServiceRequest(requestData);
+    });
+
+    this.socket.on('offer:new', (offerData) => {
+      console.log('💰 New offer received:', offerData);
+      this.handleNewOffer(offerData);
+    });
+
+    this.socket.on('offer:accepted', (data) => {
+      console.log('✅ Offer accepted:', data);
+      this.handleOfferAccepted(data);
+    });
+
+    this.socket.on('category-room-joined', (data) => {
+      console.log('✅ Joined category room:', data);
+    });
+
+    this.socket.on('request-room-joined', (data) => {
+      console.log('✅ Joined request room:', data);
     });
 
     // Error events
@@ -320,6 +362,192 @@ class MerchantNotificationSocket {
       this.socket.emit('leave_store_rooms', { storeIds });
       console.log('Left store rooms:', storeIds);
     }
+  }
+
+  // ✅ NEW: Handle new IMMEDIATE service request
+  handleNewServiceRequest(requestData) {
+    console.log('🎯 Processing new IMMEDIATE service request:', requestData);
+
+    // Convert to notification format
+    const notification = {
+      id: `req_${requestData.requestId || Date.now()}`,
+      type: 'immediate_service_request',
+      title: '🚨 New Immediate Service Request',
+      message: `${requestData.title} - Budget: KSH ${requestData.budgetMin}-${requestData.budgetMax}`,
+      priority: 'urgent',
+      createdAt: new Date(),
+      read: false,
+      isNew: true,
+      isImmediate: true,
+      data: {
+        requestId: requestData.requestId,
+        title: requestData.title,
+        category: requestData.category,
+        location: requestData.location,
+        budgetMin: requestData.budgetMin,
+        budgetMax: requestData.budgetMax,
+        urgency: requestData.urgency,
+        createdAt: requestData.createdAt
+      },
+      actionUrl: `/service-requests`,
+      actionType: 'navigate'
+    };
+
+    // Show browser notification if supported
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🚨 New Immediate Service Request', {
+        body: `${requestData.title}\nBudget: KSH ${requestData.budgetMin}-${requestData.budgetMax}\nLocation: ${requestData.location}`,
+        icon: '/logo.png',
+        tag: `request_${requestData.requestId}`,
+        requireInteraction: true
+      });
+    }
+
+    // Notify callbacks
+    this.notificationCallbacks.forEach(callback => {
+      try {
+        callback(notification, 'immediate_service_request');
+      } catch (error) {
+        console.error('Error in service request callback:', error);
+      }
+    });
+  }
+
+  // ✅ NEW: Handle new offer notification
+  handleNewOffer(offerData) {
+    console.log('💰 Processing new offer:', offerData);
+
+    const notification = {
+      id: `offer_${offerData.id || Date.now()}`,
+      type: 'new_offer',
+      title: 'New Offer Received',
+      message: `${offerData.merchant?.name || 'Merchant'} offered KSH ${offerData.price}`,
+      priority: 'high',
+      createdAt: new Date(),
+      read: false,
+      isNew: true,
+      data: offerData,
+      actionUrl: `/service-requests`,
+      actionType: 'navigate'
+    };
+
+    this.notificationCallbacks.forEach(callback => {
+      try {
+        callback(notification, 'new_offer');
+      } catch (error) {
+        console.error('Error in offer callback:', error);
+      }
+    });
+  }
+
+  // ✅ NEW: Handle offer accepted notification
+  handleOfferAccepted(data) {
+    console.log('✅ Processing offer acceptance:', data);
+
+    const notification = {
+      id: `accepted_${data.offerId || Date.now()}`,
+      type: 'offer_accepted',
+      title: '🎉 Offer Accepted!',
+      message: `Your offer for request #${data.requestId} was accepted!`,
+      priority: 'high',
+      createdAt: new Date(),
+      read: false,
+      isNew: true,
+      data: data,
+      actionUrl: `/service-requests?tab=offers`,
+      actionType: 'navigate'
+    };
+
+    // Show browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🎉 Offer Accepted!', {
+        body: `Your offer was accepted! Status: ${data.newStatus}`,
+        icon: '/logo.png',
+        tag: `accepted_${data.offerId}`
+      });
+    }
+
+    this.notificationCallbacks.forEach(callback => {
+      try {
+        callback(notification, 'offer_accepted');
+      } catch (error) {
+        console.error('Error in offer accepted callback:', error);
+      }
+    });
+  }
+
+  // ✅ NEW: Join category rooms based on merchant's store categories
+  joinCategoryRooms(categories) {
+    if (!this.socket || !this.connected) {
+      console.warn('Cannot join category rooms: socket not connected');
+      return;
+    }
+
+    if (!Array.isArray(categories) || categories.length === 0) {
+      console.warn('No categories provided to join');
+      return;
+    }
+
+    categories.forEach(category => {
+      console.log('🏪 Joining category room:', category);
+      this.socket.emit('join-category-room', { category });
+    });
+  }
+
+  // ✅ NEW: Leave category rooms
+  leaveCategoryRooms(categories) {
+    if (!this.socket || !this.connected) {
+      return;
+    }
+
+    if (!Array.isArray(categories)) {
+      return;
+    }
+
+    categories.forEach(category => {
+      console.log('🚪 Leaving category room:', category);
+      this.socket.emit('leave-category-room', { category });
+    });
+  }
+
+  // ✅ NEW: Join request room to receive offers
+  joinRequestRoom(requestId) {
+    if (!this.socket || !this.connected) {
+      console.warn('Cannot join request room: socket not connected');
+      return;
+    }
+
+    console.log('📥 Joining request room:', requestId);
+    this.socket.emit('join-request-room', { requestId });
+  }
+
+  // ✅ NEW: Leave request room
+  leaveRequestRoom(requestId) {
+    if (!this.socket || !this.connected) {
+      return;
+    }
+
+    console.log('🚪 Leaving request room:', requestId);
+    this.socket.emit('leave-request-room', { requestId });
+  }
+
+  // ✅ NEW: Request browser notification permission
+  async requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      console.warn('Browser does not support notifications');
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+
+    return false;
   }
 
   // Check connection status
