@@ -106,7 +106,7 @@ const useWebPush = (isAuthenticated) => {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl'
+          'x-api-key': import.meta.env.VITE_API_KEY || (() => { console.error('CRITICAL: API key not configured. Set VITE_API_KEY.'); return undefined; })()
         },
         credentials: 'include',
         body: JSON.stringify(subscription)

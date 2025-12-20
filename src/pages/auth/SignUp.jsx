@@ -107,10 +107,10 @@ const MerchantSignupPage = () => {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
+    } else if (formData.password.length < 12) {
+      newErrors.password = 'Password must be at least 12 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+=\-{}\[\]:;"'<>,.\/\\|`~])/.test(formData.password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, number, and special character';
     }
     
     if (!formData.confirmPassword) {
@@ -377,21 +377,41 @@ const MerchantSignupPage = () => {
           <div className="flex items-center text-xs">
             <CheckCircle
               className={`w-4 h-4 mr-2 ${
-                formData.password.length >= 8 ? 'text-green-400' : 'text-gray-400'
+                formData.password.length >= 12 ? 'text-green-400' : 'text-gray-400'
               }`}
             />
-            <span className={formData.password.length >= 8 ? 'text-green-400' : 'text-white/70'}>
-              At least 8 characters
+            <span className={formData.password.length >= 12 ? 'text-green-400' : 'text-white/70'}>
+              At least 12 characters
             </span>
           </div>
           <div className="flex items-center text-xs">
             <CheckCircle
               className={`w-4 h-4 mr-2 ${
-                /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password) ? 'text-green-400' : 'text-gray-400'
+                /(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'text-green-400' : 'text-gray-400'
               }`}
             />
-            <span className={/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password) ? 'text-green-400' : 'text-white/70'}>
-              Uppercase, lowercase, and number
+            <span className={/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'text-green-400' : 'text-white/70'}>
+              Uppercase and lowercase letters
+            </span>
+          </div>
+          <div className="flex items-center text-xs">
+            <CheckCircle
+              className={`w-4 h-4 mr-2 ${
+                /(?=.*\d)/.test(formData.password) ? 'text-green-400' : 'text-gray-400'
+              }`}
+            />
+            <span className={/(?=.*\d)/.test(formData.password) ? 'text-green-400' : 'text-white/70'}>
+              At least one number
+            </span>
+          </div>
+          <div className="flex items-center text-xs">
+            <CheckCircle
+              className={`w-4 h-4 mr-2 ${
+                /(?=.*[@$!%*?&#^()_+=\-{}\[\]:;"'<>,.\/\\|`~])/.test(formData.password) ? 'text-green-400' : 'text-gray-400'
+              }`}
+            />
+            <span className={/(?=.*[@$!%*?&#^()_+=\-{}\[\]:;"'<>,.\/\\|`~])/.test(formData.password) ? 'text-green-400' : 'text-white/70'}>
+              At least one special character
             </span>
           </div>
         </div>

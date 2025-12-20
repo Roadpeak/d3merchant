@@ -309,7 +309,7 @@ class MerchantAuthService {
   async register(merchantData) {
     try {
       console.log('🔑 Registering new merchant...');
-      console.log('📝 Registration data:', { ...merchantData, password: '[HIDDEN]' });
+      // SECURITY: Not logging registration data to prevent sensitive information exposure
 
       const response = await fetch(`${this.baseURL}/register`, {
         method: 'POST',

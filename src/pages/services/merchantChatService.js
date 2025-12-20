@@ -42,11 +42,12 @@ constructor() {
       throw new Error('Merchant authentication required');
     }
   
-    console.log('🏪 Using token for API call:', token.substring(0, 20) + '...');
+    console.log('🏪 Using token for API call:', 'Present');
+    // SECURITY: Never log token values or previews
   
     return {
       'Content-Type': 'application/json',
-      'x-api-key': import.meta.env.VITE_API_KEY || 'API_KEY_12345ABCDEF!@#67890-xyZQvTPOl',
+      'x-api-key': import.meta.env.VITE_API_KEY || (() => { console.error('CRITICAL: API key not configured. Set VITE_API_KEY.'); return undefined; })(),
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
       'User-Type': 'merchant'

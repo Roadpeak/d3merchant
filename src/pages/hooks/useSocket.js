@@ -88,7 +88,8 @@ const useSocket = (user) => {
     }
 
     if (token) {
-      console.log(`✅ Token found for ${user?.userType}:`, token.substring(0, 20) + '...');
+      console.log(`✅ Token found for ${user?.userType}:`, 'Present');
+      // SECURITY: Never log token values or previews
 
       // Validate token type matches user type
       try {
