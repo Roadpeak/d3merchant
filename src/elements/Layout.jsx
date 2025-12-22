@@ -157,17 +157,14 @@ const Layout = ({
   ];
 
   // Initialize merchant data
+  // With HttpOnly cookies, authentication is verified server-side via API calls
   useEffect(() => {
     const initializeMerchant = async () => {
       try {
         setLoading(true);
 
-        if (!merchantAuthService.isAuthenticated()) {
-          navigate('/accounts/sign-in');
-          return;
-        }
-
-        const merchant = merchantAuthService.getCurrentMerchant();
+        // Fetch merchant profile - this will fail if not authenticated (HttpOnly cookie check)
+        const merchant = await merchantAuthService.getCurrentMerchantProfile();
 
         if (merchant) {
           setCurrentMerchant(merchant);
@@ -177,8 +174,13 @@ const Layout = ({
         }
       } catch (error) {
         console.error('Error initializing merchant:', error);
-        toast.error('Authentication error. Please log in again.');
-        navigate('/accounts/sign-in');
+        // Only redirect if it's actually an auth error (401)
+        if (error.response?.status === 401) {
+          toast.error('Session expired. Please log in again.');
+          navigate('/accounts/sign-in');
+        } else {
+          toast.error('Error loading merchant data.');
+        }
       } finally {
         setLoading(false);
       }
@@ -190,7 +192,8 @@ const Layout = ({
   // Check for staff - show onboarding if no staff exists
   useEffect(() => {
     const checkStaffStatus = async () => {
-      if (!merchantAuthService.isAuthenticated()) {
+      // Skip check if no merchant is loaded yet
+      if (!currentMerchant) {
         return;
       }
 
@@ -235,7 +238,8 @@ const Layout = ({
   // Load chat unread count
   useEffect(() => {
     const loadChatCount = async () => {
-      if (!merchantAuthService.isAuthenticated()) {
+      // Skip check if no merchant is loaded yet
+      if (!currentMerchant) {
         return;
       }
 
