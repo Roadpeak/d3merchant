@@ -74,25 +74,14 @@ const MerchantLoginPage = () => {
       });
 
       // Check if response is valid
-      if (!response || !response.access_token) {
+      if (!response) {
         throw new Error('Invalid response from server. Please try again.');
       }
 
-      // Store auth data
-      merchantAuthService.storeAuthData({
-        merchant: {
-          id: response.id,
-          first_name: response.first_name,
-          last_name: response.last_name,
-          email_address: response.email_address,
-          phone_number: response.phone_number,
-          joined: response.joined,
-          updated: response.updated,
-        },
-        token: response.access_token,
-      });
-
-      toast.success(`Welcome back, ${response.first_name}!`);
+      // HttpOnly cookie is set automatically by the backend
+      // Just show success message and navigate
+      const merchantName = response.first_name || response.firstName || 'Merchant';
+      toast.success(`Welcome back, ${merchantName}!`);
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
