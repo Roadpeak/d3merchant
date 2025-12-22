@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import merchantAuthService from '../../services/merchantAuthService';
@@ -16,12 +16,8 @@ const MerchantLoginPage = () => {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  // Check if already authenticated
-  useEffect(() => {
-    if (merchantAuthService.isAuthenticated()) {
-      navigate('/dashboard');
-    }
-  }, [navigate]);
+  // Note: With HttpOnly cookies, authentication state is managed server-side.
+  // Protected routes will check auth via API calls, not client-side token checks.
 
   const validateForm = () => {
     const newErrors = {};
