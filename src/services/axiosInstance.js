@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL,
     timeout: 10000,
+    withCredentials: true, // CRITICAL: Required for HttpOnly cookies to work with cross-origin requests
     headers: {
         'Content-Type': 'application/json',
     },

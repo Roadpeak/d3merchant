@@ -233,6 +233,7 @@ class MerchantAuthService {
       const response = await fetch(`${this.baseURL}/login`, {
         method: 'POST',
         headers: this.getHeaders(false),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
         body: JSON.stringify(credentials),
       });
 
@@ -314,6 +315,7 @@ class MerchantAuthService {
       const response = await fetch(`${this.baseURL}/register`, {
         method: 'POST',
         headers: this.getHeaders(false),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
         body: JSON.stringify(merchantData),
       });
 
@@ -350,6 +352,7 @@ class MerchantAuthService {
       const response = await fetch(`${this.baseURL}/profile`, {
         method: 'GET',
         headers: this.getHeaders(true),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
       });
 
       const data = await response.json();
@@ -395,6 +398,7 @@ class MerchantAuthService {
       const response = await fetch(`${this.storeURL}/merchant/profile`, {
         method: 'PUT',
         headers: this.getHeaders(true),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
         body: JSON.stringify(updateData),
       });
 
@@ -424,7 +428,8 @@ class MerchantAuthService {
 
       const response = await fetch(`${this.storeURL}/profile/${storeId}`, {
         method: 'GET',
-        headers: this.getHeaders(true)
+        headers: this.getHeaders(true),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
       });
 
       const data = await response.json();
@@ -541,6 +546,7 @@ class MerchantAuthService {
       const response = await fetch(`${this.baseURL}/request-password-reset`, {
         method: 'POST',
         headers: this.getHeaders(false),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
         body: JSON.stringify({ email }),
       });
 
@@ -567,6 +573,7 @@ class MerchantAuthService {
       const response = await fetch(`${this.baseURL}/reset-password`, {
         method: 'POST',
         headers: this.getHeaders(false),
+        credentials: 'include', // CRITICAL: Required for HttpOnly cookies
         body: JSON.stringify({
           token,
           newPassword
