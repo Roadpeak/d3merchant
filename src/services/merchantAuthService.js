@@ -266,31 +266,22 @@ class MerchantAuthService {
         }
       }
 
-      // Validate response data
-      if (!data.access_token) {
-        console.error('💥 No access token in response:', data);
+      // With HttpOnly cookies, the token is NOT in the response body
+      // It's automatically set as a cookie by the server
+      // We only need to validate that we have merchant data
+      if (!data.id || !data.email_address) {
+        console.error('💥 Invalid merchant data in response:', data);
         throw new Error('Invalid server response. Please try again.');
       }
 
-      // Store authentication data
-      const authData = {
-        token: data.access_token,
-        merchant: {
-          id: data.id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email_address: data.email_address,
-          phone_number: data.phone_number,
-          joined: data.joined,
-          updated: data.updated,
-          last_login: data.last_login
-        },
-        timestamp: Date.now()
-      };
+      console.log('✅ Login successful - HttpOnly cookie set by server');
+      console.log('📋 Merchant info:', {
+        id: data.id,
+        name: `${data.first_name} ${data.last_name}`,
+        email: data.email_address
+      });
 
-      this.storeAuthData(authData);
-      console.log('✅ Login successful, auth data stored');
-
+      // Return merchant data (token is in HttpOnly cookie, not accessible to JavaScript)
       return data;
     } catch (error) {
       console.error('💥 Login error:', error);
