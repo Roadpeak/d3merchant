@@ -517,66 +517,76 @@ const Layout = ({
     )
   );
 
-  // Grid Navigation Component
-  const GridNavigation = () => {
-    const [stats, setStats] = useState({
-      serviceBookings: 0,
-      offerBookings: 0,
-      serviceRequests: 0,
-      monthlyRevenue: 0
-    });
-    const [loadingStats, setLoadingStats] = useState(true);
+  // Grid Navigation Component - Stats state lifted to parent to prevent re-renders
+  const [gridStats, setGridStats] = useState({
+    serviceBookings: 0,
+    offerBookings: 0,
+    serviceRequests: 0,
+    monthlyRevenue: 0
+  });
+  const [loadingGridStats, setLoadingGridStats] = useState(true);
+  const gridStatsFetchedRef = React.useRef(false);
 
-    useEffect(() => {
-      // Fetch real-time stats for welcome banner
-      const fetchStats = async () => {
-        try {
-          const [
-            { default: enhancedBookingService },
-            { default: merchantServiceRequestService }
-          ] = await Promise.all([
-            import('../services/enhancedBookingService'),
-            import('../services/merchantServiceRequestService')
-          ]);
+  // Fetch grid stats only once when component mounts
+  useEffect(() => {
+    // Skip if already fetched or no merchant loaded
+    if (gridStatsFetchedRef.current || !currentMerchant) {
+      return;
+    }
 
-          const [merchantBookings, serviceBookings, offerBookings, serviceRequests] = await Promise.allSettled([
-            enhancedBookingService.getMerchantBookings({ limit: 1000 }),
-            enhancedBookingService.getMerchantServiceBookings({ limit: 1000 }),
-            enhancedBookingService.getMerchantOfferBookings({ limit: 1000 }),
-            merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
-          ]);
+    gridStatsFetchedRef.current = true;
 
-          // Calculate monthly revenue
-          let monthlyRevenue = 0;
-          if (merchantBookings.status === 'fulfilled' && merchantBookings.value?.success) {
-            const bookings = merchantBookings.value.bookings || [];
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
+    const fetchGridStats = async () => {
+      try {
+        const [
+          { default: enhancedBookingService },
+          { default: merchantServiceRequestService }
+        ] = await Promise.all([
+          import('../services/enhancedBookingService'),
+          import('../services/merchantServiceRequestService')
+        ]);
 
-            bookings.forEach(booking => {
-              const bookingDate = new Date(booking.createdAt || booking.created_at);
-              if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
-                const amount = parseFloat(booking.totalAmount || booking.amount || booking.accessFee || 0);
-                monthlyRevenue += amount;
-              }
-            });
-          }
+        const [merchantBookings, serviceBookings, offerBookings, serviceRequests] = await Promise.allSettled([
+          enhancedBookingService.getMerchantBookings({ limit: 1000 }),
+          enhancedBookingService.getMerchantServiceBookings({ limit: 1000 }),
+          enhancedBookingService.getMerchantOfferBookings({ limit: 1000 }),
+          merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
+        ]);
 
-          setStats({
-            serviceBookings: serviceBookings.status === 'fulfilled' ? (serviceBookings.value?.bookings?.length || 0) : 0,
-            offerBookings: offerBookings.status === 'fulfilled' ? (offerBookings.value?.bookings?.length || 0) : 0,
-            serviceRequests: serviceRequests.status === 'fulfilled' ? (serviceRequests.value?.data?.requests?.length || 0) : 0,
-            monthlyRevenue
+        // Calculate monthly revenue
+        let monthlyRevenue = 0;
+        if (merchantBookings.status === 'fulfilled' && merchantBookings.value?.success) {
+          const bookings = merchantBookings.value.bookings || [];
+          const currentMonth = new Date().getMonth();
+          const currentYear = new Date().getFullYear();
+
+          bookings.forEach(booking => {
+            const bookingDate = new Date(booking.createdAt || booking.created_at);
+            if (bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear) {
+              const amount = parseFloat(booking.totalAmount || booking.amount || booking.accessFee || 0);
+              monthlyRevenue += amount;
+            }
           });
-        } catch (error) {
-          console.error('Error fetching grid stats:', error);
-        } finally {
-          setLoadingStats(false);
         }
-      };
 
-      fetchStats();
-    }, []);
+        setGridStats({
+          serviceBookings: serviceBookings.status === 'fulfilled' ? (serviceBookings.value?.bookings?.length || 0) : 0,
+          offerBookings: offerBookings.status === 'fulfilled' ? (offerBookings.value?.bookings?.length || 0) : 0,
+          serviceRequests: serviceRequests.status === 'fulfilled' ? (serviceRequests.value?.data?.requests?.length || 0) : 0,
+          monthlyRevenue
+        });
+      } catch (error) {
+        console.error('Error fetching grid stats:', error);
+      } finally {
+        setLoadingGridStats(false);
+      }
+    };
+
+    fetchGridStats();
+  }, [currentMerchant]);
+
+  // Grid Navigation Component - now uses parent state
+  const GridNavigation = () => {
 
     return (
       <div className="relative min-h-screen overflow-hidden">
@@ -609,25 +619,25 @@ const Layout = ({
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
                   <div className="text-blue-100 text-xs md:text-sm mb-1">Monthly Revenue</div>
                   <div className="text-white text-xl md:text-2xl font-bold">
-                    {loadingStats ? '...' : `$${stats.monthlyRevenue.toLocaleString()}`}
+                    {loadingGridStats ? '...' : `$${gridStats.monthlyRevenue.toLocaleString()}`}
                   </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
                   <div className="text-blue-100 text-xs md:text-sm mb-1">Service Bookings</div>
                   <div className="text-white text-xl md:text-2xl font-bold">
-                    {loadingStats ? '...' : stats.serviceBookings}
+                    {loadingGridStats ? '...' : gridStats.serviceBookings}
                   </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
                   <div className="text-blue-100 text-xs md:text-sm mb-1">Offer Bookings</div>
                   <div className="text-white text-xl md:text-2xl font-bold">
-                    {loadingStats ? '...' : stats.offerBookings}
+                    {loadingGridStats ? '...' : gridStats.offerBookings}
                   </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-200">
                   <div className="text-blue-100 text-xs md:text-sm mb-1">Open Requests</div>
                   <div className="text-white text-xl md:text-2xl font-bold">
-                    {loadingStats ? '...' : stats.serviceRequests}
+                    {loadingGridStats ? '...' : gridStats.serviceRequests}
                   </div>
                 </div>
               </div>
