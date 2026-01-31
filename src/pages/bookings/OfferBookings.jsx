@@ -374,11 +374,11 @@ const OfferBookings = () => {
                 <div className="flex items-center mb-1">
                   <Tag className="w-4 h-4 text-green-600 dark:text-green-400 mr-2 flex-shrink-0" />
                   <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {booking.Offer?.title || booking.Offer?.Service?.name || booking.offer || "Special Offer"}
+                    {booking.Offer?.title || booking.Offer?.Service?.name || (typeof booking.offer === 'string' ? booking.offer : booking.offer?.title) || "Special Offer"}
                   </span>
                 </div>
                 <p className="text-xs text-green-700 dark:text-green-400 font-medium">
-                  {booking.Offer?.description || "Special Promotion"}
+                  {booking.Offer?.description || (typeof booking.offer === 'object' ? booking.offer?.description : null) || "Special Promotion"}
                 </p>
               </div>
             </div>
