@@ -167,6 +167,7 @@ const Layout = ({
         const merchant = await merchantAuthService.getCurrentMerchantProfile();
 
         if (merchant) {
+          console.log('📋 Merchant profile loaded:', merchant);
           setCurrentMerchant(merchant);
         } else {
           toast.error('Session expired. Please log in again.');
@@ -377,17 +378,26 @@ const Layout = ({
   const UserMenu = () => {
     if (!currentMerchant) return null;
 
+    // Debug: log currentMerchant to see what fields are available
+    console.log('🔍 UserMenu currentMerchant:', currentMerchant);
+
     const merchantInitials = currentMerchant.first_name && currentMerchant.last_name
       ? `${currentMerchant.first_name.charAt(0)}${currentMerchant.last_name.charAt(0)}`
       : currentMerchant.first_name
         ? currentMerchant.first_name.charAt(0)
-        : 'D';
+        : currentMerchant.email_address
+          ? currentMerchant.email_address.charAt(0).toUpperCase()
+          : 'M';
 
     const merchantName = currentMerchant.first_name && currentMerchant.last_name
       ? `${currentMerchant.first_name} ${currentMerchant.last_name}`
-      : currentMerchant.first_name || 'Doron';
+      : currentMerchant.first_name
+        ? currentMerchant.first_name
+        : currentMerchant.email_address
+          ? currentMerchant.email_address.split('@')[0]
+          : 'Merchant';
 
-    const merchantEmail = currentMerchant.email_address || currentMerchant.email || 'doron@example.com';
+    const merchantEmail = currentMerchant.email_address || currentMerchant.email || '';
 
     return (
       <div className="user-menu relative">
