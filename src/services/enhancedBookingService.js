@@ -436,39 +436,38 @@ class EnhancedBookingService {
 
     /**
      * Fallback method when merchant-specific endpoints aren't available
+     * Returns empty data instead of mock data for production accuracy
      */
     async getMerchantBookingsFallback(params = {}) {
         try {
-            console.log('🔄 Using fallback method for merchant bookings');
-            
-            // Return structured empty response with realistic mock data for development
-            const mockBookings = this.generateMockServiceBookings(params.limit || 20);
-            
-            const mockResponse = {
+            console.log('🔄 Using fallback method for merchant bookings - returning empty data');
+
+            // Return empty response - don't generate mock data as it shows wrong counts
+            const emptyResponse = {
                 success: true,
-                bookings: mockBookings,
+                bookings: [],
                 pagination: {
-                    total: mockBookings.length,
+                    total: 0,
                     page: parseInt(params.page) || 1,
                     limit: parseInt(params.limit) || 20,
-                    totalPages: Math.ceil(mockBookings.length / (parseInt(params.limit) || 20))
+                    totalPages: 0
                 },
                 summary: {
-                    total: mockBookings.length,
-                    offerBookings: mockBookings.filter(b => b.isOfferBooking).length,
-                    serviceBookings: mockBookings.filter(b => b.isServiceBooking).length,
-                    upcomingBookings: mockBookings.filter(b => b.isUpcoming).length,
-                    confirmedBookings: mockBookings.filter(b => b.status === 'confirmed').length,
-                    pendingBookings: mockBookings.filter(b => b.status === 'pending').length,
-                    completedBookings: mockBookings.filter(b => b.status === 'completed').length,
-                    cancelledBookings: mockBookings.filter(b => b.status === 'cancelled').length
+                    total: 0,
+                    offerBookings: 0,
+                    serviceBookings: 0,
+                    upcomingBookings: 0,
+                    confirmedBookings: 0,
+                    pendingBookings: 0,
+                    completedBookings: 0,
+                    cancelledBookings: 0
                 },
-                message: 'Using fallback method - merchant bookings endpoint not yet implemented'
+                message: 'API endpoint unavailable - please ensure server is updated'
             };
 
-            console.log('📋 Fallback response prepared with mock data');
-            return mockResponse;
-            
+            console.log('📋 Fallback response prepared with empty data');
+            return emptyResponse;
+
         } catch (error) {
             console.error('❌ Error in fallback method:', error);
             throw this.handleError(error);
