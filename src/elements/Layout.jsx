@@ -547,13 +547,13 @@ const Layout = ({
         ]);
 
         const [merchantBookings, serviceBookings, offerBookings, serviceRequests] = await Promise.allSettled([
-          enhancedBookingService.getMerchantBookings({ limit: 1000 }),
-          enhancedBookingService.getMerchantServiceBookings({ limit: 1000 }),
-          enhancedBookingService.getMerchantOfferBookings({ limit: 1000 }),
-          merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 1000, status: 'open' })
+          enhancedBookingService.getMerchantBookings({ limit: 100 }),
+          enhancedBookingService.getMerchantServiceBookings({ limit: 100 }),
+          enhancedBookingService.getMerchantOfferBookings({ limit: 100 }),
+          merchantServiceRequestService.getServiceRequestsForMerchant({ limit: 100, status: 'open' })
         ]);
 
-        // Calculate monthly revenue
+        // Calculate monthly revenue from actual bookings
         let monthlyRevenue = 0;
         if (merchantBookings.status === 'fulfilled' && merchantBookings.value?.success) {
           const bookings = merchantBookings.value.bookings || [];
@@ -569,10 +569,26 @@ const Layout = ({
           });
         }
 
+        // Use summary.total or pagination.total from API response for accurate counts
+        // Fall back to array length only if totals not available
+        const getBookingCount = (result) => {
+          if (result.status !== 'fulfilled' || !result.value?.success) return 0;
+          // Prefer summary.total or pagination.total over array length
+          return result.value?.summary?.total ??
+                 result.value?.pagination?.total ??
+                 result.value?.bookings?.length ?? 0;
+        };
+
+        const getRequestCount = (result) => {
+          if (result.status !== 'fulfilled') return 0;
+          return result.value?.data?.pagination?.total ??
+                 result.value?.data?.requests?.length ?? 0;
+        };
+
         setGridStats({
-          serviceBookings: serviceBookings.status === 'fulfilled' ? (serviceBookings.value?.bookings?.length || 0) : 0,
-          offerBookings: offerBookings.status === 'fulfilled' ? (offerBookings.value?.bookings?.length || 0) : 0,
-          serviceRequests: serviceRequests.status === 'fulfilled' ? (serviceRequests.value?.data?.requests?.length || 0) : 0,
+          serviceBookings: getBookingCount(serviceBookings),
+          offerBookings: getBookingCount(offerBookings),
+          serviceRequests: getRequestCount(serviceRequests),
           monthlyRevenue
         });
       } catch (error) {
