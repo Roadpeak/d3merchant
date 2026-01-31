@@ -64,9 +64,17 @@ class MerchantAuthService {
   // Store authentication data securely
   storeAuthData(authData) {
     try {
+      // Always store in localStorage as primary storage (most reliable for cross-origin)
+      localStorage.setItem('merchant_auth_data', JSON.stringify({
+        ...authData,
+        timestamp: Date.now()
+      }));
+      console.log('✅ Auth data stored in localStorage');
+
+      // Also try cookie storage as backup
       if (!SECRET_KEY) {
         console.warn('⚠️ SECRET_KEY not configured, storing auth data without encryption');
-        // Fallback to unencrypted storage in development
+        // Fallback to unencrypted storage
         const fallbackData = {
           ...authData,
           unencrypted: true,
@@ -75,7 +83,7 @@ class MerchantAuthService {
         Cookies.set('merchant_auth_fallback', JSON.stringify(fallbackData), {
           expires: 7,
           secure: import.meta.env.PROD,
-          sameSite: 'strict',
+          sameSite: 'lax', // Changed from strict to lax for better cross-origin support
           path: '/'
         });
         return;
@@ -89,13 +97,13 @@ class MerchantAuthService {
       Cookies.set('merchant_auth', encryptedData, {
         expires: 7, // 7 days
         secure: import.meta.env.PROD, // Only secure in production
-        sameSite: 'strict',
+        sameSite: 'lax', // Changed from strict to lax for better cross-origin support
         path: '/'
       });
 
       // Clear fallback cookie if it exists
       Cookies.remove('merchant_auth_fallback', { path: '/' });
-      console.log('✅ Auth data stored securely');
+      console.log('✅ Auth data stored securely in cookie');
     } catch (error) {
       console.error('💥 Error storing auth data:', error);
       throw new Error('Failed to store authentication data');
@@ -105,7 +113,14 @@ class MerchantAuthService {
   // Get stored authentication data
   getAuthData() {
     try {
-      // Try encrypted data first
+      // Try localStorage first (most reliable for cross-origin)
+      const localData = localStorage.getItem('merchant_auth_data');
+      if (localData) {
+        console.log('📦 Using localStorage auth data');
+        return JSON.parse(localData);
+      }
+
+      // Try encrypted cookie data
       const encryptedData = Cookies.get('merchant_auth');
       if (encryptedData && SECRET_KEY) {
         try {
@@ -120,14 +135,14 @@ class MerchantAuthService {
         }
       }
 
-      // Try fallback unencrypted data
+      // Try fallback unencrypted cookie data
       const fallbackData = Cookies.get('merchant_auth_fallback');
       if (fallbackData) {
-        console.log('📭 Using fallback auth data');
+        console.log('📭 Using fallback cookie auth data');
         return JSON.parse(fallbackData);
       }
 
-      console.log('📭 No auth data found in cookies');
+      console.log('📭 No auth data found');
       return null;
     } catch (error) {
       console.error('💥 Error retrieving auth data:', error);
@@ -533,6 +548,7 @@ class MerchantAuthService {
       // Clear any other related data
       localStorage.removeItem('merchant_temp_data');
       localStorage.removeItem('merchant_access_token'); // Clear localStorage token fallback
+      localStorage.removeItem('merchant_auth_data'); // Clear localStorage auth data
       sessionStorage.clear();
 
       // Clear logout flag
