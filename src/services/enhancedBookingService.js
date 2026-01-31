@@ -1,7 +1,6 @@
 // services/enhancedBookingService.js - Enhanced merchant dashboard version with proper error handling
 
 import axios from 'axios';
-import { getTokenFromCookie } from '../services/api_service';
 import merchantAuthService from './merchantAuthService';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
@@ -18,7 +17,7 @@ class EnhancedBookingService {
 
         // Add auth token to requests
         this.api.interceptors.request.use((config) => {
-            const token = getTokenFromCookie();
+            const token = merchantAuthService.getToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
