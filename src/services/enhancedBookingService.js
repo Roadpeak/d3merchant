@@ -3,7 +3,8 @@
 import axios from 'axios';
 import merchantAuthService from './merchantAuthService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
+// VITE_API_BASE_URL already includes /api/v1, so don't add it again
+const API_BASE_URL = process.env.REACT_APP_API_URL || import.meta.env.VITE_API_BASE_URL;
 
 class EnhancedBookingService {
     constructor() {
