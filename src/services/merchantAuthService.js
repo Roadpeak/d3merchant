@@ -396,8 +396,19 @@ class MerchantAuthService {
         console.log('✅ Access token refreshed in localStorage');
       }
 
+      // Update stored auth data with fresh merchant profile
+      if (data.merchantProfile) {
+        const authData = this.getAuthData() || {};
+        authData.merchant = data.merchantProfile;
+        authData.token = data.access_token || authData.token;
+        authData.timestamp = Date.now();
+        this.storeAuthData(authData);
+        console.log('✅ Auth data updated with fresh merchant profile');
+      }
+
       console.log('✅ Current merchant profile fetched successfully');
-      return data;
+      // Return the merchantProfile directly, not the wrapper object
+      return data.merchantProfile || data;
     } catch (error) {
       console.error('💥 Profile fetch error:', error);
       throw error;
