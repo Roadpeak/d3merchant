@@ -19,23 +19,51 @@ axiosInstance.interceptors.request.use(
             const apiKey = import.meta.env.VITE_API_KEY;
             if (apiKey) {
                 config.headers['x-api-key'] = apiKey;
-                console.log('✅ API key added to request');
             } else {
                 console.warn('⚠️ VITE_API_KEY not found in environment variables');
             }
 
-            // Add auth token from cookies (your existing logic)
-            const encryptedData = Cookies.get('auth_data');
+            // Try to get token from multiple sources
+            let token = null;
             const secretKey = import.meta.env.VITE_SECRET_KEY;
 
+            // 1. Try encrypted merchant_auth cookie first
+            const encryptedData = Cookies.get('merchant_auth');
             if (encryptedData && secretKey) {
-                const bytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
-                const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-
-                if (decryptedData.token) {
-                    config.headers.Authorization = `Bearer ${decryptedData.token}`;
-                    console.log('✅ Auth token added to request');
+                try {
+                    const bytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
+                    const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                    if (decryptedData.token) {
+                        token = decryptedData.token;
+                    }
+                } catch (decryptError) {
+                    // Silent - try fallback
                 }
+            }
+
+            // 2. Try fallback unencrypted cookie
+            if (!token) {
+                const fallbackData = Cookies.get('merchant_auth_fallback');
+                if (fallbackData) {
+                    try {
+                        const parsed = JSON.parse(fallbackData);
+                        if (parsed.token) {
+                            token = parsed.token;
+                        }
+                    } catch (parseError) {
+                        // Silent - try next fallback
+                    }
+                }
+            }
+
+            // 3. Try localStorage as final fallback (for cross-origin cookie issues)
+            if (!token) {
+                token = localStorage.getItem('merchant_access_token');
+            }
+
+            // Add Authorization header if we have a token
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
             }
         } catch (error) {
             console.error('Error in request interceptor:', error);
@@ -54,7 +82,10 @@ axiosInstance.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             console.error('Unauthorized request - clearing auth data');
-            Cookies.remove('auth_data');
+            // Clear all auth storage
+            Cookies.remove('merchant_auth', { path: '/' });
+            Cookies.remove('merchant_auth_fallback', { path: '/' });
+            localStorage.removeItem('merchant_access_token');
             // Redirect to login
             if (window.location.pathname !== '/accounts/sign-in') {
                 window.location.href = '/accounts/sign-in';

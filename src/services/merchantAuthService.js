@@ -188,10 +188,21 @@ class MerchantAuthService {
     return authData?.merchant || null;
   }
 
-  // Get authentication token
+  // Get authentication token (with localStorage fallback)
   getToken() {
+    // First try encrypted cookie storage
     const authData = this.getAuthData();
-    return authData?.token || null;
+    if (authData?.token) {
+      return authData.token;
+    }
+
+    // Fallback to localStorage for cross-origin cookie issues
+    const localToken = localStorage.getItem('merchant_access_token');
+    if (localToken) {
+      return localToken;
+    }
+
+    return null;
   }
 
   // Get merchant ID
@@ -266,22 +277,42 @@ class MerchantAuthService {
         }
       }
 
-      // With HttpOnly cookies, the token is NOT in the response body
-      // It's automatically set as a cookie by the server
-      // We only need to validate that we have merchant data
+      // Validate that we have merchant data
       if (!data.id || !data.email_address) {
         console.error('💥 Invalid merchant data in response:', data);
         throw new Error('Invalid server response. Please try again.');
       }
 
-      console.log('✅ Login successful - HttpOnly cookie set by server');
+      console.log('✅ Login successful');
       console.log('📋 Merchant info:', {
         id: data.id,
         name: `${data.first_name} ${data.last_name}`,
         email: data.email_address
       });
 
-      // Return merchant data (token is in HttpOnly cookie, not accessible to JavaScript)
+      // Store token in localStorage as fallback for cross-origin cookie issues
+      if (data.access_token) {
+        localStorage.setItem('merchant_access_token', data.access_token);
+        console.log('✅ Access token stored in localStorage as fallback');
+      }
+
+      // Also store auth data for the encrypted cookie system
+      const authData = {
+        token: data.access_token,
+        merchant: {
+          id: data.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email_address: data.email_address,
+          phone_number: data.phone_number,
+          joined: data.joined,
+          updated: data.updated,
+          last_login: data.last_login
+        },
+        timestamp: Date.now()
+      };
+      this.storeAuthData(authData);
+
       return data;
     } catch (error) {
       console.error('💥 Login error:', error);
@@ -357,6 +388,12 @@ class MerchantAuthService {
 
         this.handleApiError(response, data);
         return null;
+      }
+
+      // Store the returned token in localStorage as fallback for cross-origin cookie issues
+      if (data.access_token) {
+        localStorage.setItem('merchant_access_token', data.access_token);
+        console.log('✅ Access token refreshed in localStorage');
       }
 
       console.log('✅ Current merchant profile fetched successfully');
@@ -484,6 +521,7 @@ class MerchantAuthService {
 
       // Clear any other related data
       localStorage.removeItem('merchant_temp_data');
+      localStorage.removeItem('merchant_access_token'); // Clear localStorage token fallback
       sessionStorage.clear();
 
       // Clear logout flag
